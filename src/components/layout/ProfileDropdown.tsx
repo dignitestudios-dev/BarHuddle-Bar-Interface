@@ -1,0 +1,95 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export interface ProfileDropdownProps {
+    name?: string;
+    initials?: string;
+}
+
+export function ProfileDropdown({
+    name = "James",
+    initials = "JD",
+}: ProfileDropdownProps) {
+    const router = useRouter();
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const profileRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                profileRef.current &&
+                !profileRef.current.contains(event.target as Node)
+            ) {
+                setShowProfileMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={profileRef} className="relative">
+            {/* Profile Pill Button */}
+            <button
+                type="button"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="h-[37.6px] px-3 bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] rounded-[24px] flex items-center gap-2.5 hover:bg-[rgba(124,58,237,0.2)] transition-all focus:outline-none cursor-pointer"
+            >
+                {/* Gradient Avatar */}
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#F472B6] flex items-center justify-center text-[10px] font-bold text-[#F0EEFF] shrink-0">
+                    {initials}
+                </div>
+
+                {/* Name */}
+                <span className="font-semibold text-sm text-white">{name}</span>
+
+                {/* Chevron Down */}
+                <svg
+                    className={`w-3 h-3 text-[#C27AFF] transition-transform duration-200 ${
+                        showProfileMenu ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {showProfileMenu && (
+                <div className="absolute right-0 mt-3 w-40 bg-[#05033A] border border-[rgba(180,95,242,0.3)] shadow-2xl rounded-xl p-3 flex flex-col gap-2 z-50 animate-in fade-in duration-150">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setShowProfileMenu(false);
+                            router.push("/app/settings");
+                        }}
+                        className="w-full text-left font-medium text-sm text-white hover:text-[#B45FF2] py-1.5 px-2 rounded hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                        View Profile
+                    </button>
+
+                    <div className="w-full h-[1px] bg-[rgba(180,95,242,0.16)]" />
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setShowProfileMenu(false);
+                            router.push("/auth/login");
+                        }}
+                        className="w-full text-left font-medium text-sm text-[#FF3636] hover:text-red-400 py-1.5 px-2 rounded hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                        Log Out
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export default ProfileDropdown;
