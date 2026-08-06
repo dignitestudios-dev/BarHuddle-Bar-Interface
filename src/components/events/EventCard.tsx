@@ -18,28 +18,49 @@ export interface EventCardData {
 
 export interface EventCardProps {
     event: EventCardData;
+    variant?: "default" | "boosting";
     onActionClick?: (event: EventCardData) => void;
+    onBoostToggle?: (event: EventCardData) => void;
     className?: string;
 }
 
 export function EventCard({
     event,
+    variant = "default",
+    onActionClick,
+    onBoostToggle,
     className = "",
 }: EventCardProps) {
     const router = useRouter();
 
-    const handleClick = () => {
-
-        router.push(`/app/events/${event.id}`);
-
+    const handleClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (variant === "boosting") {
+            onBoostToggle?.(event);
+        } else if (onActionClick) {
+            onActionClick(event);
+        } else {
+            router.push(`/app/events/${event.id}`);
+        }
     };
+
+    const isBoostingMode = variant === "boosting";
 
     return (
         <div
-            className={`relative w-full max-w-[370px] min-h-[428px] bg-[rgba(10,6,50,0.75)] border border-[rgba(124,58,237,0.2)] shadow-[0px_4px_24px_rgba(0,0,0,0.4),inset_0px_1px_0px_rgba(255,255,255,0.04)] rounded-[22px] overflow-hidden flex flex-col justify-between font-['Manrope',sans-serif] hover:border-[rgba(124,58,237,0.4)] transition-all duration-300 group ${className}`}
+            className={`relative w-full max-w-[370px] min-h-[440px] bg-[rgba(10,6,50,0.75)] border border-[rgba(124,58,237,0.2)] shadow-[0px_4px_24px_rgba(0,0,0,0.4),inset_0px_1px_0px_rgba(255,255,255,0.04)] rounded-[22px] overflow-hidden flex flex-col justify-between font-['Manrope',sans-serif] hover:border-[rgba(124,58,237,0.4)] transition-all duration-300 group ${className}`}
         >
             {/* Top Image Section (176px) */}
             <div className="relative w-full h-[176px] bg-[#3C0366] overflow-hidden shrink-0">
+                {/* Actively Boosted Top Banner */}
+                {isBoostingMode && event.isBoosted && (
+                    <div className="absolute top-0 inset-x-0 h-7 bg-gradient-to-r from-[#7C3AED] via-[#9F4FFA] to-[#7C3AED] flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold tracking-[1.2px] uppercase text-[#E8FF57] z-20 shadow-md">
+                        <span>⚡</span>
+                        <span>ACTIVELY BOOSTED</span>
+                        <span>⚡</span>
+                    </div>
+                )}
+
                 {/* Event Photo */}
                 <img
                     src={event.imageUrl}
@@ -105,13 +126,13 @@ export function EventCard({
                         </span>
                     </div>
 
-                    {/* Stat 2: M/F Ratio */}
+                    {/* Stat 2: Redemptions */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[24px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#4ADE80]">
                             {event.ratio}
                         </span>
                         <span className="font-semibold text-[9px] leading-[14px] text-[#8B7EC8]">
-                            M/F Ratio
+                            Redemptions
                         </span>
                     </div>
 
@@ -145,14 +166,45 @@ export function EventCard({
                     </div>
                 </div>
 
-                {/* Action CTA Button ("View Details" / "Boost Event") */}
-                <button
-                    type="button"
-                    onClick={handleClick}
-                    className="w-full h-[46px] rounded-[14px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_22px_rgba(124,58,237,0.4)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-1"
-                >
-                    View Details
-                </button>
+                {/* Action CTA Button */}
+                {isBoostingMode ? (
+                    event.isBoosted ? (
+                        /* Currently Boosted Button State */
+                        <button
+                            type="button"
+                            onClick={handleClick}
+                            className="w-full h-[52px] rounded-[14px] bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.28)] flex items-center justify-center gap-2 font-bold text-[12px] sm:text-[13px] leading-[16px] text-[#4ADE80] hover:bg-[rgba(74,222,128,0.18)] transition-all cursor-pointer mt-1"
+                        >
+                            {/* Checkmark Icon */}
+                            <svg className="w-4 h-4 text-[#4ADE80]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Currently Boosted</span>
+                        </button>
+                    ) : (
+                        /* Boost Event Button State */
+                        <button
+                            type="button"
+                            onClick={handleClick}
+                            className="w-full h-[52px] rounded-[14px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_22px_rgba(124,58,237,0.4)] flex items-center justify-center gap-2 font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer mt-1"
+                        >
+                            {/* Lightning Bolt Icon */}
+                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <span>Boost Event</span>
+                        </button>
+                    )
+                ) : (
+                    /* Default Mode Button ("View Details") */
+                    <button
+                        type="button"
+                        onClick={handleClick}
+                        className="w-full h-[46px] rounded-[14px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_22px_rgba(124,58,237,0.4)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-1"
+                    >
+                        View Details
+                    </button>
+                )}
             </div>
         </div>
     );
