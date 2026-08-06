@@ -9,6 +9,7 @@ export interface VenueHeaderProps {
     venue?: VenueCardData;
     onBack?: () => void;
     onClaim?: (venue: VenueCardData) => void;
+    onOpenSubscription?: () => void;
     className?: string;
 }
 
@@ -16,6 +17,7 @@ export function VenueHeader({
     venue,
     onBack,
     onClaim,
+    onOpenSubscription,
     className = "",
 }: VenueHeaderProps) {
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
@@ -26,6 +28,10 @@ export function VenueHeader({
             onClaim(venue);
         }
         setIsClaimModalOpen(true);
+    };
+
+    const handleClaimSubmitted = () => {
+        onOpenSubscription?.();
     };
 
     return (
@@ -77,6 +83,7 @@ export function VenueHeader({
             <ClaimFormModal
                 isOpen={isClaimModalOpen}
                 onClose={() => setIsClaimModalOpen(false)}
+                onSubmitted={handleClaimSubmitted}
             />
 
             {/* Edit Details Modal */}

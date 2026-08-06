@@ -9,6 +9,7 @@ import { VenueCarouselSection } from "./VenueCarouselSection";
 import { VenueInfoSection } from "./VenueInfoSection";
 import { VenueAttendeesSection } from "./VenueAttendeesSection";
 import { VenueEventsSection } from "./VenueEventsSection";
+import { SubscriptionPlansScreen } from "./SubscriptionPlansScreen";
 
 export interface VenueDetailViewProps {
     venue?: VenueCardData;
@@ -38,11 +39,26 @@ export function VenueDetailView({
     className = "",
 }: VenueDetailViewProps) {
     const [activeStory, setActiveStory] = useState<VisitorStory | null>(null);
+    const [showSubscriptionScreen, setShowSubscriptionScreen] = useState(false);
+
+    if (showSubscriptionScreen) {
+        return (
+            <SubscriptionPlansScreen
+                onBack={() => setShowSubscriptionScreen(false)}
+                className={className}
+            />
+        );
+    }
 
     return (
         <div className={`w-full max-w-[1136px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
             {/* Top Navigation Header Component */}
-            <VenueHeader venue={venue} onBack={onBack} onClaim={onClaim} />
+            <VenueHeader
+                venue={venue}
+                onBack={onBack}
+                onClaim={onClaim}
+                onOpenSubscription={() => setShowSubscriptionScreen(true)}
+            />
 
             {/* Top Live Stories Component */}
             <VenueStoriesSection onSelectStory={(story) => setActiveStory(story)} />

@@ -6,9 +6,10 @@ import { SuccessModal } from "@/components/ui/success-modal";
 export interface ClaimFormModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSubmitted?: () => void;
 }
 
-export function ClaimFormModal({ isOpen, onClose }: ClaimFormModalProps) {
+export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalProps) {
     const [name, setName] = useState("James Smith");
     const [email, setEmail] = useState("jamessmith@gmail.com");
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -173,6 +174,7 @@ export function ClaimFormModal({ isOpen, onClose }: ClaimFormModalProps) {
                 onClose={() => {
                     setShowSuccess(false);
                     onClose();
+                    onSubmitted?.();
                 }}
                 title="Request Submitted"
                 description="Your request has been sent to the admin for review. As soon as it is approved, you'll be notified via email."

@@ -10,6 +10,7 @@ export interface VenueEvent {
 }
 
 export interface VenueEventsSectionProps {
+    title?: string;
     events?: VenueEvent[];
     className?: string;
 }
@@ -54,6 +55,7 @@ const DEFAULT_EVENTS: VenueEvent[] = [
 ];
 
 export function VenueEventsSection({
+    title = "Events",
     events = DEFAULT_EVENTS,
     className = "",
 }: VenueEventsSectionProps) {
@@ -71,7 +73,7 @@ export function VenueEventsSection({
                         </span>
                     </div>
                     <h2 className="font-bold text-[20px] leading-[28px] text-white">
-                        Events
+                        {title}
                     </h2>
                 </div>
 
@@ -84,35 +86,31 @@ export function VenueEventsSection({
                 </button>
             </div>
 
-            {/* Grid of Event Cards (2 Columns) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
-                {events.map((event) => (
+            {/* Event Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full pt-1">
+                {events.map((evt) => (
                     <div
-                        key={event.id}
-                        className="w-full h-[209px] rounded-[16px] bg-[#070425] overflow-hidden flex flex-col justify-between border border-purple-900/40 hover:border-purple-600/60 transition-all cursor-pointer group shadow-lg"
+                        key={evt.id}
+                        className="relative w-full h-[220px] rounded-[16px] overflow-hidden group shadow-[0px_4px_16px_rgba(0,0,0,0.3)] border border-[rgba(124,58,237,0.3)] bg-purple-950/40"
                     >
-                        {/* Event Top Banner Image */}
-                        <div className="relative w-full h-[147px] overflow-hidden bg-[#1E0B36]">
-                            <img
-                                src={event.imageUrl}
-                                alt={event.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-80"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050332]/50 to-[#070425]" />
-                        </div>
+                        {/* Event Image */}
+                        <img
+                            src={evt.imageUrl}
+                            alt={evt.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
 
-                        {/* Event Details Content Below Image */}
-                        <div className="p-3 flex flex-col gap-0.5 justify-center flex-1 bg-[#070425]">
-                            <h3 className="font-semibold text-[14px] leading-[20px] text-white truncate">
-                                {event.title}
+                        {/* Dark Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/90" />
+
+                        {/* Event Details Card (Bottom Overlay) */}
+                        <div className="absolute bottom-3 left-3 right-3 p-3 rounded-[12px] bg-[rgba(20,14,80,0.7)] backdrop-blur-md border border-[rgba(255,255,255,0.1)] flex flex-col gap-0.5">
+                            <h3 className="font-bold text-[15px] leading-[20px] text-white truncate">
+                                {evt.title}
                             </h3>
-
-                            <div className="flex items-center gap-1.5 text-[11px] leading-[16px] text-[#C4B5FD]">
-                                <svg className="w-3 h-3 text-[#8B7EC8] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span>{event.dateTime}</span>
-                            </div>
+                            <span className="font-medium text-[12px] leading-[16px] text-[#E8FF57]">
+                                {evt.dateTime}
+                            </span>
                         </div>
                     </div>
                 ))}
