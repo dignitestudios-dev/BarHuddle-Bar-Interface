@@ -4,7 +4,8 @@ import React from "react";
 import { StatsCard } from "@/components/ui";
 import { VisitorTrendsChart } from "@/components/charts/VisitorTrendsChart";
 import { CustomerDonutChart } from "@/components/charts/CustomerDonutChart";
-import { EventPerformanceCard } from "@/components/events/EventPerformanceCard";
+import { EventPerformanceCard } from "@/features/events/components";
+
 import { statsList } from "@/utils/constants";
 import VisitorSentimentsChart from "@/components/charts/VisitorSentimentsChart";
 

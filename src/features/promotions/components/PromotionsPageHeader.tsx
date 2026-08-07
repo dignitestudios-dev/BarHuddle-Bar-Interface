@@ -12,7 +12,7 @@ export function PromotionsPageHeader({
     className = "",
 }: PromotionsPageHeaderProps) {
     return (
-        <div className={`w-full flex items-center justify-between min-h-[45px] font-['Manrope',sans-serif] ${className}`}>
+        <div className={`w-full max-w-[1200px] flex items-center justify-between min-h-[45px] font-['Manrope',sans-serif] ${className}`}>
             {/* Promotions Gradient Heading */}
             <h1 className="font-extrabold text-[36px] leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
                 Promotions

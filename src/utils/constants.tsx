@@ -63,7 +63,7 @@ export const navItems: NavItem[] = [
     },
     {
         name: "Event Boosting",
-        href: "/app/boosting",
+        href: "/app/event-boosting",
         icon: (
             <svg className="w-[17px] h-[17px]" viewBox="0 0 17 17" fill="none">
                 <path d="M9.5 2L3.5 9.5H8.5L7.5 15L13.5 7.5H8.5L9.5 2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />

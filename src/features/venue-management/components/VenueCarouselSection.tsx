@@ -82,7 +82,7 @@ export function VenueCarouselSection({
     };
 
     return (
-        <div className={`w-full max-w-[1136px] flex flex-col md:flex-row gap-3 items-stretch select-none font-['Manrope',sans-serif] ${className}`}>
+        <div className={`w-full max-w-[1200px] flex flex-col md:flex-row gap-3 items-stretch select-none font-['Manrope',sans-serif] ${className}`}>
             {/* Left Main Large Hero Showcase Container (Width: ~980px, Height: 480px) */}
             <div className="relative flex-1 h-[480px] bg-[#3C0366] rounded-[20px] overflow-hidden group shadow-[0px_0px_40px_rgba(0,0,0,0.5)]">
                 {/* Main Hero Background Image */}
@@ -178,11 +178,10 @@ export function VenueCarouselSection({
                                 key={idx}
                                 type="button"
                                 onClick={() => setActiveIndex(idx)}
-                                className={`h-[6px] rounded-full transition-all duration-300 cursor-pointer ${
-                                    idx === activeIndex
+                                className={`h-[6px] rounded-full transition-all duration-300 cursor-pointer ${idx === activeIndex
                                         ? "w-[24px] bg-[#E8FF57]"
                                         : "w-[6px] bg-white/30 hover:bg-white/50"
-                                }`}
+                                    }`}
                                 aria-label={`Go to slide ${idx + 1}`}
                             />
                         ))}
@@ -200,11 +199,10 @@ export function VenueCarouselSection({
                             key={slide.id}
                             type="button"
                             onClick={() => setActiveIndex(idx)}
-                            className={`relative w-[144px] shrink-0 rounded-[14px] overflow-hidden transition-all duration-300 cursor-pointer ${
-                                isActive
+                            className={`relative w-[144px] shrink-0 rounded-[14px] overflow-hidden transition-all duration-300 cursor-pointer ${isActive
                                     ? "h-[140px] border-[1.6px] border-[#E8FF57] shadow-[0px_0px_14px_rgba(232,255,87,0.4)]"
                                     : "h-[80px] border border-[rgba(124,58,237,0.2)] hover:border-[rgba(124,58,237,0.5)] opacity-80 hover:opacity-100"
-                            }`}
+                                }`}
                         >
                             {/* Thumbnail Image */}
                             <img

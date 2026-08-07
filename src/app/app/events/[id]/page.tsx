@@ -4,8 +4,8 @@
 
 import React, { use } from "react";
 import { useRouter } from "next/navigation";
-import { EventDetailView } from "@/components/events/EventDetailView";
-import { type EventCardData } from "@/components/events/EventCard";
+import { EventDetailView, type EventCardData } from "@/features/events/components";
+
 
 const SAMPLE_EVENTS: Record<string, EventCardData> = {
     "1": {

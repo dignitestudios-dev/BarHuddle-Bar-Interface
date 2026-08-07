@@ -2,8 +2,11 @@
 
 import React, { useState } from "react";
 
+import { AnalyticsTab } from "./AnalyticsTabs";
+
+
 export type DateFilterOption = "Daily" | "Weekly" | "Monthly" | "Custom";
-export type AnalyticsTab = "Overview" | "Visitor" | "Retention" | "Events" | "Sentiment" | "Boost" | "Reports";
+
 
 export interface AnalyticsPageHeaderProps {
     dateFilter?: DateFilterOption;
@@ -37,7 +40,7 @@ export function AnalyticsPageHeader({
     };
 
     return (
-        <div className={`w-full flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
+        <div className={`max-w-[1200px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
             {/* Top Row: Gradient Title & Date Filter Pill Group */}
             <div className="w-full flex items-center justify-between min-h-[45px] flex-wrap gap-4">
                 {/* Title: Analytics */}
@@ -54,42 +57,16 @@ export function AnalyticsPageHeader({
                                 key={filter}
                                 type="button"
                                 onClick={() => handleFilterClick(filter)}
-                                className={`h-[29px] px-3.5 flex items-center justify-center rounded-[20px] font-bold text-[11px] leading-[16px] transition-all cursor-pointer ${
-                                    isActive
-                                        ? "bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white shadow-[0px_0px_14px_rgba(124,58,237,0.45)]"
-                                        : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
-                                }`}
+                                className={`h-[29px] px-3.5 flex items-center justify-center rounded-[20px] font-bold text-[11px] leading-[16px] transition-all cursor-pointer ${isActive
+                                    ? "bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white shadow-[0px_0px_14px_rgba(124,58,237,0.45)]"
+                                    : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
+                                    }`}
                             >
                                 {filter}
                             </button>
                         );
                     })}
                 </div>
-            </div>
-
-            {/* Sub-Navigation Tabs Row */}
-            <div className="w-full flex items-center gap-2 overflow-x-auto scrollbar-none py-1 border-b border-[rgba(124,58,237,0.15)]">
-                {TABS.map((tab) => {
-                    const isActive = selectedTab === tab;
-                    return (
-                        <button
-                            key={tab}
-                            type="button"
-                            onClick={() => handleTabClick(tab)}
-                            className={`relative px-4 py-2 rounded-full font-bold text-[13px] leading-[18px] transition-all cursor-pointer shrink-0 ${
-                                isActive
-                                    ? "bg-[rgba(124,58,237,0.25)] text-white border border-[rgba(124,58,237,0.4)] shadow-[0px_0px_12px_rgba(124,58,237,0.2)]"
-                                    : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
-                            }`}
-                        >
-                            {tab}
-                            {/* Active Tab Accent Line */}
-                            {isActive && (
-                                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-[#E8FF57] shadow-[0px_0px_8px_#E8FF57]" />
-                            )}
-                        </button>
-                    );
-                })}
             </div>
         </div>
     );

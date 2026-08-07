@@ -23,7 +23,7 @@ export function EventsPageHeader({
     };
 
     return (
-        <div className={`w-full flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
+        <div className={`w-full max-w-[1200px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
             {/* Top Row: Title + Create Button */}
             <div className="w-full flex items-center justify-between min-h-[45px]">
                 {/* Events Gradient Heading */}
@@ -47,11 +47,10 @@ export function EventsPageHeader({
                 <button
                     type="button"
                     onClick={() => handleTabClick("events")}
-                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${
-                        tabState === "events"
+                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${tabState === "events"
                             ? "bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] font-semibold text-white"
                             : "font-normal text-white/70 hover:text-white"
-                    }`}
+                        }`}
                 >
                     Events
                 </button>
@@ -60,11 +59,10 @@ export function EventsPageHeader({
                 <button
                     type="button"
                     onClick={() => handleTabClick("boosted")}
-                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${
-                        tabState === "boosted"
+                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${tabState === "boosted"
                             ? "bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] font-semibold text-white"
                             : "font-normal text-white/70 hover:text-white"
-                    }`}
+                        }`}
                 >
                     Boosted Events
                 </button>

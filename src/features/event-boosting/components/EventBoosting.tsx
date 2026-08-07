@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { EventBoostingHeader } from "@/components/boosting/EventBoostingHeader";
-import { EventCard, EventCardData } from "@/components/events/EventCard";
-import { BoostEventModal } from "@/components/boosting/BoostEventModal";
+import { EventBoostingHeader } from "./EventBoostingHeader";
+import { EventCard, EventCardData } from "@/features/events/components";
+import { BoostEventModal } from "./BoostEventModal";
 import { SuccessModal } from "@/components/ui/success-modal";
 
 const SAMPLE_BOOSTING_EVENTS: EventCardData[] = [
@@ -81,7 +81,7 @@ const SAMPLE_BOOSTING_EVENTS: EventCardData[] = [
     },
 ];
 
-export default function EventBoostingPage() {
+export function EventBoosting() {
     const [eventsList, setEventsList] = useState<EventCardData[]>(SAMPLE_BOOSTING_EVENTS);
     const [selectedEventForBoost, setSelectedEventForBoost] = useState<EventCardData | null>(null);
     const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
@@ -118,7 +118,7 @@ export default function EventBoostingPage() {
     };
 
     return (
-        <div className="w-full max-w-[1136px] flex flex-col gap-8 p-4 sm:p-6 font-['Manrope',sans-serif]">
+        <div className="w-full flex flex-col gap-8 p-4 sm:p-6 font-['Manrope',sans-serif]">
             {/* Top Section */}
             <EventBoostingHeader />
 
@@ -160,3 +160,5 @@ export default function EventBoostingPage() {
         </div>
     );
 }
+
+export default EventBoosting;

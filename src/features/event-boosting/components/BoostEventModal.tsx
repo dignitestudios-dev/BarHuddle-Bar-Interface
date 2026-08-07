@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { EventCardData } from "@/components/events/EventCard";
+import { EventCardData } from "@/features/events/components";
+
 
 export interface BoostEventModalProps {
     isOpen: boolean;

@@ -2,8 +2,8 @@
 
 import React, { use } from "react";
 import { useRouter } from "next/navigation";
-import { VenueDetailView } from "@/components/venues/VenueDetailView";
-import { type VenueCardData } from "@/components/venues/VenueCard";
+import { VenueDetailView, type VenueCardData } from "@/features/venue-management/components";
+
 
 const SAMPLE_VENUES: Record<string, VenueCardData> = {
     "1": {

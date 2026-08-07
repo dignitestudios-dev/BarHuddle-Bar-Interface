@@ -1,3 +1,5 @@
-import EventBoostingPage from "../boosting/page";
+import EventBoosting from "@/features/event-boosting/components/EventBoosting";
 
-export default EventBoostingPage;
+export default function EventBoostingPage() {
+    return <EventBoosting />;
+}

@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
 import { EventCardData } from "./EventCard";
-import { VenueCarouselSection } from "../venues";
+import { VenueCarouselSection } from "@/features/venue-management/components";
+
 
 export interface EventDetailViewProps {
     event?: EventCardData;
@@ -40,7 +40,7 @@ export function EventDetailView({
     className = "",
 }: EventDetailViewProps) {
     return (
-        <div className={`w-full max-w-[1136px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
+        <div className={`w-full max-w-[1200px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
             {/* Top Bar: Back Button, Event Detail Heading & Options Menu */}
             <div className="w-full flex items-center justify-between min-h-[45px]">
                 <div className="flex items-center gap-4">
