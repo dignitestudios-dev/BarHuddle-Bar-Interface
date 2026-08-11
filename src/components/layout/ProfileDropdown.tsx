@@ -2,18 +2,12 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useProfile } from "@/context/ProfileContext";
 
-export interface ProfileDropdownProps {
-    name?: string;
-    initials?: string;
-}
-
-export function ProfileDropdown({
-    name = "James",
-    initials = "JD",
-}: ProfileDropdownProps) {
+export function ProfileDropdown() {
     const router = useRouter();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const { firstName, initials } = useProfile();
     const profileRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown on click outside
@@ -30,8 +24,13 @@ export function ProfileDropdown({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    const handleViewProfileClick = () => {
+        setShowProfileMenu(false);
+        router.push("/app/profile");
+    };
+
     return (
-        <div ref={profileRef} className="relative">
+        <div ref={profileRef} className="relative font-['Manrope',sans-serif]">
             {/* Profile Pill Button */}
             <button
                 type="button"
@@ -44,7 +43,7 @@ export function ProfileDropdown({
                 </div>
 
                 {/* Name */}
-                <span className="font-semibold text-sm text-white">{name}</span>
+                <span className="font-semibold text-sm text-white">{firstName}</span>
 
                 {/* Chevron Down */}
                 <svg
@@ -62,13 +61,10 @@ export function ProfileDropdown({
 
             {/* Profile Dropdown Menu */}
             {showProfileMenu && (
-                <div className="absolute right-0 mt-3 w-40 bg-[#05033A] border border-[rgba(180,95,242,0.3)] shadow-2xl rounded-xl p-3 flex flex-col gap-2 z-50 animate-in fade-in duration-150">
+                <div className="absolute right-0 mt-3 w-40 bg-[#05033A] border border-[rgba(180,95,242,0.3)] shadow-2xl rounded-xl p-3 flex flex-col gap-2 z-50 animate-in fade-in duration-150 font-['Manrope',sans-serif]">
                     <button
                         type="button"
-                        onClick={() => {
-                            setShowProfileMenu(false);
-                            router.push("/app/settings");
-                        }}
+                        onClick={handleViewProfileClick}
                         className="w-full text-left font-medium text-sm text-white hover:text-[#B45FF2] py-1.5 px-2 rounded hover:bg-white/5 transition-colors cursor-pointer"
                     >
                         View Profile
@@ -93,3 +89,5 @@ export function ProfileDropdown({
 }
 
 export default ProfileDropdown;
+
+
