@@ -6,17 +6,17 @@ import { ProfileProvider } from "@/context/ProfileContext";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
         <ProfileProvider>
-            <div className="flex h-screen w-full bg-[#0B0314] text-white overflow-hidden">
+            <div className="flex min-h-screen w-full bg-[#0B0314] text-white overflow-hidden">
                 {/* Left Sidebar */}
                 <Sidebar />
 
                 {/* Right Main Content Area */}
-                <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto custom-scrollbar">
+                <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-y-auto">
                     {/* Navbar / Topbar */}
                     <Navbar />
 
                     {/* Page Content Area Container with Scoped Background Image */}
-                    <div className="relative flex-1 min-h-0">
+                    <div className="relative flex-1 min-h-0 overflow-hidden">
                         {/* Background Image scoped strictly to Page Content Area */}
                         <Image
                             src="/images/dashboard-bg.png"

@@ -35,7 +35,7 @@ export function Dashboard() {
                 </div>
 
                 {/* Charts Row: Visitor Trends (Area) + Customer Breakdown (Donut) */}
-                <div className="flex justify-between items-center w-full">
+                <div className="flex justify-between items-center max-w-[1200px] w-full gap-6">
                     <div className="w-3/4">
                         <VisitorTrendsChart />
                     </div>
@@ -45,7 +45,7 @@ export function Dashboard() {
                 </div>
 
                 {/* Bottom Row: Event Performance */}
-                <div className="grid grid-cols-1 lg:grid-cols-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 max-w-[1200px] gap-6">
                     <div className="w-full lg:w-auto">
                         <EventPerformanceCard />
                     </div>

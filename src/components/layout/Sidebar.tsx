@@ -15,7 +15,7 @@ export function Sidebar() {
 
 
     return (
-        <aside className="w-[255px] h-screen sticky top-0 bg-[#030228F2] border-r border-[#7C3AED]/20 shrink-0 flex flex-col justify-between select-none font-['Manrope',sans-serif] overflow-y-auto custom-scrollbar">
+        <aside className="w-[255px] min-h-screen bg-[#030228F2] border-r border-[#7C3AED]/20 shrink-0 flex flex-col justify-between select-none font-['Manrope',sans-serif]">
             {/* Top Brand & Menu Section */}
             <div className="flex flex-col items-start w-full p-6 pb-4">
                 {/* Brand Logo & Title */}
