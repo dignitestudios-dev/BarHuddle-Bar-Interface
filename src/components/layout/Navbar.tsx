@@ -5,7 +5,7 @@ import { ProfileDropdown } from "./ProfileDropdown";
 
 export function Navbar() {
     return (
-        <header className="w-full h-16 px-6 bg[#05033AD9]  backdrop-blur-md border-b border-[#7C3AED]/20 flex items-center justify-end gap-4 sticky top-0 z-30 font-['Manrope',sans-serif]">
+        <header className="w-full h-16 px-6 bg-[#05033AD9] border-b border-[#7C3AED]/20 flex items-center justify-end gap-4 sticky top-0 z-30 font-['Manrope',sans-serif]">
             {/* Search Bar */}
             {/* bg-[#0B0314]/80 */}
             <div className="relative w-full max-w-[320px] sm:max-w-[400px]">

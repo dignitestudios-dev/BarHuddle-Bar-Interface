@@ -15,7 +15,7 @@ export function Sidebar() {
 
 
     return (
-        <aside className="w-[255px] min-h-screen bg-[#070210] border-r border-[#7C3AED]/20 shrink-0 flex flex-col justify-between select-none font-['Manrope',sans-serif]">
+        <aside className="w-[255px] h-screen sticky top-0 bg-[#030228F2] border-r border-[#7C3AED]/20 shrink-0 flex flex-col justify-between select-none font-['Manrope',sans-serif] overflow-y-auto custom-scrollbar">
             {/* Top Brand & Menu Section */}
             <div className="flex flex-col items-start w-full p-6 pb-4">
                 {/* Brand Logo & Title */}
@@ -52,8 +52,8 @@ export function Sidebar() {
                                 key={item.name}
                                 href={item.href}
                                 className={`relative group flex items-center gap-3 w-full h-[41.6px] px-3 rounded-[24px] transition-all duration-200 ${isActive
-                                        ? "bg-[rgba(124,58,237,0.2)] border border-[rgba(124,58,237,0.3)] text-[#E8FF57]"
-                                        : "text-[#9D8FD0] hover:text-white hover:bg-white/5 border border-transparent"
+                                    ? "bg-[rgba(124,58,237,0.2)] border border-[rgba(124,58,237,0.3)] text-[#E8FF57]"
+                                    : "text-[#9D8FD0] hover:text-white hover:bg-white/5 border border-transparent"
                                     }`}
                             >
                                 {/* Left Active Glow Indicator */}
