@@ -15,7 +15,7 @@ export function Sidebar() {
 
 
     return (
-        <aside className="w-[255px] min-h-screen bg-[#030228F2] border-r border-[#7C3AED]/20 shrink-0 flex flex-col justify-between select-none font-['Manrope',sans-serif]">
+        <aside className="w-[255px] h-screen sticky top-0 bg-[#030228F2] border-r border-[#7C3AED]/20 shrink-0 flex flex-col justify-between select-none font-['Manrope',sans-serif] overflow-y-auto custom-scrollbar">
             {/* Top Brand & Menu Section */}
             <div className="flex flex-col items-start w-full p-6 pb-4">
                 {/* Brand Logo & Title */}
@@ -25,6 +25,7 @@ export function Sidebar() {
                             src="/images/bar-huddle-logo.png"
                             alt="BarHuddle"
                             fill
+                            sizes="36px"
                             className="object-contain"
                         />
                     </div>
