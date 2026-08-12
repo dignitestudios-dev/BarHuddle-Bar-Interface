@@ -26,9 +26,9 @@ export const metadata: Metadata = {
   title: "Bar Huddle - Owner",
   description: "Login to your Bar Huddle account",
   icons: {
-    icon: "/images/bar-huddle-logo.png",
-    shortcut: "/images/bar-huddle-logo.png",
-    apple: "/images/bar-huddle-logo.png",
+    icon: "/barhuddle.svg",
+    shortcut: "/barhuddle.svg",
+    apple: "/barhuddle.svg",
   },
 };
 
