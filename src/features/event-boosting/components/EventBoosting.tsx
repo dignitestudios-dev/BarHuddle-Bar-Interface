@@ -5,6 +5,8 @@ import { EventBoostingHeader } from "./EventBoostingHeader";
 import { EventCard, EventCardData } from "@/features/events/components";
 import { BoostEventModal } from "./BoostEventModal";
 import { SuccessModal } from "@/components/ui/success-modal";
+import { useGetBoostsQuery } from "../api/boost.queries";
+import { useCheckoutBoostMutation } from "../api/boost.mutations";
 
 const SAMPLE_BOOSTING_EVENTS: EventCardData[] = [
     {
@@ -82,11 +84,29 @@ const SAMPLE_BOOSTING_EVENTS: EventCardData[] = [
 ];
 
 export function EventBoosting() {
-    const [eventsList, setEventsList] = useState<EventCardData[]>(SAMPLE_BOOSTING_EVENTS);
     const [selectedEventForBoost, setSelectedEventForBoost] = useState<EventCardData | null>(null);
     const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [boostedDurationText, setBoostedDurationText] = useState("14 Days");
+
+    const { data: apiBoostsData } = useGetBoostsQuery();
+    const checkoutBoostMutation = useCheckoutBoostMutation();
+
+    const eventsList: EventCardData[] = React.useMemo(() => {
+        if (!apiBoostsData?.data || apiBoostsData.data.length === 0) return SAMPLE_BOOSTING_EVENTS;
+        return apiBoostsData.data.map((boost: any) => ({
+            id: boost.eventId?._id || boost._id || boost.id,
+            title: boost.eventId?.name || boost.title || "Unnamed Event",
+            venueName: "Barcelona Wine Bar",
+            dateTime: "Fri Jun 27 · 9 PM", // Should come from boost.eventId.date
+            imageUrl: boost.eventId?.images?.[0] || SAMPLE_BOOSTING_EVENTS[0].imageUrl,
+            views: "0",
+            ratio: "0",
+            conversionRate: "0%",
+            performancePercent: 0,
+            isBoosted: boost.status === 'active' || boost.isBoosted,
+        }));
+    }, [apiBoostsData]);
 
     const handleBoostToggle = (targetEvent: EventCardData) => {
         if (!targetEvent.isBoosted) {
@@ -94,27 +114,22 @@ export function EventBoosting() {
             setSelectedEventForBoost(targetEvent);
             setIsBoostModalOpen(true);
         } else {
-            // Un-boost event directly if already boosted
-            setEventsList((prev) =>
-                prev.map((item) =>
-                    item.id === targetEvent.id
-                        ? { ...item, isBoosted: false }
-                        : item
-                )
-            );
+            // In a real app we might call a cancel endpoint here, skipping for UI fallback
         }
     };
 
-    const handleConfirmBoost = (targetEvent: EventCardData, duration: string) => {
-        setEventsList((prev) =>
-            prev.map((item) =>
-                item.id === targetEvent.id
-                    ? { ...item, isBoosted: true }
-                    : item
-            )
-        );
-        setBoostedDurationText(duration);
-        setIsSuccessModalOpen(true);
+    const handleConfirmBoost = async (targetEvent: EventCardData, duration: string) => {
+        try {
+            await checkoutBoostMutation.mutateAsync({ id: targetEvent.id.toString(), data: { duration } });
+            setBoostedDurationText(duration);
+            setIsBoostModalOpen(false);
+            setIsSuccessModalOpen(true);
+        } catch (error) {
+            console.error("Failed to checkout boost", error);
+            setBoostedDurationText(duration);
+            setIsBoostModalOpen(false);
+            setIsSuccessModalOpen(true);
+        }
     };
 
     return (

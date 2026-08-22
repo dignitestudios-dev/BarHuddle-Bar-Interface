@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button, OtpInput, SuccessModal } from "@/components/ui";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "../hooks/use-auth";
 
 export interface VerifyEmailProps {
     email?: string;
@@ -46,6 +47,8 @@ export function VerifyEmail({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    const { handleVerifyOtp, isLoadingVerify } = useAuth();
+    
     // Resend countdown timer
     useEffect(() => {
         if (timer <= 0) return;
@@ -68,16 +71,18 @@ export function VerifyEmail({
         onResend?.();
     };
 
-    const handleVerificationSubmit = (codeToVerify: string = otpCode) => {
+    const handleVerificationSubmit = async (codeToVerify: string = otpCode) => {
         if (codeToVerify.length < 5) return;
         setIsSubmitting(true);
-        console.log("Verifying code:", codeToVerify, "for email:", email, "mode:", mode);
-        onVerify?.(codeToVerify);
-
-        setTimeout(() => {
+        
+        try {
+            await handleVerifyOtp(codeToVerify, mode, email);
             setIsSubmitting(false);
             setShowSuccessModal(true);
-        }, 600);
+        } catch (error) {
+            setIsSubmitting(false);
+            // Handle error, e.g. show toast
+        }
     };
 
     const handleModalClose = () => {
@@ -87,9 +92,9 @@ export function VerifyEmail({
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        handleVerificationSubmit(otpCode);
+        await handleVerificationSubmit(otpCode);
     };
 
     return (

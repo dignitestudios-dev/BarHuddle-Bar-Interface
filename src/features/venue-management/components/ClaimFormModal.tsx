@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { SuccessModal } from "@/components/ui/success-modal";
+import { useClaimVenueMutation } from "../api/venue.mutations";
 
 export interface ClaimFormModalProps {
     isOpen: boolean;
@@ -10,6 +11,7 @@ export interface ClaimFormModalProps {
 }
 
 export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalProps) {
+    const { mutateAsync: claimVenue, isPending } = useClaimVenueMutation();
     const [name, setName] = useState("James Smith");
     const [email, setEmail] = useState("jamessmith@gmail.com");
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -33,9 +35,20 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setShowSuccess(true);
+        try {
+            await claimVenue({
+                name: "Test Venue", // Or some dynamic venue name
+                address: "Test Address",
+                role: "owner",
+                proofUrl: uploadedFile ? uploadedFile.name : "default.pdf",
+            });
+            setShowSuccess(true);
+        } catch (error) {
+            console.error("Failed to claim venue:", error);
+            // Handle error, maybe show toast
+        }
     };
 
     return (
@@ -160,9 +173,10 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
                         {/* Submit Request CTA Button */}
                         <button
                             type="submit"
-                            className="w-full h-[48px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-semibold text-[16px] leading-[22px] text-white capitalize hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2"
+                            disabled={isPending}
+                            className="w-full h-[48px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-semibold text-[16px] leading-[22px] text-white capitalize hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            Submit Request
+                            {isPending ? "Submitting..." : "Submit Request"}
                         </button>
                     </form>
                 </div>

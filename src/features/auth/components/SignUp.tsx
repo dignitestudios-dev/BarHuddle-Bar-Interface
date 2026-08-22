@@ -4,15 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Button, InputField } from "@/components/ui";
+import { useAuth } from "../hooks/use-auth";
 
 export function SignUp({ setShowLogin }: { setShowLogin?: (showLogin: boolean) => void }) {
-    const [email, setEmail] = useState("jamessmith@gmail.com");
-    const [acceptedTerms, setAcceptedTerms] = useState(true);
+    const { email, setEmail, acceptedTerms, setAcceptedTerms, handleSignUp, isLoadingLogin } = useAuth();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Signup submitted:", { email, acceptedTerms });
-        setShowLogin?.(true);
+        await handleSignUp();
     };
 
     return (
@@ -77,8 +76,8 @@ export function SignUp({ setShowLogin }: { setShowLogin?: (showLogin: boolean) =
                 </div>
 
                 {/* Continue CTA Button using reusable Button component */}
-                <Button type="submit" variant="gradient">
-                    Continue
+                <Button type="submit" variant="gradient" disabled={isLoadingLogin}>
+                    {isLoadingLogin ? "Loading..." : "Continue"}
                 </Button>
 
                 {/* OR Divider */}

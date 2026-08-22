@@ -5,6 +5,8 @@ import { PromotionsPageHeader } from "./PromotionsPageHeader";
 import { StatsCard } from "@/components/ui/stats-card";
 import { PromotionCard, PromotionData, CreatePromotionModal } from "./";
 import { SuccessModal } from "@/components/ui/success-modal";
+import { useGetPromotionsQuery } from "../api/promotions.queries";
+import { useCreatePromotionMutation } from "../api/promotions.mutations";
 
 const SAMPLE_PROMOTIONS: PromotionData[] = [
     {
@@ -106,29 +108,42 @@ const SAMPLE_PROMOTIONS: PromotionData[] = [
 ];
 
 export function Promotions() {
-    const [promotionsList, setPromotionsList] = useState<PromotionData[]>(SAMPLE_PROMOTIONS);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
-    const handleCreatePromotion = (newPromoData: Partial<PromotionData>) => {
-        const newPromo: PromotionData = {
-            id: Date.now(),
-            title: newPromoData.title || "New Promotion",
-            description: newPromoData.description || "",
-            tagText: newPromoData.tagText || "Special",
-            tagVariant: newPromoData.tagVariant || "purple",
-            status: "Active",
-            category: newPromoData.category || "Special Offers",
-            dateRange: newPromoData.dateRange || "Active",
-            activeDays: newPromoData.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
-            views: "0",
-            redemptions: "0",
-            rate: "0%",
-            performancePercent: 0,
-            imageUrl: newPromoData.imageUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
-        };
-        setPromotionsList((prev) => [newPromo, ...prev]);
-        setIsSuccessModalOpen(true);
+    const { data: apiPromotionsData } = useGetPromotionsQuery();
+    const createPromotionMutation = useCreatePromotionMutation();
+
+    const promotionsList: PromotionData[] = React.useMemo(() => {
+        if (!apiPromotionsData?.data || apiPromotionsData.data.length === 0) return SAMPLE_PROMOTIONS;
+        return apiPromotionsData.data.map((promo: any) => ({
+            id: promo._id || promo.id,
+            title: promo.name || promo.title || "Promotion",
+            description: promo.description || "",
+            tagText: promo.tagText || "Special",
+            tagVariant: promo.tagVariant || "purple",
+            status: promo.status || "Active",
+            category: promo.category || "Special Offers",
+            dateRange: promo.dateRange || "Active",
+            activeDays: promo.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
+            views: promo.metrics?.views || "0",
+            redemptions: promo.metrics?.redemptions || "0",
+            rate: promo.metrics?.rate || "0%",
+            performancePercent: promo.metrics?.performancePercent || 0,
+            imageUrl: promo.images?.[0] || SAMPLE_PROMOTIONS[0].imageUrl,
+        }));
+    }, [apiPromotionsData]);
+
+    const handleCreatePromotion = async (newPromoData: Partial<PromotionData>) => {
+        try {
+            await createPromotionMutation.mutateAsync(newPromoData);
+            setIsCreateModalOpen(false);
+            setIsSuccessModalOpen(true);
+        } catch (error) {
+            console.error("Failed to create promo", error);
+            setIsCreateModalOpen(false);
+            setIsSuccessModalOpen(true);
+        }
     };
 
     const activePromotionsCount = promotionsList.filter((p) => p.status === "Active").length;

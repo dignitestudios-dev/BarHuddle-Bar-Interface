@@ -8,8 +8,26 @@ import { EventPerformanceCard } from "@/features/events/components";
 
 import { statsList } from "@/utils/constants";
 import VisitorSentimentsChart from "@/components/charts/VisitorSentimentsChart";
+import { useGetDashboardQuery } from "@/features/analytics/api/analytics.queries";
 
 export function Dashboard() {
+    const { data: dashboardData } = useGetDashboardQuery();
+
+    const stats = React.useMemo(() => {
+        if (!dashboardData?.data) return statsList;
+        // In a real app we map the dashboardData.data to the statsList format
+        // For now, if the API succeeds but returns different schema, we safely fallback to UI statsList or merge them
+        return statsList.map(stat => {
+            if (stat.title === 'Active Promotions' && dashboardData.data.activePromotions !== undefined) {
+                return { ...stat, value: dashboardData.data.activePromotions.toString() };
+            }
+            if (stat.title === 'Total Events' && dashboardData.data.totalEvents !== undefined) {
+                return { ...stat, value: dashboardData.data.totalEvents.toString() };
+            }
+            return stat;
+        });
+    }, [dashboardData]);
+
     return (
         <div className="w-full flex flex-col font-['Manrope',sans-serif]">
             {/* Main Content Area */}
@@ -21,7 +39,7 @@ export function Dashboard() {
 
                 {/* Overview Stats Cards Grid - 4 Columns */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {statsList.map((stat, idx) => (
+                    {stats.map((stat, idx) => (
                         <StatsCard
                             key={idx}
                             title={stat.title}
