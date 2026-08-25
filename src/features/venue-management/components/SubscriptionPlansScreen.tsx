@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/store";
+import { updateUser } from "@/store/slices/auth.slice";
 
 export interface SubscriptionPlansScreenProps {
     onBack?: () => void;
@@ -14,10 +17,21 @@ export function SubscriptionPlansScreen({
     className = "",
 }: SubscriptionPlansScreenProps) {
     const [selectedPlan, setSelectedPlan] = useState<string>("growth");
+    const dispatch = useAppDispatch();
+    const router = useRouter();
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         onSelectPlan?.(selectedPlan);
-        onBack?.();
+        
+        // For now, simulate purchasing a plan by updating the user status to 'subscribed' in Redux
+        // This will trigger the RouteProxy to redirect to /app/dashboard
+        dispatch(updateUser({ status: "subscribed" }));
+        
+        if (onBack) {
+            onBack();
+        } else {
+            router.push("/app/dashboard");
+        }
     };
 
     return (

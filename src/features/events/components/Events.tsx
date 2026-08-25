@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { EventsPageHeader } from "./EventsPageHeader";
 import { EventCard, EventCardData } from "./EventCard";
 import { CreateEventModal } from "./CreateEventModal";
-
+import { useGetEventsQuery } from "../api/events.queries";
+import { useCreateEventMutation } from "../api/events.mutations";
 
 const MOCK_EVENTS: EventCardData[] = [
     {
@@ -86,26 +87,40 @@ export function Events() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<"events" | "boosted">("events");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [eventsList, setEventsList] = useState<EventCardData[]>(MOCK_EVENTS);
+
+    const { data: apiEventsData, isLoading } = useGetEventsQuery();
+    const createEventMutation = useCreateEventMutation();
+
+    // Map API events to EventCardData, fallback to MOCK_EVENTS if empty/loading for UI dev
+    const apiEvents: EventCardData[] = useMemo(() => {
+        if (!apiEventsData?.data || apiEventsData.data.length === 0) return MOCK_EVENTS;
+        return apiEventsData.data.map((evt: any) => ({
+            id: evt._id || evt.id,
+            title: evt.name || evt.title || "Unnamed Event",
+            venueName: evt.venue?.name || "Barcelona Wine Bar",
+            dateTime: evt.date ? new Date(evt.date).toLocaleDateString() : "Fri Jun 27 · 9 PM",
+            imageUrl: evt.images?.[0] || MOCK_EVENTS[0].imageUrl,
+            views: evt.metrics?.views || "0",
+            ratio: evt.metrics?.ratio || "0/0",
+            conversionRate: evt.metrics?.conversionRate || "0%",
+            performancePercent: evt.metrics?.performancePercent || 0,
+            isBoosted: !!evt.isBoosted,
+        }));
+    }, [apiEventsData]);
 
     const displayedEvents = activeTab === "events"
-        ? eventsList
-        : eventsList.filter((evt) => evt.isBoosted);
+        ? apiEvents
+        : apiEvents.filter((evt) => evt.isBoosted);
 
-    const handleCreateEvent = (newEventData: any) => {
-        const newEvt: EventCardData = {
-            id: Date.now(),
-            title: newEventData.eventName || "New Event",
-            venueName: "Barcelona Wine Bar",
-            dateTime: `${newEventData.date || "Fri Jun 27"} · ${newEventData.startTime || "9 PM"}`,
-            imageUrl: newEventData.images?.[0] || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
-            views: "1.0K",
-            ratio: "50/50",
-            conversionRate: "12.0%",
-            performancePercent: 25,
-            isBoosted: activeTab === "boosted",
-        };
-        setEventsList((prev) => [newEvt, ...prev]);
+    const handleCreateEvent = async (newEventData: any) => {
+        try {
+            await createEventMutation.mutateAsync(newEventData);
+            setIsCreateModalOpen(false);
+        } catch (error) {
+            console.error("Failed to create event", error);
+            // Fallback for local testing if API fails
+            setIsCreateModalOpen(false);
+        }
     };
 
     return (

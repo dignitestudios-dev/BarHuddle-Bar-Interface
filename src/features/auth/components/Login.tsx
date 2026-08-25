@@ -5,19 +5,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button, InputField } from "@/components/ui";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../hooks/use-auth";
 
 export function Login({ setShowLogin }: { setShowLogin?: (showLogin: boolean) => void }) {
+    const { email, setEmail, password, setPassword, acceptedTerms, setAcceptedTerms, handleLogin, isLoadingLogin } = useAuth();
     const router = useRouter();
 
-    const [email, setEmail] = useState("jamessmith@gmail.com");
-    const [password, setPassword] = useState("");
-    const [acceptedTerms, setAcceptedTerms] = useState(true);
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Login submitted:", { email, password, acceptedTerms });
-        router.push('/auth/register');
-        setShowLogin?.(false);
+        await handleLogin();
     };
 
     return (
@@ -107,8 +103,8 @@ export function Login({ setShowLogin }: { setShowLogin?: (showLogin: boolean) =>
                 </div>
 
                 {/* Continue CTA Button using reusable Button component */}
-                <Button type="submit" variant="gradient">
-                    Continue
+                <Button type="submit" variant="gradient" disabled={isLoadingLogin}>
+                    {isLoadingLogin ? "Loading..." : "Continue"}
                 </Button>
 
                 {/* OR Divider */}

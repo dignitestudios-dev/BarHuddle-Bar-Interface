@@ -62,8 +62,23 @@ const SAMPLE_VENUES: VenueCardData[] = [
     },
 ];
 
+import { useMyVenuesQuery } from "../api/venue.queries";
+
 export function VenueManagement() {
     const router = useRouter();
+    const { data: venues, isLoading, isError } = useMyVenuesQuery();
+
+    const displayVenues = venues && venues.length > 0 
+        ? venues.map((v, i) => ({
+            id: v.id,
+            title: v.name,
+            category: "Venue", // fallback if no category in schema
+            address: v.location || "Unknown Location",
+            capacity: "~ 50", // fallback
+            imageUrl: "/images/venue-barcelona.png",
+            demographics: { male: 50, female: 50, nonBinary: 0 },
+        })) 
+        : SAMPLE_VENUES; // fallback to sample if no data yet
 
     return (
         <div className="w-full flex flex-col font-['Manrope',sans-serif]">
@@ -73,13 +88,19 @@ export function VenueManagement() {
 
                 {/* Venues Grid - 3 Columns */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full ">
-                    {SAMPLE_VENUES.map((venue, idx) => (
-                        <VenueCard
-                            key={`${venue.id}-${idx}`}
-                            venue={venue}
-                            onViewDetails={(v) => router.push(`/app/venue-management/${v.id}`)}
-                        />
-                    ))}
+                    {isLoading ? (
+                        <div className="text-white">Loading venues...</div>
+                    ) : isError ? (
+                        <div className="text-red-400">Failed to load venues.</div>
+                    ) : (
+                        displayVenues.map((venue, idx) => (
+                            <VenueCard
+                                key={`${venue.id}-${idx}`}
+                                venue={venue as any}
+                                onViewDetails={(v) => router.push(`/app/venue-management/${v.id}`)}
+                            />
+                        ))
+                    )}
                 </div>
             </main>
         </div>
