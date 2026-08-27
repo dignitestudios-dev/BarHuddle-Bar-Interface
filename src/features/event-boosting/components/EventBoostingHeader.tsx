@@ -9,15 +9,15 @@ import { useGetBoostsQuery } from "../api/boost.queries";
 export function EventBoostingHeader() {
     const { data: apiBoostsData } = useGetBoostsQuery();
 
-    const avgReach = apiBoostsData?.avgBoostedReach 
-        ? `${(apiBoostsData.avgBoostedReach / 1000).toFixed(0)}K+` 
-        : "55K+";
-    const attendLift = apiBoostsData?.attendRateLift 
-        ? `${apiBoostsData.attendRateLift}%` 
-        : "87%";
-    const roi = apiBoostsData?.roiVsOrganic 
-        ? `${apiBoostsData.roiVsOrganic}×` 
-        : "3.2×";
+    const avgReach = apiBoostsData?.avgBoostedReach !== undefined && apiBoostsData?.avgBoostedReach !== null
+        ? (apiBoostsData.avgBoostedReach >= 1000 ? `${(apiBoostsData.avgBoostedReach / 1000).toFixed(0)}K+` : `${apiBoostsData.avgBoostedReach}`)
+        : "0";
+    const attendLift = apiBoostsData?.attendRateLift !== undefined && apiBoostsData?.attendRateLift !== null
+        ? `${apiBoostsData.attendRateLift}%`
+        : "0%";
+    const roi = apiBoostsData?.roiVsOrganic !== undefined && apiBoostsData?.roiVsOrganic !== null
+        ? `${apiBoostsData.roiVsOrganic}×`
+        : "0×";
 
     return (
         <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">

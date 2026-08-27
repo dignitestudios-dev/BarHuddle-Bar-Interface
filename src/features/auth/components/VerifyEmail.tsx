@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, OtpInput, SuccessModal } from "@/components/ui";
+import { Button, OtpInput } from "@/components/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../hooks/use-auth";
+import { useResendOtpMutation } from "../api/auth.mutations";
 import { toast } from "sonner";
 
 export interface VerifyEmailProps {
     email?: string;
     initialTimerSeconds?: number;
-    mode?: "register" | "reset-password";
+    mode?: "register" | "reset-password" | "login" | "signup" | "reset";
     onVerify?: (code: string) => void;
     onResend?: () => void;
     redirectTo?: string;
@@ -28,27 +29,19 @@ export function VerifyEmail({
 
     // Determine email & mode from props or query params
     const queryEmail = searchParams?.get("email");
-    const queryMode = searchParams?.get("mode") as "register" | "reset-password" | null;
+    const queryMode = searchParams?.get("mode") as "register" | "reset-password" | "login" | "signup" | "reset" | null;
 
     const email = propEmail || queryEmail || "jamessmith@gmail.com";
     const mode = propMode || queryMode || "register";
 
-    const isResetPassword = mode === "reset-password";
-
-    // Target redirection URL
-    const targetRedirect =
-        redirectTo || (isResetPassword ? "/auth/create-new-password" : "/app/dashboard");
-
-    const modalButtonText = isResetPassword
-        ? "Continue to Reset Password"
-        : "Go to App";
+    const isResetPassword = mode === "reset-password" || mode === "reset";
 
     const [otpCode, setOtpCode] = useState("");
     const [timer, setTimer] = useState(initialTimerSeconds);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    const { handleVerifyOtp, isLoadingVerify } = useAuth();
+    const { handleVerifyOtp } = useAuth();
+    const resendOtpMutation = useResendOtpMutation();
     
     // Resend countdown timer
     useEffect(() => {
@@ -65,11 +58,18 @@ export function VerifyEmail({
         return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
     };
 
-    const handleResend = () => {
-        if (timer > 0) return;
-        setTimer(initialTimerSeconds);
-        setOtpCode("");
-        onResend?.();
+    const handleResend = async () => {
+        if (timer > 0 || resendOtpMutation.isPending) return;
+        try {
+            await resendOtpMutation.mutateAsync(email);
+            setTimer(initialTimerSeconds);
+            setOtpCode("");
+            onResend?.();
+            toast.success("Verification code resent to your email!");
+        } catch (error: any) {
+            console.error("Resend OTP error:", error);
+            toast.error(error?.response?.data?.message || error.message || "Failed to resend code");
+        }
     };
 
     const handleVerificationSubmit = async (codeToVerify: string = otpCode) => {
@@ -77,9 +77,8 @@ export function VerifyEmail({
         setIsSubmitting(true);
         
         try {
-            await handleVerifyOtp(codeToVerify, mode, email);
+            await handleVerifyOtp(codeToVerify, isResetPassword ? "reset-password" : "login", email);
             setIsSubmitting(false);
-            // Redirection is handled inside handleVerifyOtp
         } catch (error: any) {
             setIsSubmitting(false);
             toast.error(error.message || "Failed to verify OTP");
@@ -93,13 +92,13 @@ export function VerifyEmail({
     };
 
     return (
-        <div className="flex flex-col items-center justify-center w-full max-w-[496px] mx-auto py-8">
+        <div className="flex flex-col items-center justify-center w-full max-w-[496px] mx-auto py-8 font-['Manrope',sans-serif]">
             {/* Header Section */}
             <div className="flex flex-col items-center gap-2 mb-8 text-center max-w-[496px]">
-                <h1 className="font-['Manrope',sans-serif] font-semibold text-[36px] leading-[49px] text-white tracking-tight">
+                <h1 className="font-semibold text-[32px] sm:text-[36px] leading-[44px] sm:leading-[49px] text-white tracking-tight">
                     Verification
                 </h1>
-                <p className="font-['Manrope',sans-serif] font-normal text-[16px] leading-[22px] text-white/80">
+                <p className="font-normal text-[15px] sm:text-[16px] leading-[22px] text-white/80">
                     Enter the code sent to{" "}
                     <span className="text-[#FDF88F] font-medium">{email}</span>
                 </p>
@@ -113,7 +112,6 @@ export function VerifyEmail({
                     value={otpCode}
                     onChange={setOtpCode}
                     onComplete={(code) => {
-                        console.log("OTP Complete:", code);
                         handleVerificationSubmit(code);
                     }}
                     className="gap-3"
@@ -121,7 +119,7 @@ export function VerifyEmail({
 
                 {/* Timer / Resend Link */}
                 <div className="text-center">
-                    <p className="font-['Manrope',sans-serif] font-normal text-[16px] leading-[22px] text-white">
+                    <p className="font-normal text-[15px] sm:text-[16px] leading-[22px] text-white">
                         Didn’t receive code?{" "}
                         {timer > 0 ? (
                             <span className="font-medium text-[#FDF88F]">
@@ -131,9 +129,10 @@ export function VerifyEmail({
                             <button
                                 type="button"
                                 onClick={handleResend}
-                                className="text-[#FDF88F] font-semibold hover:underline cursor-pointer transition-all focus:outline-none"
+                                disabled={resendOtpMutation.isPending}
+                                className="text-[#FDF88F] font-semibold hover:underline cursor-pointer transition-all focus:outline-none disabled:opacity-50"
                             >
-                                Resend
+                                {resendOtpMutation.isPending ? "Resending..." : "Resend"}
                             </button>
                         )}
                     </p>
@@ -145,7 +144,7 @@ export function VerifyEmail({
                         type="submit"
                         variant="gradient"
                         disabled={otpCode.length < 4 || isSubmitting}
-                        className="w-full h-[52px] font-['Manrope',sans-serif] font-bold text-[16px] leading-[22px]"
+                        className="w-full h-[52px] rounded-full font-bold text-[15px] sm:text-[16px] leading-[22px] cursor-pointer"
                     >
                         {isSubmitting ? "Verifying..." : "Verify"}
                     </Button>

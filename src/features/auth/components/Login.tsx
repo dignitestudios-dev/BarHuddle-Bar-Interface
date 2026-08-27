@@ -217,7 +217,7 @@ export function Login() {
                             {isExistingUser && (
                                 <button
                                     type="button"
-                                    onClick={() => router.push('/auth/forgot-password')}
+                                    onClick={() => router.push(`/auth/forgot-password${emailValue ? `?email=${encodeURIComponent(emailValue)}` : ""}`)}
                                     className="font-medium text-[13px] leading-[18px] text-[#B972FC] hover:underline transition-colors focus:outline-none cursor-pointer"
                                 >
                                     Forgot Password?

@@ -23,6 +23,10 @@ export const promotionService = {
     const response = await axiosInstance.get(`/venue-owner/promotions/${id}`);
     return response.data;
   },
+  getPromotionAnalytics: async () => {
+    const response = await axiosInstance.get("/venue-owner/analytics/promotions");
+    return response.data;
+  },
   updatePromotion: async (id: string, data: any) => {
     const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
     const response = await axiosInstance.put(`/venue-owner/promotions/${id}`, data, {

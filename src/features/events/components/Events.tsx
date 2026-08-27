@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useGetEventsQuery, useGetBoostedEventsQuery } from "../api/events.queries";
 import { useCreateEventMutation, useUpdateEventMutation, useDeleteEventMutation } from "../api/events.mutations";
 import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
+import { useAppSelector } from "@/store";
 import { toast } from "sonner";
 
 const DEFAULT_EVENT_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
@@ -21,6 +22,7 @@ export function Events() {
     const [editingEvent, setEditingEvent] = useState<any | null>(null);
     const [deletingEvent, setDeletingEvent] = useState<{ id: string; title: string } | null>(null);
 
+    const user = useAppSelector((state) => state.auth.user);
     const { data: apiEventsData, isLoading: isLoadingEvents } = useGetEventsQuery();
     const { data: apiBoostedData, isLoading: isLoadingBoosted } = useGetBoostedEventsQuery(1, 20);
     const { data: ownerVenuesData } = useGetOwnerVenuesQuery();
@@ -28,12 +30,14 @@ export function Events() {
     const primaryVenueId = useMemo(() => {
         const rawVenues = Array.isArray((ownerVenuesData as any)?.data)
             ? (ownerVenuesData as any).data
-            : Array.isArray(ownerVenuesData)
-                ? ownerVenuesData
-                : [];
+            : Array.isArray((ownerVenuesData as any)?.venues)
+                ? (ownerVenuesData as any).venues
+                : Array.isArray(ownerVenuesData)
+                    ? ownerVenuesData
+                    : [];
         const first = rawVenues[0];
-        return first?.venue?._id || first?.venue?.id || first?._id || first?.id || "";
-    }, [ownerVenuesData]);
+        return first?.venue?._id || first?.venue?.id || first?._id || first?.id || (user as any)?.venueId || (user as any)?.claimedVenueId || "";
+    }, [ownerVenuesData, user]);
 
     const createEventMutation = useCreateEventMutation();
     const updateEventMutation = useUpdateEventMutation();
@@ -57,6 +61,18 @@ export function Events() {
         const mappedList: EventCardData[] = rawEvents.map((evt: any) => {
             const id = String(evt._id || evt.id);
             map.set(id, evt);
+
+            const ratioVal = String(evt.maleToFemaleRatio || evt.gender?.ratio || evt.metrics?.ratio || evt.ratio || "0:0");
+            const rateVal = String(
+                evt.retentionRate !== undefined
+                    ? `${evt.retentionRate}%`
+                    : evt.retention?.retentionRate !== undefined
+                    ? `${evt.retention.retentionRate}%`
+                    : evt.conversionRate || evt.metrics?.conversionRate || "0%"
+            );
+            const performanceVal = Number(evt.organicPerformance ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
+            const viewsVal = String(evt.views ?? evt.viewCount ?? evt.metrics?.views ?? "0");
+
             return {
                 id,
                 title: evt.name || evt.title || "Unnamed Event",
@@ -65,10 +81,10 @@ export function Events() {
                     ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                     : "TBD",
                 imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || DEFAULT_EVENT_IMAGE,
-                views: String(evt.metrics?.views || evt.views || "0"),
-                ratio: String(evt.metrics?.ratio || evt.ratio || "0/0"),
-                conversionRate: String(evt.metrics?.conversionRate || evt.conversionRate || "0%"),
-                performancePercent: Number(evt.metrics?.performancePercent || evt.performancePercent || 0),
+                views: viewsVal,
+                ratio: ratioVal,
+                conversionRate: rateVal,
+                performancePercent: performanceVal,
                 isBoosted: Boolean(evt.isBoosted === true || (evt.activeBoosts && evt.activeBoosts > 0) || evt.boostStatus === "active"),
             };
         });
@@ -95,6 +111,18 @@ export function Events() {
                 const evt = item.event || item.eventId || item;
                 const isItemBoosted = item.isBoosted === true || evt.isBoosted === true || item.status === "active" || (evt.activeBoosts && evt.activeBoosts > 0);
                 if (!isItemBoosted && item.status !== undefined && item.status !== "active") return null;
+
+                const ratioVal = String(evt.maleToFemaleRatio || evt.gender?.ratio || item.ratio || evt.metrics?.ratio || evt.ratio || "0:0");
+                const rateVal = String(
+                    evt.retentionRate !== undefined
+                        ? `${evt.retentionRate}%`
+                        : evt.retention?.retentionRate !== undefined
+                        ? `${evt.retention.retentionRate}%`
+                        : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
+                );
+                const performanceVal = Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
+                const viewsVal = String(evt.views ?? evt.viewCount ?? item.views ?? evt.metrics?.views ?? "0");
+
                 return {
                     id: String(evt._id || evt.id || item._id || item.id),
                     title: evt.name || evt.title || item.title || "Boosted Event",
@@ -103,10 +131,10 @@ export function Events() {
                         ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                         : "TBD",
                     imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || item.banner || DEFAULT_EVENT_IMAGE,
-                    views: String(evt.metrics?.views || item.views || evt.views || "0"),
-                    ratio: String(evt.metrics?.ratio || item.ratio || evt.ratio || "0/0"),
-                    conversionRate: String(evt.metrics?.conversionRate || item.conversionRate || evt.conversionRate || "0%"),
-                    performancePercent: Number(evt.metrics?.performancePercent || item.performancePercent || evt.performancePercent || 0),
+                    views: viewsVal,
+                    ratio: ratioVal,
+                    conversionRate: rateVal,
+                    performancePercent: performanceVal,
                     isBoosted: true,
                 };
             })
@@ -133,6 +161,7 @@ export function Events() {
 
     const handleCreateEvent = async (newEventData: any) => {
         try {
+            const venueId = newEventData.venueId || primaryVenueId;
             const formattedDate = newEventData.date instanceof Date 
                 ? newEventData.date.toLocaleDateString('en-CA') 
                 : newEventData.date;
@@ -147,6 +176,9 @@ export function Events() {
             const endAt = endDate.toISOString();
 
             const formData = new FormData();
+            if (venueId) {
+                formData.append("venueId", venueId);
+            }
             formData.append("title", newEventData.title);
             formData.append("description", newEventData.description);
             formData.append("startAt", startAt);
@@ -186,6 +218,7 @@ export function Events() {
             const endAt = endDate.toISOString();
 
             const formData = new FormData();
+            // Explicitly DO NOT append venueId on edit
             formData.append("title", updatedEventData.title);
             formData.append("description", updatedEventData.description);
             formData.append("startAt", startAt);
@@ -282,6 +315,8 @@ export function Events() {
             {/* Create Event Modal */}
             <CreateEventModal
                 isOpen={isCreateModalOpen}
+                venueId={primaryVenueId}
+                isLoading={createEventMutation.isPending}
                 onClose={() => setIsCreateModalOpen(false)}
                 onCreate={handleCreateEvent}
             />
@@ -290,6 +325,7 @@ export function Events() {
             <CreateEventModal
                 isOpen={Boolean(editingEvent)}
                 eventToEdit={editingEvent}
+                isLoading={updateEventMutation.isPending}
                 onClose={() => setEditingEvent(null)}
                 onUpdate={handleUpdateEvent}
             />

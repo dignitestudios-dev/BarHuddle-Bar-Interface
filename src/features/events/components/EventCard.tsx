@@ -193,13 +193,13 @@ export function EventCard({
                         </span>
                     </div>
 
-                    {/* Stat 2: Redemptions */}
+                    {/* Stat 2: M/F Ratio */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[24px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#4ADE80]">
                             {event.ratio}
                         </span>
                         <span className="font-semibold text-[9px] leading-[14px] text-[#8B7EC8]">
-                            Redemptions
+                            M/F Ratio
                         </span>
                     </div>
 

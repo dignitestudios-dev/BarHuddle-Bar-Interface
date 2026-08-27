@@ -21,11 +21,14 @@ export interface EventPerformanceCardProps {
 
 function EventPerformanceRow({ event }: { event: any }) {
     const eventId = String(event._id || event.id || "");
+    const hasDirectData = event.attendees !== undefined || event.engagement !== undefined;
     const { data: perfResponse, isLoading: isPerfLoading } = useGetEventPerformanceQuery(eventId);
 
     const perf = perfResponse?.data || perfResponse || {};
-    const attendees = perf.attendees ?? perf.uniqueVisitors ?? perf.totalAttendees ?? event.views ?? event.attendees ?? 0;
-    const engagement = Math.min(100, Math.max(0, perf.engagement ?? perf.performancePercent ?? perf.engagementRate ?? (perf.rate ? parseFloat(perf.rate) : 0)));
+    const attendees = event.attendees ?? perf.attendees ?? perf.uniqueVisitors ?? perf.totalAttendees ?? event.views ?? 0;
+    const rawEngagement = event.engagement ?? perf.engagement ?? perf.performancePercent ?? perf.engagementRate ?? (perf.rate ? parseFloat(perf.rate) : 0);
+    const engagement = Math.min(100, Math.max(0, Number(rawEngagement) || 0));
+    const showLoading = isPerfLoading && !hasDirectData;
 
     const title = event.title || event.name || "Event";
     const dateStr = event.startAt || event.date
@@ -76,7 +79,7 @@ function EventPerformanceRow({ event }: { event: any }) {
                 <div className="flex items-end justify-between gap-4 mt-2">
                     {/* Attendees Count */}
                     <div className="flex flex-col">
-                        {isPerfLoading ? (
+                        {showLoading ? (
                             <Skeleton className="h-5 w-12 rounded bg-purple-900/40" />
                         ) : (
                             <span className="font-extrabold text-[16px] leading-[20px] text-white">
@@ -92,7 +95,7 @@ function EventPerformanceRow({ event }: { event: any }) {
                     <div className="flex-1 flex flex-col gap-1 max-w-[260px]">
                         <div className="flex items-center justify-between text-[11px]">
                             <span className="font-normal text-[#E8C7FF]">Engagement</span>
-                            {isPerfLoading ? (
+                            {showLoading ? (
                                 <Skeleton className="h-3 w-8 rounded bg-purple-900/40" />
                             ) : (
                                 <span className="font-bold text-[#FDF88F]">{Math.round(engagement)}%</span>

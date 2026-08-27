@@ -13,10 +13,20 @@ import { CalendarIcon } from "lucide-react";
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
+const getTodayStart = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+};
+
 const createEventSchema = z.object({
     title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
     date: z.date({
         message: "Date is required",
+    }).refine((date) => {
+        return date >= getTodayStart();
+    }, {
+        message: "Event date must be today or in the future",
     }),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
@@ -41,9 +51,11 @@ export type CreateEventFormValues = z.infer<typeof createEventSchema>;
 export interface CreateEventModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreate?: (eventData: CreateEventFormValues) => void;
-    onUpdate?: (id: string, eventData: CreateEventFormValues) => void;
+    onCreate?: (eventData: any) => void;
+    onUpdate?: (id: string, eventData: any) => void;
     eventToEdit?: any | null;
+    venueId?: string;
+    isLoading?: boolean;
 }
 
 export function CreateEventModal({
@@ -52,6 +64,8 @@ export function CreateEventModal({
     onCreate,
     onUpdate,
     eventToEdit,
+    venueId,
+    isLoading = false,
 }: CreateEventModalProps) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -164,10 +178,16 @@ export function CreateEventModal({
 
     const onSubmit = (data: CreateEventFormValues) => {
         if (eventToEdit) {
+            // Edit mode: DO NOT send venueId
             const eventId = String(eventToEdit._id || eventToEdit.id);
             onUpdate?.(eventId, data);
         } else {
-            onCreate?.(data);
+            // Create mode: attach venueId if present
+            const createData: any = { ...data };
+            if (venueId) {
+                createData.venueId = venueId;
+            }
+            onCreate?.(createData);
         }
         reset();
     };
@@ -310,6 +330,7 @@ export function CreateEventModal({
                                         <Calendar
                                             mode="single"
                                             selected={field.value}
+                                            disabled={(date) => date < getTodayStart()}
                                             onSelect={(date) => {
                                                 field.onChange(date);
                                                 setIsCalendarOpen(false);
@@ -383,9 +404,22 @@ export function CreateEventModal({
                     {/* Create / Update CTA Button */}
                     <button
                         type="submit"
-                        className="w-full h-[48px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-semibold text-[16px] leading-[22px] text-white capitalize hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2"
+                        disabled={isLoading}
+                        className="w-full h-[48px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-semibold text-[16px] leading-[22px] text-white capitalize hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
                     >
-                        {isEditMode ? "Update Event" : "Create Now"}
+                        {isLoading ? (
+                            <div className="flex items-center gap-2">
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                                <span>{isEditMode ? "Updating..." : "Creating Event..."}</span>
+                            </div>
+                        ) : isEditMode ? (
+                            "Update Event"
+                        ) : (
+                            "Create Now"
+                        )}
                     </button>
                 </form>
             </div>

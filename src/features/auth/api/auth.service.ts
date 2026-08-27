@@ -10,6 +10,13 @@ export interface LoginPayload {
 export interface VerifyOtpPayload {
   email: string;
   otp: string;
+  type?: string;
+  mode?: "reset" | "login" | "register" | "signup";
+}
+
+export interface ResetPasswordPayload {
+  resetToken: string;
+  password: string;
 }
 
 export interface AuthResponse {
@@ -18,6 +25,7 @@ export interface AuthResponse {
   data: {
     token: string;
     user: User;
+    resetToken?: string;
   };
 }
 
@@ -45,6 +53,11 @@ export async function checkEmail(email: string): Promise<CheckEmailResponse> {
   return data;
 }
 
+export async function forgotPassword(email: string): Promise<any> {
+  const { data } = await axiosInstance.post("/auth/forgot", { email });
+  return data;
+}
+
 export async function login(payload: LoginPayload): Promise<AuthLoginResponse> {
   const { data } = await axiosInstance.post<AuthLoginResponse>("/auth", {
     ...payload,
@@ -55,7 +68,25 @@ export async function login(payload: LoginPayload): Promise<AuthLoginResponse> {
 }
 
 export async function verifyOtp(payload: VerifyOtpPayload): Promise<AuthResponse> {
-  const { data } = await axiosInstance.post<AuthResponse>("/auth/verify-otp", payload);
+  const { data } = await axiosInstance.post<AuthResponse>("/auth/verify-otp", {
+    email: payload.email,
+    otp: payload.otp,
+    type: payload.type || "email",
+    ...(payload.mode ? { mode: payload.mode } : {}),
+  });
+  return data;
+}
+
+export async function resendOtp(email: string): Promise<any> {
+  const { data } = await axiosInstance.post("/auth/resend-otp", {
+    email,
+    // type: "email" 
+  });
+  return data;
+}
+
+export async function resetPassword(payload: ResetPasswordPayload): Promise<any> {
+  const { data } = await axiosInstance.post("/auth/update-password", payload);
   return data;
 }
 
@@ -67,6 +98,7 @@ export async function updateProfile(formData: FormData): Promise<any> {
   });
   return data;
 }
+
 export async function getMe(): Promise<any> {
   const { data } = await axiosInstance.get("/users");
   return data;
@@ -88,4 +120,9 @@ export async function updatePassword(payload: UpdatePasswordPayload): Promise<an
     }
     throw error;
   }
+}
+
+export async function deleteVenueOwnerAccount(): Promise<any> {
+  const { data } = await axiosInstance.delete("/venue-owner/account");
+  return data;
 }

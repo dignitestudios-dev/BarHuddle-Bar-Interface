@@ -20,9 +20,7 @@ export function useAuth() {
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
     try {
-      // Assuming password is used in a real endpoint, but doc says only email is needed for /auth. We send both.
       await loginMutation.mutateAsync({ email });
-      // Redirect to OTP verification
       router.push(`/auth/verify-email?email=${encodeURIComponent(email)}&mode=login`);
     } catch (error) {
       console.error("Login error", error);
@@ -33,26 +31,42 @@ export function useAuth() {
     e?.preventDefault();
     try {
       await loginMutation.mutateAsync({ email });
-      // Redirect to OTP verification
       router.push(`/auth/verify-email?email=${encodeURIComponent(email)}&mode=register`);
     } catch (error) {
       console.error("Signup error", error);
     }
   };
 
-  const handleVerifyOtp = async (codeToVerify: string, mode: "login" | "register" | "reset-password", targetEmail: string) => {
+  const handleVerifyOtp = async (
+    codeToVerify: string, 
+    mode: "login" | "register" | "reset" | "reset-password", 
+    targetEmail: string
+  ) => {
     try {
-      const response = await verifyOtpMutation.mutateAsync({ email: targetEmail, otp: codeToVerify });
-      dispatch(setAuth({ 
-        token: response.data.token, 
-        user: response.data.user || user 
-      }));
+      const isReset = mode === "reset" || mode === "reset-password";
+      const response = await verifyOtpMutation.mutateAsync({ 
+        email: targetEmail, 
+        otp: codeToVerify,
+        type: "email",
+        mode: isReset ? "reset" : undefined
+      });
 
-      if (mode === "reset-password") {
-        router.push("/auth/create-new-password");
+      if (isReset) {
+        const resetToken = response?.data?.resetToken || (response as any)?.resetToken;
+        if (resetToken && typeof window !== "undefined") {
+          sessionStorage.setItem("reset-token", resetToken);
+        }
+        router.push(`/auth/create-new-password?token=${encodeURIComponent(resetToken || "")}&email=${encodeURIComponent(targetEmail)}`);
         return;
       }
-      console.log(response, "here////////////////////")
+
+      if (response?.data?.token) {
+        dispatch(setAuth({ 
+          token: response.data.token, 
+          user: response.data.user || user 
+        }));
+      }
+
       if (!response?.data?.user?.isProfileCompleted) {
         router.push("/auth/profile-setup");
       } else {

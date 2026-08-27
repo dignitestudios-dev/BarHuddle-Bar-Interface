@@ -25,89 +25,60 @@ export function EventBoosting() {
     const createBoostMutation = useCreateBoostMutation();
 
     const eventsList: EventCardData[] = React.useMemo(() => {
-        const rawEvents = Array.isArray(apiEventsData?.data)
+        const rawBoostsList = Array.isArray(apiBoostsData?.data)
+            ? apiBoostsData.data
+            : Array.isArray(apiBoostsData)
+                ? apiBoostsData
+                : [];
+
+        const rawEventsList = Array.isArray(apiEventsData?.data)
             ? apiEventsData.data
             : Array.isArray(apiEventsData?.data?.events)
                 ? apiEventsData.data.events
-                : Array.isArray(apiEventsData?.events)
-                    ? apiEventsData.events
-                    : Array.isArray(apiEventsData)
-                        ? apiEventsData
-                        : [];
+                : Array.isArray(apiEventsData)
+                    ? apiEventsData
+                    : [];
 
-        const rawBoosts = Array.isArray(apiBoostsData?.data)
-            ? apiBoostsData.data
-            : Array.isArray(apiBoostsData?.data?.boosts)
-                ? apiBoostsData.data.boosts
-                : Array.isArray(apiBoostsData?.boosts)
-                    ? apiBoostsData.boosts
-                    : Array.isArray(apiBoostsData)
-                        ? apiBoostsData
-                        : [];
+        const listToUse = rawBoostsList.length > 0 ? rawBoostsList : rawEventsList;
 
-        // Set of active boosted event IDs from API
-        const activeBoostedEventIds = new Set<string>();
-        rawBoosts.forEach((boost: any) => {
-            const bEventId = boost.eventId?._id || boost.eventId || boost.event?._id || boost.event || boost._id || boost.id;
-            if (boost.status === 'active' || boost.isBoosted || boost.boostDetails?.status === 'active') {
-                activeBoostedEventIds.add(String(bEventId));
-            }
-        });
-
-        // Combined map
-        const eventsMap = new Map<string | number, EventCardData>();
-
-        rawEvents.forEach((evt: any) => {
+        return listToUse.map((evt: any) => {
             const eventId = String(evt._id || evt.id);
             const isBoosted = Boolean(
                 evt.isBoosted === true ||
                 (evt.activeBoosts && evt.activeBoosts > 0) ||
+                evt.boostDetails?.status === "active" ||
                 evt.boostStatus === "active" ||
-                activeBoostedEventIds.has(eventId) ||
                 locallyBoostedIds.has(eventId)
             );
 
-            eventsMap.set(eventId, {
+            const ratioVal = String(evt.maleToFemaleRatio || evt.gender?.ratio || evt.metrics?.ratio || evt.ratio || "0:0");
+            const rateVal = String(
+                evt.retentionRate !== undefined
+                    ? `${evt.retentionRate}%`
+                    : evt.retention?.retentionRate !== undefined
+                    ? `${evt.retention.retentionRate}%`
+                    : evt.conversionRate || evt.metrics?.conversionRate || "0%"
+            );
+            const performanceVal = Number(evt.organicPerformance ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
+            const viewsVal = String(evt.views ?? evt.viewCount ?? evt.metrics?.views ?? "0");
+
+            const formattedDateTime = evt.startAt
+                ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                : "TBD";
+
+            return {
                 id: eventId,
-                title: evt.name || evt.title || "Unnamed Event",
+                title: evt.title || evt.name || "Unnamed Event",
                 venueName: evt.venue?.name || evt.venueName || "Venue",
-                dateTime: evt.startAt 
-                    ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                    : "TBD",
-                imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || DEFAULT_EVENT_IMAGE,
-                views: String(evt.metrics?.views || evt.views || "0"),
-                ratio: String(evt.metrics?.ratio || evt.ratio || "0"),
-                conversionRate: String(evt.metrics?.conversionRate || evt.conversionRate || "0%"),
-                performancePercent: Number(evt.metrics?.performancePercent || evt.performancePercent || 0),
+                dateTime: formattedDateTime,
+                imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || evt.venue?.coverImage || DEFAULT_EVENT_IMAGE,
+                views: viewsVal,
+                ratio: ratioVal,
+                conversionRate: rateVal,
+                performancePercent: performanceVal,
                 isBoosted,
-            });
+            };
         });
-
-        // Also add any boosts with embedded event details if not in eventsMap
-        rawBoosts.forEach((boost: any) => {
-            const evt = boost.eventId || boost.event;
-            if (evt && typeof evt === 'object') {
-                const eventId = String(evt._id || evt.id || boost._id || boost.id);
-                if (!eventsMap.has(eventId)) {
-                    eventsMap.set(eventId, {
-                        id: eventId,
-                        title: evt.name || evt.title || boost.title || "Unnamed Event",
-                        venueName: evt.venue?.name || evt.venueName || "Venue",
-                        dateTime: evt.startAt 
-                            ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                            : "TBD",
-                        imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || DEFAULT_EVENT_IMAGE,
-                        views: String(evt.metrics?.views || boost.views || evt.views || "0"),
-                        ratio: String(evt.metrics?.ratio || boost.ratio || evt.ratio || "0"),
-                        conversionRate: String(evt.metrics?.conversionRate || boost.conversionRate || evt.conversionRate || "0%"),
-                        performancePercent: Number(evt.metrics?.performancePercent || boost.performancePercent || evt.performancePercent || 0),
-                        isBoosted: boost.status === 'active' || boost.isBoosted || Boolean(evt.isBoosted) || locallyBoostedIds.has(eventId),
-                    });
-                }
-            }
-        });
-
-        return Array.from(eventsMap.values());
     }, [apiBoostsData, apiEventsData, locallyBoostedIds]);
 
     const isLoading = isLoadingBoosts || isLoadingEvents;

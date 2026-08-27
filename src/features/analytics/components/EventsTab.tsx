@@ -3,10 +3,12 @@
 import React from "react";
 import { EventAnalyticsCard, EventTagConfig } from "./EventAnalyticsCard";
 import { EventAttendanceTrendChart } from "@/components/charts/EventAttendanceTrendChart";
-import { TopPerformingEventsCard } from "@/components/charts/TopPerformingEventsCard";
+import { TopPerformingEventsCard, RankedEventItem } from "@/components/charts/TopPerformingEventsCard";
 import TrafficByTimeChart from "@/components/charts/TrafficByTimeChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetEventsAnalyticsQuery } from "../api/analytics.queries";
+
+const DEFAULT_EVENT_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
 
 export interface EventItemData {
     id: string;
@@ -22,27 +24,95 @@ export function EventsTab() {
     const { data: eventsAnalytics, isLoading } = useGetEventsAnalyticsQuery();
     const data = eventsAnalytics?.data;
 
+    // Map top performance cards
     const eventsList: EventItemData[] = React.useMemo(() => {
         if (!data?.eventPerformance || !Array.isArray(data.eventPerformance) || data.eventPerformance.length === 0) {
             return [];
         }
+        return data.eventPerformance.map((item: any, idx: number) => {
+            const rawDate = item.date || item.startAt;
+            const isUpcoming = rawDate ? new Date(rawDate) > new Date() : false;
+            
+            let tagConfig: EventTagConfig = { label: "Top", icon: "⭐", variant: "top" };
+            if (isUpcoming) {
+                tagConfig = { label: "Upcoming", variant: "upcoming" };
+            } else if (item.engagement >= 50) {
+                tagConfig = { label: "Top", icon: "⭐", variant: "top" };
+            } else if (item.attendees > 0) {
+                tagConfig = { label: "Growing", variant: "growing" };
+            }
+
+            return {
+                id: item._id || item.id || `evt-${idx}`,
+                title: item.title || "Event",
+                date: rawDate
+                    ? new Date(rawDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    : "TBD",
+                image: item.banner || item.image || DEFAULT_EVENT_IMAGE,
+                tag: tagConfig,
+                attendees: item.attendees ?? 0,
+                engagement: item.engagement ?? 0,
+            };
+        });
+    }, [data]);
+
+    // Map ranked events for the right sidebar card
+    const rankedList: RankedEventItem[] = React.useMemo(() => {
+        if (!data?.eventPerformance || !Array.isArray(data.eventPerformance) || data.eventPerformance.length === 0) {
+            return [];
+        }
         return data.eventPerformance.map((item: any, idx: number) => ({
-            id: item._id || item.id || `evt-${idx}`,
+            id: item._id || item.id || `rank-${idx}`,
             title: item.title || "Event",
-            date: item.date ? new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "TBD",
-            image: item.image || "/images/event-ladies-night.png",
-            tag: { label: "Top", icon: "⭐", variant: "top" },
-            attendees: item.attendees || 0,
-            engagement: item.engagement || 0,
+            attendees: `${item.attendees ?? 0} attendees`,
+            engagement: item.engagement ?? 0,
+            image: item.banner || item.image || DEFAULT_EVENT_IMAGE,
         }));
     }, [data]);
+
+    // Summary Stat Cards
+    const summaryCards = [
+        {
+            id: "total_events",
+            label: "Total Events",
+            value: String(data?.totalEvents ?? 0),
+            iconColor: "text-[#9F4FFA]",
+            iconBgShadow: "shadow-[0px_0px_12px_rgba(159,79,250,0.2)]",
+        },
+        {
+            id: "upcoming_events",
+            label: "Upcoming Events",
+            value: String(data?.upcomingEvents ?? 0),
+            iconColor: "text-[#22D3EE]",
+            iconBgShadow: "shadow-[0px_0px_12px_rgba(34,211,238,0.2)]",
+        },
+        {
+            id: "past_events",
+            label: "Past Events",
+            value: String(data?.pastEvents ?? 0),
+            iconColor: "text-[#C4B5FD]",
+            iconBgShadow: "shadow-[0px_0px_12px_rgba(196,181,253,0.2)]",
+        },
+        {
+            id: "boosted_events",
+            label: "Boosted Events",
+            value: String(data?.boostedEvents ?? data?.activeBoosts ?? 0),
+            iconColor: "text-[#E8FF57]",
+            iconBgShadow: "shadow-[0px_0px_12px_rgba(232,255,87,0.2)]",
+        },
+    ];
 
     if (isLoading) {
         return (
             <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <div className="max-w-[1200px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="w-full h-[80px] rounded-[24px]" />
+                    ))}
+                </div>
                 <div className="w-full max-w-[1200px] flex gap-4 overflow-x-auto pb-2">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <Skeleton key={i} className="w-[320px] h-[180px] rounded-[24px] shrink-0" />
+                        <Skeleton key={i} className="w-[240px] h-[222px] rounded-[18px] shrink-0" />
                     ))}
                 </div>
                 <div className="max-w-[1200px] w-full flex flex-col lg:flex-row gap-6 items-stretch">
@@ -55,7 +125,39 @@ export function EventsTab() {
 
     return (
         <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
-            {/* Top Cards Section */}
+            {/* Top Stat Cards Row */}
+            <div className="max-w-[1200px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                {summaryCards.map((card) => (
+                    <div
+                        key={card.id}
+                        className="w-full h-[80px] rounded-[24px] bg-gradient-to-br from-[rgba(124,58,237,0.35)] via-[rgba(79,20,150,0.2)] to-[rgba(5,3,58,0.1)] border border-[rgba(124,58,237,0.3)] shadow-[0px_0px_60px_rgba(124,58,237,0.15)] px-4 flex items-center gap-3.5"
+                    >
+                        {/* Icon Box */}
+                        <div className={`w-[48px] h-[48px] rounded-[10px] bg-[rgba(124,58,237,0.082)] border border-[rgba(124,58,237,0.157)] flex items-center justify-center shrink-0 ${card.iconBgShadow}`}>
+                            <svg className={`w-5 h-5 ${card.iconColor}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                            </svg>
+                        </div>
+
+                        {/* Text Container */}
+                        <div className="flex flex-col">
+                            <span className="font-extrabold text-[20px] leading-[22px] text-white">
+                                {card.value}
+                            </span>
+                            <span className="font-normal text-[11px] leading-[16px] text-[#8B7EC8] mt-1">
+                                {card.label}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Event Analytics Cards Carousel Row */}
             <div className="w-full max-w-[1200px]">
                 {eventsList.length === 0 ? (
                     <div className="w-full py-12 flex flex-col items-center justify-center gap-2 border border-dashed border-[rgba(124,58,237,0.2)] rounded-[24px] bg-[#0E093C]/50 text-center">
@@ -79,11 +181,16 @@ export function EventsTab() {
                 )}
             </div>
 
-            {/* Lower Charts Row */}
+            {/* Lower Charts Row: Attendance Trend & Top Performing Events */}
             <div className="max-w-[1200px] w-full flex flex-col lg:flex-row gap-6 items-stretch">
                 <EventAttendanceTrendChart className="flex-1 max-w-full" />
-                <TopPerformingEventsCard className="w-full lg:w-[320px] xl:w-[340px] shrink-0" />
+                <TopPerformingEventsCard
+                    items={rankedList.length > 0 ? rankedList : undefined}
+                    className="w-full lg:w-[320px] xl:w-[340px] shrink-0"
+                />
             </div>
+
+            {/* Traffic By Time Chart */}
             <div className="max-w-[1200px] w-full flex flex-col xl:flex-row gap-6 items-stretch">
                 <TrafficByTimeChart className="flex-1 max-w-full" />
             </div>

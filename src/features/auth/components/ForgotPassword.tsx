@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, InputField } from "@/components/ui";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForgotPasswordMutation } from "../api/auth.mutations";
+import { toast } from "sonner";
 
 interface ForgotPasswordProps {
     onBack?: () => void;
@@ -12,20 +13,34 @@ interface ForgotPasswordProps {
 
 export function ForgotPassword({ onBack, onSendOtp }: ForgotPasswordProps) {
     const router = useRouter();
-    const [email, setEmail] = useState("jamessmith@gmail.com");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const searchParams = useSearchParams();
+    const [email, setEmail] = useState("");
+    const forgotPasswordMutation = useForgotPasswordMutation();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        const emailFromQuery = searchParams?.get("email");
+        if (emailFromQuery) {
+            setEmail(emailFromQuery);
+        }
+    }, [searchParams]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!email) return;
-        setIsSubmitting(true);
-        console.log("Sending OTP code to:", email);
-        onSendOtp?.(email);
-        setTimeout(() => {
-            setIsSubmitting(false);
-            router.push(`/auth/verify-email?email=${encodeURIComponent(email)}&mode=reset-password`);
-        }, 500);
+        const trimmedEmail = email.trim();
+        if (!trimmedEmail) {
+            toast.error("Please enter your email address");
+            return;
+        }
 
+        try {
+            await forgotPasswordMutation.mutateAsync(trimmedEmail);
+            onSendOtp?.(trimmedEmail);
+            toast.success("OTP sent successfully to your email!");
+            router.push(`/auth/verify-email?email=${encodeURIComponent(trimmedEmail)}&mode=reset`);
+        } catch (error: any) {
+            console.error("Forgot password error:", error);
+            toast.error(error?.response?.data?.message || error.message || "Failed to send OTP. Please check your email.");
+        }
     };
 
     const handleBackClick = () => {
@@ -37,7 +52,7 @@ export function ForgotPassword({ onBack, onSendOtp }: ForgotPasswordProps) {
     };
 
     return (
-        <div className="relative flex flex-col items-center justify-center w-full max-w-[496px] mx-auto py-8">
+        <div className="relative flex flex-col items-center justify-center w-full max-w-[496px] mx-auto py-8 font-['Manrope',sans-serif]">
             {/* Top Back Arrow Button */}
             <div className="w-full flex justify-start mb-6">
                 <button
@@ -64,10 +79,10 @@ export function ForgotPassword({ onBack, onSendOtp }: ForgotPasswordProps) {
 
             {/* Header Text */}
             <div className="flex flex-col items-center gap-2 mb-8 text-center w-full">
-                <h1 className="font-['Manrope',sans-serif] font-semibold text-[36px] leading-[49px] text-white tracking-tight">
+                <h1 className="font-semibold text-[32px] sm:text-[36px] leading-[44px] sm:leading-[49px] text-white tracking-tight">
                     Forgot Password?
                 </h1>
-                <p className="font-['Manrope',sans-serif] font-normal text-[16px] leading-[22px] text-white/80 max-w-[496px]">
+                <p className="font-normal text-[15px] sm:text-[16px] leading-[22px] text-white/80 max-w-[460px]">
                     Lost your password? No worries. Enter your email below, and we’ll send
                     you a verification code to reset your password securely.
                 </p>
@@ -94,10 +109,10 @@ export function ForgotPassword({ onBack, onSendOtp }: ForgotPasswordProps) {
                     <Button
                         type="submit"
                         variant="gradient"
-                        disabled={isSubmitting}
-                        className="w-full h-[52px] font-['Manrope',sans-serif] font-bold text-[16px] leading-[22px]"
+                        disabled={forgotPasswordMutation.isPending}
+                        className="w-full h-[52px] rounded-full font-bold text-[15px] sm:text-[16px] cursor-pointer"
                     >
-                        {isSubmitting ? "Sending..." : "Send OTP Code"}
+                        {forgotPasswordMutation.isPending ? "Sending OTP..." : "Send OTP"}
                     </Button>
                 </div>
             </form>
