@@ -9,17 +9,17 @@ import * as z from "zod";
 import { Button, InputField } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useLoginMutation, useCheckEmailMutation } from "../api/auth.mutations";
-import { useAuth } from "../hooks/use-auth";
 import { useAppDispatch } from "@/store";
 import { setAuth, updateUser } from "@/store/slices/auth.slice";
 import { toast } from "sonner";
 
 const emailSchema = z.object({
-    email: z.string().email({ message: "Invalid email address" }).max(100, { message: "Email must be less than 100 characters" }),
+    email: z.string().min(1, "Email is required").email({ message: "Please enter a valid email address" }).max(100, { message: "Email must be less than 100 characters" }),
 });
 
 const passwordSchema = z.object({
     password: z.string()
+        .min(1, "Password is required")
         .min(8, { message: "Password must be at least 8 characters" })
         .max(50, { message: "Password must be less than 50 characters" })
         .regex(/[A-Z]/, { message: "Password must contain at least 1 uppercase letter" })
@@ -34,7 +34,8 @@ export function Login() {
     const dispatch = useAppDispatch();
     const [step, setStep] = useState<1 | 2>(1);
     const [emailValue, setEmailValue] = useState("");
-    const { acceptedTerms, setAcceptedTerms } = useAuth();
+    const [showPassword, setShowPassword] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(true);
 
     const checkEmailMutation = useCheckEmailMutation();
     const loginMutation = useLoginMutation();
@@ -66,29 +67,34 @@ export function Login() {
             setStep(2);
         } catch (error: any) {
             console.error("Check email error", error);
-            toast.error(error.message || "Failed to check email");
-            // Still going to step 2 as per requirement
+            toast.error(error?.response?.data?.message || error.message || "Failed to check email");
             setEmailValue(data.email);
             setStep(2);
         }
     };
 
     const onPasswordSubmit = async (data: PasswordFormValues) => {
+        if (!acceptedTerms) {
+            toast.error("Please accept the Terms & Conditions and Privacy Policy to proceed");
+            return;
+        }
+
         try {
             const response = await loginMutation.mutateAsync({
                 email: emailValue,
                 password: data.password,
-                role: "bar_owner", // sending as required
+                role: "bar_owner",
             });
 
-            if (response.data.requiresOtp) {
+            if (response.data?.requiresOtp) {
                 if (response.data.user) {
                     dispatch(updateUser(response.data.user));
                 }
                 router.push(`/auth/verify-email?email=${encodeURIComponent(emailValue)}&mode=login`);
             } else {
                 dispatch(setAuth({ token: response.data.token || "", user: response.data.user }));
-                if (!response.data.user.isProfileCompleted) {
+                toast.success("Logged in successfully!");
+                if (!response.data.user?.isProfileCompleted) {
                     router.push(`/auth/profile-setup`);
                 } else {
                     router.push(`/app/dashboard`);
@@ -96,14 +102,14 @@ export function Login() {
             }
         } catch (error: any) {
             console.error("Login error", error);
-            toast.error(error.message || "Failed to login");
+            toast.error(error?.response?.data?.message || error.message || "Failed to login");
         }
     };
 
     return (
-        <div className="flex flex-col items-center justify-center w-full max-w-[392px] mx-auto py-8">
+        <div className="flex flex-col items-center justify-center w-full max-w-[400px] mx-auto py-6 font-['Manrope',sans-serif]">
             {/* Logo */}
-            <div className="relative w-[180px] h-[180px] mb-6 transition-transform hover:scale-105 duration-300">
+            <div className="relative w-[160px] h-[160px] mb-4 transition-transform hover:scale-105 duration-300">
                 <Image
                     src="/images/bar-huddle-logo.png"
                     alt="Bar Huddle Logo"
@@ -114,18 +120,18 @@ export function Login() {
             </div>
 
             {/* Header Text */}
-            <div className="flex flex-col items-center gap-2 mb-6 text-center">
-                <h1 className="font-['Manrope',sans-serif] font-semibold text-[36px] leading-[49px] text-white">
+            <div className="flex flex-col items-center gap-1.5 mb-6 text-center">
+                <h1 className="font-semibold text-[32px] sm:text-[36px] leading-[44px] sm:leading-[49px] text-white tracking-tight">
                     Welcome back!
                 </h1>
-                <p className="font-['Manrope',sans-serif] font-normal text-[16px] leading-[22px] text-white/80">
+                <p className="font-normal text-[15px] leading-[22px] text-white/80">
                     Enter your details below to login.
                 </p>
             </div>
 
             {step === 1 ? (
                 /* Step 1: Email Form */
-                <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="w-full flex flex-col gap-6">
+                <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="w-full flex flex-col gap-5 animate-in fade-in duration-200">
                     <Controller
                         name="email"
                         control={emailControl}
@@ -140,34 +146,52 @@ export function Login() {
                         )}
                     />
 
-                    <Button type="submit" variant="gradient" disabled={checkEmailMutation.isPending}>
-                        {checkEmailMutation.isPending ? "Loading..." : "Continue"}
+                    <Button 
+                        type="submit" 
+                        variant="gradient" 
+                        disabled={checkEmailMutation.isPending}
+                        className="w-full h-[52px] rounded-full font-bold text-[15px] cursor-pointer"
+                    >
+                        {checkEmailMutation.isPending ? "Checking..." : "Continue"}
                     </Button>
 
                     <SocialLogins />
                 </form>
             ) : (
                 /* Step 2: Password Form */
-                <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="w-full flex flex-col gap-6">
-                    {/* Disabled Email Field */}
-                    <InputField
-                        label="Email"
-                        type="email"
-                        value={emailValue}
-                        disabled
-                        className="opacity-50 cursor-not-allowed"
-                    />
+                <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="w-full flex flex-col gap-5 animate-in fade-in duration-200">
+                    {/* Email Field with Change Option */}
+                    <div className="flex flex-col gap-1.5 w-full">
+                        <div className="flex items-center justify-between">
+                            <label className="font-semibold text-[14px] leading-[19px] text-white">
+                                Email
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                className="font-medium text-[13px] leading-[18px] text-[#B972FC] hover:underline cursor-pointer focus:outline-none"
+                            >
+                                Change
+                            </button>
+                        </div>
+                        <InputField
+                            type="email"
+                            value={emailValue}
+                            disabled
+                            className="opacity-60 cursor-not-allowed bg-purple-950/30"
+                        />
+                    </div>
 
                     {/* Forgot Password Link & Password Field */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 w-full">
                         <div className="flex justify-between items-center mb-1">
-                            <label className="font-['Manrope',sans-serif] font-semibold text-[14px] leading-[19px] text-white">
+                            <label className="font-semibold text-[14px] leading-[19px] text-white">
                                 Password
                             </label>
                             <button
                                 type="button"
                                 onClick={() => router.push('/auth/forgot-password')}
-                                className="font-['Manrope',sans-serif] font-medium text-[14px] leading-[19px] text-[#B972FC] hover:underline transition-colors focus:outline-none cursor-pointer"
+                                className="font-medium text-[13px] leading-[18px] text-[#B972FC] hover:underline transition-colors focus:outline-none cursor-pointer"
                             >
                                 Forgot Password?
                             </button>
@@ -177,9 +201,28 @@ export function Login() {
                             control={passwordControl}
                             render={({ field }) => (
                                 <InputField
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="•••••••••"
                                     error={passwordErrors.password?.message}
+                                    rightElement={
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="focus:outline-none p-1 hover:text-[#B972FC] transition-colors cursor-pointer"
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
+                                        >
+                                            {showPassword ? (
+                                                <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.025 10.025 0 0111.44 3.029C20.268 10.057 16.478 13 12 13c-.88 0-1.737-.113-2.553-.326m-4.52-4.52l12.14 12.14" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    }
                                     {...field}
                                 />
                             )}
@@ -187,20 +230,21 @@ export function Login() {
                     </div>
 
                     {/* Terms and Conditions Checkbox */}
-                    <div className="flex items-center justify-center gap-2.5 mt-0">
+                    <div className="flex items-center justify-center gap-2.5 mt-1">
                         <button
                             type="button"
                             onClick={() => setAcceptedTerms(!acceptedTerms)}
-                            className={`w-6 h-6 min-w-[24px] rounded-[4px] flex items-center justify-center transition-colors ${acceptedTerms ? "bg-[#B45FF2]" : "bg-white/10 border border-white/30"
-                                }`}
+                            className={`w-5 h-5 min-w-[20px] rounded-[4px] flex items-center justify-center transition-colors cursor-pointer ${
+                                acceptedTerms ? "bg-[#B45FF2]" : "bg-white/10 border border-white/30"
+                            }`}
                         >
                             {acceptedTerms && (
-                                <svg className="w-4 h-3 text-white fill-current" viewBox="0 0 16 12">
+                                <svg className="w-3.5 h-2.5 text-white fill-current" viewBox="0 0 16 12">
                                     <path d="M5.5 10.586L1.707 6.793A1 1 0 00.293 8.207l4.5 4.5a1 1 0 001.414 0l9-9A1 1 0 0013.793 2.293L5.5 10.586z" />
                                 </svg>
                             )}
                         </button>
-                        <p className="font-['Manrope',sans-serif] text-[14px] leading-[20px] text-white">
+                        <p className="text-[13px] sm:text-[14px] leading-[20px] text-white/90">
                             I accept the{" "}
                             <Link href="/terms" className="text-[#FDF88F] font-medium hover:underline">
                                 Terms & Conditions
@@ -212,8 +256,13 @@ export function Login() {
                         </p>
                     </div>
 
-                    <Button type="submit" variant="gradient" disabled={loginMutation.isPending}>
-                        {loginMutation.isPending ? "Loading..." : "Login"}
+                    <Button 
+                        type="submit" 
+                        variant="gradient" 
+                        disabled={loginMutation.isPending}
+                        className="w-full h-[52px] rounded-full font-bold text-[15px] cursor-pointer mt-1"
+                    >
+                        {loginMutation.isPending ? "Logging in..." : "Login"}
                     </Button>
                 </form>
             )}
@@ -226,21 +275,21 @@ function SocialLogins() {
         <>
             <div className="flex items-center justify-between gap-3 my-1">
                 <div className="flex-1 h-[1px] bg-white/20" />
-                <span className="font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[20px] leading-[25px] text-white uppercase px-1">
+                <span className="font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[16px] leading-[20px] text-white/80 uppercase px-1">
                     OR
                 </span>
                 <div className="flex-1 h-[1px] bg-white/20" />
             </div>
 
             <div className="flex items-center gap-3 w-full">
-                <Button type="button" variant="social" className="gap-2">
+                <Button type="button" variant="social" className="gap-2 flex-1 h-[48px] rounded-full cursor-pointer">
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 170 170">
                         <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.34.13-9.13-1.9-14.37-6.08-3.38-2.73-7.23-7.39-11.55-13.98-6.19-9.39-11.03-19.86-14.53-31.4-3.5-11.55-5.25-22.38-5.25-32.5 0-14.54 3.73-26.6 11.19-36.19 7.46-9.59 16.78-14.47 27.97-14.65 4.8 0 10.05 1.25 15.75 3.75 5.7 2.5 9.7 3.79 12 3.87 1.8.08 5.86-1.22 12.18-3.9 6.32-2.68 11.58-3.9 15.78-3.66 8.5.54 15.67 3.33 21.52 8.37-12.28 7.42-18.29 17.84-18.03 31.26.26 10.45 4.23 19.14 11.91 26.07 7.68 6.93 16.59 10.66 26.73 11.19-1.9 6.22-4.57 12.82-8.01 19.8zm-29.41-105.1c0 6.64-2.45 13.06-7.35 19.26-4.9 6.2-10.82 9.77-17.75 10.71-.53-6.64 1.77-13.1 6.9-19.38 5.13-6.28 11.35-9.87 18.66-10.77.1 0 .26.06.54.18z" />
                     </svg>
                     Apple
                 </Button>
 
-                <Button type="button" variant="social" className="gap-2">
+                <Button type="button" variant="social" className="gap-2 flex-1 h-[48px] rounded-full cursor-pointer">
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                         <path
                             fill="#EA4335"

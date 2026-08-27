@@ -3,10 +3,25 @@
 import React, { useState } from "react";
 import { useProfile } from "@/context/ProfileContext";
 import { EditProfileModal } from "@/components/layout/EditProfileModal";
+import { useGetEventsQuery } from "@/features/events/api/events.queries";
+import { useMyVenuesQuery } from "@/features/venue-management/api/venue.queries";
 
 export default function ProfilePage() {
-    const { fullName, email, initials, updateFullName } = useProfile();
+    const { fullName, email, initials, avatarUrl, bio, updateFullName } = useProfile();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    const { data: apiEventsData } = useGetEventsQuery();
+    const { data: myVenuesData } = useMyVenuesQuery(1, 10);
+
+    const eventsCount = Array.isArray(apiEventsData?.data)
+        ? apiEventsData.data.length
+        : Array.isArray(apiEventsData?.data?.events)
+            ? apiEventsData.data.events.length
+            : Array.isArray(apiEventsData)
+                ? apiEventsData.length
+                : 0;
+
+    const venuesCount = Array.isArray(myVenuesData) ? myVenuesData.length : 1;
 
     return (
         <div className="w-full flex flex-col p-6 sm:p-8 font-['Manrope',sans-serif] min-h-screen">
@@ -31,10 +46,18 @@ export default function ProfilePage() {
                     <div className="absolute left-[210px] top-[67px] w-[171px] h-[171px] bg-gradient-to-br from-[#7C3AED] via-[#A855F7] to-[#E8FF57] opacity-70 blur-[2px] rounded-full pointer-events-none" />
 
                     {/* Main Avatar Circle */}
-                    <div className="absolute left-[217px] top-[74px] w-[157px] h-[157px] bg-gradient-to-br from-[#7C3AED] to-[#F472B6] border-4 border-[#04022E] shadow-[0px_0px_32px_rgba(124,58,237,0.5)] rounded-full flex items-center justify-center z-10">
-                        <span className="font-extrabold text-[24px] leading-[32px] text-[#F0EEFF] text-center tracking-wide">
-                            {initials}
-                        </span>
+                    <div className="absolute left-[217px] top-[74px] w-[157px] h-[157px] bg-gradient-to-br from-[#7C3AED] to-[#F472B6] border-4 border-[#04022E] shadow-[0px_0px_32px_rgba(124,58,237,0.5)] rounded-full flex items-center justify-center overflow-hidden z-10">
+                        {avatarUrl ? (
+                            <img
+                                src={avatarUrl}
+                                alt={fullName}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <span className="font-extrabold text-[36px] leading-[44px] text-[#F0EEFF] text-center tracking-wide">
+                                {initials}
+                            </span>
+                        )}
                     </div>
 
                     {/* Yellow Plus Badge Button */}
@@ -59,15 +82,15 @@ export default function ProfilePage() {
                     </button>
 
                     {/* Name Heading */}
-                    <div className="absolute left-[217px] top-[248px] w-[157px] h-[36px] flex flex-col items-center justify-center z-10">
-                        <h2 className="w-[157px] text-[24px] leading-[32px] font-extrabold text-white text-center tracking-[-0.6px] truncate">
+                    <div className="absolute left-[33px] right-[33px] top-[248px] h-[36px] flex flex-col items-center justify-center z-10 px-4">
+                        <h2 className="w-full max-w-[400px] text-[24px] leading-[32px] font-extrabold text-white text-center tracking-[-0.6px] truncate">
                             {fullName}
                         </h2>
                     </div>
 
                     {/* Email Paragraph */}
-                    <div className="absolute left-[218px] top-[284px] w-[154px] h-[20px] flex flex-col items-center justify-center z-10">
-                        <p className="w-[154px] text-[14px] leading-[20px] font-semibold text-[#8B7EC8] text-center truncate">
+                    <div className="absolute left-[33px] right-[33px] top-[284px] h-[20px] flex flex-col items-center justify-center z-10 px-4">
+                        <p className="w-full max-w-[400px] text-[14px] leading-[20px] font-semibold text-[#8B7EC8] text-center truncate">
                             {email}
                         </p>
                     </div>
@@ -77,7 +100,7 @@ export default function ProfilePage() {
                         {/* Stat Card 1: Venues Owned */}
                         <div className="w-[104.18px] h-[70.6px] bg-[rgba(124,58,237,0.04)] border border-[rgba(124,58,237,0.118)] rounded-[14px] p-[12px_16px] flex flex-col justify-center items-center">
                             <span className="font-extrabold text-[20px] leading-[28px] text-[#7C3AED] text-center">
-                                1
+                                {venuesCount}
                             </span>
                             <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] text-center whitespace-nowrap mt-0.5">
                                 Venues Owned
@@ -87,7 +110,7 @@ export default function ProfilePage() {
                         {/* Stat Card 2: Events Created */}
                         <div className="w-[106.79px] h-[70.6px] bg-[rgba(244,114,182,0.04)] border border-[rgba(244,114,182,0.118)] rounded-[14px] p-[12px_16px] flex flex-col justify-center items-center">
                             <span className="font-extrabold text-[20px] leading-[28px] text-[#F472B6] text-center">
-                                12
+                                {eventsCount}
                             </span>
                             <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] text-center whitespace-nowrap mt-0.5">
                                 Events Created
@@ -97,7 +120,7 @@ export default function ProfilePage() {
                         {/* Stat Card 3: Total Reach */}
                         <div className="w-[89.4px] h-[70.6px] bg-[rgba(34,211,238,0.04)] border border-[rgba(34,211,238,0.118)] rounded-[14px] p-[12px_16px] flex flex-col justify-center items-center">
                             <span className="font-extrabold text-[20px] leading-[28px] text-[#22D3EE] text-center">
-                                42K
+                                0
                             </span>
                             <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] text-center whitespace-nowrap mt-0.5">
                                 Total Reach
@@ -195,6 +218,8 @@ export default function ProfilePage() {
                 onClose={() => setIsEditModalOpen(false)}
                 currentFullName={fullName}
                 currentEmail={email}
+                currentBio={bio}
+                currentAvatarUrl={avatarUrl}
                 onSave={updateFullName}
             />
         </div>

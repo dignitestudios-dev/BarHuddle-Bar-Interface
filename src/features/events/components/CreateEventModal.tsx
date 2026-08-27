@@ -5,19 +5,15 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { useGetOwnerVenuesQuery } from "../../venue-management/api/venue.queries";
-
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const createEventSchema = z.object({
-    venueId: z.string().min(1, "Please select a venue"),
     title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
     date: z.date({
         message: "Date is required",
@@ -26,17 +22,7 @@ const createEventSchema = z.object({
     endTime: z.string().min(1, "End time is required"),
     artist: z.string().optional(),
     description: z.string().min(10, "Description must be at least 10 characters").max(1000, "Description is too long"),
-    images: z.array(z.any())
-        .min(1, "At least one image is required")
-        .refine((files) => files.every((file) => file instanceof File), "Expected files")
-        .refine(
-            (files) => files.every((file) => file.size <= MAX_FILE_SIZE),
-            `Max image size is 20MB.`
-        )
-        .refine(
-            (files) => files.every((file) => ACCEPTED_IMAGE_TYPES.includes(file.type)),
-            "Only .jpg, .jpeg, .png and .webp formats are supported."
-        ),
+    images: z.array(z.any()),
 }).refine(
     (data) => {
         if (data.startTime && data.endTime) {
@@ -56,22 +42,20 @@ export interface CreateEventModalProps {
     isOpen: boolean;
     onClose: () => void;
     onCreate?: (eventData: CreateEventFormValues) => void;
+    onUpdate?: (id: string, eventData: CreateEventFormValues) => void;
+    eventToEdit?: any | null;
 }
 
 export function CreateEventModal({
     isOpen,
     onClose,
     onCreate,
+    onUpdate,
+    eventToEdit,
 }: CreateEventModalProps) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
-    // Fetch venues for the dropdown
-    const { data: venues = [], isLoading: isLoadingVenues } = useGetOwnerVenuesQuery();
-
-    // Debugging venue response to ensure it's an array
-    console.log("Fetched Venues:", venues);
 
     const {
         register,
@@ -84,7 +68,6 @@ export function CreateEventModal({
     } = useForm<CreateEventFormValues>({
         resolver: zodResolver(createEventSchema),
         defaultValues: {
-            venueId: "",
             title: "",
             date: undefined,
             startTime: "",
@@ -97,10 +80,50 @@ export function CreateEventModal({
 
     const watchImages = watch("images");
 
+    // Pre-populate fields if editing or reset if creating
+    useEffect(() => {
+        if (isOpen) {
+            if (eventToEdit) {
+                const startDate = eventToEdit.startAt || eventToEdit.date ? new Date(eventToEdit.startAt || eventToEdit.date) : undefined;
+                const endDate = eventToEdit.endAt ? new Date(eventToEdit.endAt) : undefined;
+
+                reset({
+                    title: eventToEdit.title || eventToEdit.name || "",
+                    date: startDate,
+                    startTime: startDate ? format(startDate, "HH:mm") : "20:00",
+                    endTime: endDate ? format(endDate, "HH:mm") : "02:00",
+                    artist: eventToEdit.artist || "",
+                    description: eventToEdit.description || "",
+                    images: [],
+                });
+
+                const existingImg = eventToEdit.banner || eventToEdit.coverImage || eventToEdit.imageUrl || eventToEdit.images?.[0];
+                if (existingImg) {
+                    setImagePreviews([existingImg]);
+                } else {
+                    setImagePreviews([]);
+                }
+            } else {
+                reset({
+                    title: "",
+                    date: undefined,
+                    startTime: "",
+                    endTime: "",
+                    artist: "",
+                    description: "",
+                    images: [],
+                });
+                setImagePreviews([]);
+            }
+        }
+    }, [isOpen, eventToEdit, reset]);
+
     // Update previews when images change
     useEffect(() => {
         if (!watchImages || watchImages.length === 0) {
-            setImagePreviews([]);
+            if (!eventToEdit) {
+                setImagePreviews([]);
+            }
             return;
         }
 
@@ -116,19 +139,20 @@ export function CreateEventModal({
         // Cleanup URLs to avoid memory leaks
         return () => {
             newPreviews.forEach(url => {
-                if (url && url.startsWith('blob:')) {
+                if (url && typeof url === "string" && url.startsWith('blob:')) {
                     URL.revokeObjectURL(url);
                 }
             });
         };
-    }, [watchImages]);
+    }, [watchImages, eventToEdit]);
 
     if (!isOpen) return null;
 
     const handleRemoveImage = (index: number) => {
-        const newImages = [...watchImages];
+        const newImages = [...(watchImages || [])];
         newImages.splice(index, 1);
         setValue("images", newImages, { shouldValidate: true });
+        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,7 +163,12 @@ export function CreateEventModal({
     };
 
     const onSubmit = (data: CreateEventFormValues) => {
-        onCreate?.(data);
+        if (eventToEdit) {
+            const eventId = String(eventToEdit._id || eventToEdit.id);
+            onUpdate?.(eventId, data);
+        } else {
+            onCreate?.(data);
+        }
         reset();
     };
 
@@ -148,14 +177,16 @@ export function CreateEventModal({
         onClose();
     };
 
+    const isEditMode = Boolean(eventToEdit);
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
             {/* Modal Container */}
-            <div className="relative w-full max-w-[562px] bg-[#05033A] border border-[rgba(124,58,237,0.3)] shadow-[0px_4px_25px_rgba(0,0,0,0.5)] rounded-[16px] p-6 sm:p-7 flex flex-col gap-6 max-h-[90vh] overflow-y-auto scrollbar-none">
+            <div className="relative w-full max-w-[562px] bg-[#05033A] border border-[rgba(124,58,237,0.3)] shadow-[0px_4px_25px_rgba(0,0,0,0.5)] rounded-[24px] p-6 sm:p-7 flex flex-col gap-6 max-h-[90vh] overflow-y-auto scrollbar-none">
                 {/* Modal Header */}
                 <div className="flex items-center justify-between">
                     <h2 className="font-bold text-[20px] leading-[27px] text-white capitalize">
-                        Create Event
+                        {isEditMode ? "Edit Event" : "Create Event"}
                     </h2>
 
                     {/* Close Icon Button */}
@@ -173,50 +204,6 @@ export function CreateEventModal({
 
                 {/* Form Body */}
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 w-full">
-                    {/* Venue Selection */}
-                    <div className="flex flex-col gap-2 w-full">
-                        <label className="font-semibold text-[14px] leading-[19px] text-white">
-                            Select Venue
-                        </label>
-                        <Controller
-                            control={control}
-                            name="venueId"
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="w-full h-12 px-4 rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] text-white focus:outline-none focus:ring-0 focus:ring-offset-0 focus:border-[#B45FF2] transition-colors">
-                                        <SelectValue placeholder={isLoadingVenues ? "Loading venues..." : "Select a venue"}>
-                                            {(() => {
-                                                if (!field.value) return null;
-                                                const selectedItem = (venues as any[])?.find((item: any) => {
-                                                    const venue = item.venue || item;
-                                                    return (venue?.id || venue?._id) === field.value;
-                                                });
-                                                const selectedVenue = (selectedItem as any)?.venue || selectedItem;
-                                                return selectedVenue?.name || selectedVenue?.title || field.value;
-                                            })()}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent side="bottom" alignItemWithTrigger={false} className="bg-[#0A074A] border-[rgba(124,58,237,0.25)] text-white p-2" style={{ zIndex: 9999 }}>
-                                        {(venues as any[])?.length > 0 ? (venues as any[]).map((item: any) => {
-                                            const venue = item.venue || item;
-                                            const venueId = venue?.id || venue?._id;
-                                            const venueName = venue?.name || venue?.title || "Unnamed Venue";
-                                            if (!venueId) return null;
-                                            return (
-                                                <SelectItem key={venueId} value={venueId} className="px-4 py-3 !text-white hover:!text-white focus:!text-white data-[highlighted]:!text-white hover:bg-purple-900/40 focus:bg-purple-900/40 cursor-pointer rounded-lg" style={{ color: "#ffffff" }}>
-                                                    {venueName}
-                                                </SelectItem>
-                                            );
-                                        }) : (
-                                            <div className="p-4 text-center text-white/50 text-sm">No venues found</div>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                        {errors.venueId && <span className="text-red-400 text-xs">{errors.venueId.message}</span>}
-                    </div>
-
                     {/* Upload Images Section */}
                     <div className="flex flex-col gap-3 w-full">
                         <label className="font-semibold text-[14px] leading-[19px] text-white">
@@ -393,12 +380,12 @@ export function CreateEventModal({
                         {errors.description && <span className="text-red-400 text-xs">{errors.description.message}</span>}
                     </div>
 
-                    {/* Create Now CTA Button */}
+                    {/* Create / Update CTA Button */}
                     <button
                         type="submit"
                         className="w-full h-[48px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-semibold text-[16px] leading-[22px] text-white capitalize hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2"
                     >
-                        Create Now
+                        {isEditMode ? "Update Event" : "Create Now"}
                     </button>
                 </form>
             </div>

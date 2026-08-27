@@ -23,9 +23,9 @@ export function PendingApprovalScreen() {
                 <h1 className="font-extrabold text-[32px] md:text-[40px] leading-[1.2] bg-gradient-to-r from-white via-[#C4B5FD] to-[#E8FF57] bg-clip-text text-transparent mb-4">
                     Under Review
                 </h1>
-                
+
                 <p className="font-normal text-[16px] leading-[26px] text-[#9D8FD0] mb-8 max-w-[400px]">
-                    Your venue claim has been submitted successfully. Our team is currently reviewing your application. You will be notified via email once approved.
+                    Your venue claim has been submitted successfully. Our team is currently reviewing your application.
                 </p>
 
                 <div className="flex flex-col gap-4 w-full">

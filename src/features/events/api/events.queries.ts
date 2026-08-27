@@ -7,6 +7,7 @@ export const eventsKeys = {
   list: (filters: string) => [...eventsKeys.lists(), { filters }] as const,
   details: () => [...eventsKeys.all, 'detail'] as const,
   detail: (id: string) => [...eventsKeys.details(), id] as const,
+  performance: (id: string) => [...eventsKeys.all, 'performance', id] as const,
 };
 
 export const useGetEventsQuery = () => {
@@ -26,7 +27,7 @@ export const useGetEventDetailsQuery = (id: string) => {
 
 export const useGetEventPerformanceQuery = (id: string) => {
   return useQuery({
-    queryKey: eventsKeys.detail(id),
+    queryKey: eventsKeys.performance(id),
     queryFn: () => eventService.getEventPerformance(id),
     enabled: !!id,
   });

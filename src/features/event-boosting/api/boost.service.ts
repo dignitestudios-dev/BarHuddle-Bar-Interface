@@ -5,12 +5,19 @@ export interface Boost {
   // add other fields
 }
 
+export interface CreateBoostPayload {
+  eventId: string;
+  startAt: string;
+  endAt: string;
+  amount: number;
+}
+
 export const boostService = {
   getBoosts: async () => {
     const response = await axiosInstance.get("/venue-owner/boosts");
     return response.data;
   },
-  createBoost: async (data: any) => {
+  createBoost: async (data: CreateBoostPayload) => {
     const response = await axiosInstance.post("/venue-owner/boosts", data);
     return response.data;
   },

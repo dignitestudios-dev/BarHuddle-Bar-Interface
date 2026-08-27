@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useGetBoostsQuery } from "../api/boost.queries";
+import { useGetEventsQuery } from "@/features/events/api/events.queries";
 
 export interface BoostingStatCardData {
     id: string;
@@ -15,44 +17,72 @@ export interface BoostingStatCardsRowProps {
     className?: string;
 }
 
-export const DEFAULT_BOOSTING_STAT_CARDS: BoostingStatCardData[] = [
-    {
-        id: "total-events",
-        value: "3",
-        label: "Total Events",
-        iconColor: "text-[#9F4FFA]",
-        iconBgShadow: "shadow-[0px_0px_12px_rgba(159,79,250,0.2)]",
-    },
-    {
-        id: "boosted-events",
-        value: "3",
-        label: "Boosted Events",
-        iconColor: "text-[#E8FF57]",
-        iconBgShadow: "shadow-[0px_0px_12px_rgba(232,255,87,0.2)]",
-    },
-    {
-        id: "total-reach",
-        value: "14K",
-        label: "Total Reach",
-        iconColor: "text-[#22D3EE]",
-        iconBgShadow: "shadow-[0px_0px_12px_rgba(34,211,238,0.2)]",
-    },
-    {
-        id: "avg-engagement",
-        value: "44%",
-        label: "Avg Engagement",
-        iconColor: "text-[#4ADE80]",
-        iconBgShadow: "shadow-[0px_0px_12px_rgba(74,222,128,0.2)]",
-    },
-];
-
 export function BoostingStatCardsRow({
-    cards = DEFAULT_BOOSTING_STAT_CARDS,
+    cards,
     className = "",
 }: BoostingStatCardsRowProps) {
+    const { data: apiBoostsData } = useGetBoostsQuery();
+    const { data: apiEventsData } = useGetEventsQuery();
+
+    const displayCards = React.useMemo(() => {
+        if (cards) return cards;
+
+        const rawEvents = Array.isArray(apiEventsData?.data)
+            ? apiEventsData.data
+            : Array.isArray(apiEventsData?.data?.events)
+                ? apiEventsData.data.events
+                : Array.isArray(apiEventsData)
+                    ? apiEventsData
+                    : [];
+
+        const rawBoosts = Array.isArray(apiBoostsData?.data)
+            ? apiBoostsData.data
+            : Array.isArray(apiBoostsData?.data?.boosts)
+                ? apiBoostsData.data.boosts
+                : Array.isArray(apiBoostsData)
+                    ? apiBoostsData
+                    : [];
+
+        const totalEventsCount = apiBoostsData?.totalEvents ?? rawEvents.length ?? 0;
+        const boostedEventsCount = apiBoostsData?.boostedEvents ?? rawBoosts.filter((b: any) => b.status === "active" || b.isBoosted).length ?? 0;
+        const totalReachVal = apiBoostsData?.totalReach ? `${(apiBoostsData.totalReach / 1000).toFixed(0)}K` : "0";
+        const avgEngagementVal = apiBoostsData?.attendRateLift ? `${apiBoostsData.attendRateLift}%` : "0%";
+
+        return [
+            {
+                id: "total-events",
+                value: String(totalEventsCount),
+                label: "Total Events",
+                iconColor: "text-[#9F4FFA]",
+                iconBgShadow: "shadow-[0px_0px_12px_rgba(159,79,250,0.2)]",
+            },
+            {
+                id: "boosted-events",
+                value: String(boostedEventsCount),
+                label: "Boosted Events",
+                iconColor: "text-[#E8FF57]",
+                iconBgShadow: "shadow-[0px_0px_12px_rgba(232,255,87,0.2)]",
+            },
+            {
+                id: "total-reach",
+                value: totalReachVal,
+                label: "Total Reach",
+                iconColor: "text-[#22D3EE]",
+                iconBgShadow: "shadow-[0px_0px_12px_rgba(34,211,238,0.2)]",
+            },
+            {
+                id: "avg-engagement",
+                value: avgEngagementVal,
+                label: "Avg Engagement",
+                iconColor: "text-[#4ADE80]",
+                iconBgShadow: "shadow-[0px_0px_12px_rgba(74,222,128,0.2)]",
+            },
+        ];
+    }, [cards, apiBoostsData, apiEventsData]);
+
     return (
         <div className={`max-w-[1200px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full ${className}`}>
-            {cards.map((card) => (
+            {displayCards.map((card) => (
                 <div
                     key={card.id}
                     className="w-full h-[80px] rounded-[24px] bg-gradient-to-br from-[rgba(124,58,237,0.35)] via-[rgba(79,20,150,0.2)] to-[rgba(5,3,58,0.1)] border border-[rgba(124,58,237,0.3)] shadow-[0px_0px_60px_rgba(124,58,237,0.15)] px-4 flex items-center gap-3.5"

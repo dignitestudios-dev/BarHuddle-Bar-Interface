@@ -23,7 +23,10 @@ export const eventService = {
     return response.data;
   },
   updateEvent: async (id: string, data: any) => {
-    const response = await axiosInstance.put(`/venue-owner/events/${id}`, data);
+    const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
+    const response = await axiosInstance.put(`/venue-owner/events/${id}`, data, {
+      headers: isFormData ? { "Content-Type": "multipart/form-data" } : undefined,
+    });
     return response.data;
   },
   deleteEvent: async (id: string) => {

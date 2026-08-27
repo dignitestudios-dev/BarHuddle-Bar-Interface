@@ -9,6 +9,7 @@ export interface ProfileModalProps {
     fullName: string;
     email: string;
     initials: string;
+    avatarUrl?: string;
 }
 
 export function ProfileModal({
@@ -18,6 +19,7 @@ export function ProfileModal({
     fullName,
     email,
     initials,
+    avatarUrl,
 }: ProfileModalProps) {
     if (!isOpen) return null;
 
@@ -62,10 +64,18 @@ export function ProfileModal({
                 <div className="absolute left-[210px] top-[67px] w-[171px] h-[171px] bg-gradient-to-br from-[#7C3AED] via-[#A855F7] to-[#E8FF57] opacity-70 blur-[2px] rounded-full pointer-events-none" />
 
                 {/* Main Avatar Circle */}
-                <div className="absolute left-[217px] top-[74px] w-[157px] h-[157px] bg-gradient-to-br from-[#7C3AED] to-[#F472B6] border-4 border-[#04022E] shadow-[0px_0px_32px_rgba(124,58,237,0.5)] rounded-full flex items-center justify-center z-10">
-                    <span className="font-extrabold text-[24px] leading-[32px] text-[#F0EEFF] text-center tracking-wide">
-                        {initials}
-                    </span>
+                <div className="absolute left-[217px] top-[74px] w-[157px] h-[157px] bg-gradient-to-br from-[#7C3AED] to-[#F472B6] border-4 border-[#04022E] shadow-[0px_0px_32px_rgba(124,58,237,0.5)] rounded-full flex items-center justify-center overflow-hidden z-10">
+                    {avatarUrl ? (
+                        <img
+                            src={avatarUrl}
+                            alt={fullName}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <span className="font-extrabold text-[36px] leading-[44px] text-[#F0EEFF] text-center tracking-wide">
+                            {initials}
+                        </span>
+                    )}
                 </div>
 
                 {/* Yellow Plus Badge Button */}

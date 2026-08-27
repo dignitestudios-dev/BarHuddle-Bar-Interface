@@ -14,15 +14,14 @@ export function Dashboard() {
     const { data: dashboardData, isLoading } = useGetDashboardQuery();
 
     const stats = React.useMemo(() => {
-        if (!dashboardData?.data) return statsList;
-        const d = dashboardData.data;
+        const d = dashboardData?.data || {};
 
         // Construct stat cards strictly from API response
         return [
             {
                 title: "Total Visitors",
                 value: (d.totalVisits ?? d.uniqueVisitors ?? d.totalVisitors ?? d.visitors ?? 0).toLocaleString(),
-                trend: d.visitorTrend ?? "+18.4%",
+                trend: d.visitorTrend ?? "+0%",
                 isPositive: true,
                 variant: "purple" as const,
                 icon: statsList[0]?.icon,
@@ -30,7 +29,7 @@ export function Dashboard() {
             {
                 title: "Total Events",
                 value: (d.totalEvents ?? d.events ?? 0).toString(),
-                trend: d.eventTrend ?? "+12%",
+                trend: d.eventTrend ?? "+0%",
                 isPositive: true,
                 variant: "green" as const,
                 icon: statsList[1]?.icon,
@@ -38,7 +37,7 @@ export function Dashboard() {
             {
                 title: "Active Promotions",
                 value: (d.activePromotions ?? d.promotions ?? 0).toString(),
-                trend: d.promotionTrend ?? "+5%",
+                trend: d.promotionTrend ?? "+0%",
                 isPositive: true,
                 variant: "yellow" as const,
                 icon: statsList[2]?.icon,
@@ -46,7 +45,7 @@ export function Dashboard() {
             {
                 title: "Retention Rate",
                 value: `${d.retentionRate ?? d.retention ?? 0}%`,
-                trend: d.retentionTrend ?? "+4.2%",
+                trend: d.retentionTrend ?? "+0%",
                 isPositive: true,
                 variant: "coral" as const,
                 icon: statsList[3]?.icon,

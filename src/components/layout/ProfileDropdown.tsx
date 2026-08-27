@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getAvatarUrl } from "@/context/ProfileContext";
 
 export function ProfileDropdown() {
     const router = useRouter();
@@ -29,9 +30,10 @@ export function ProfileDropdown() {
         router.push("/app/profile");
     };
 
-    // Calculate display name and initials
+    // Calculate display name, avatar, and initials
     const displayName = (user as any)?.firstName || (user as any)?.name || (user as any)?.fullName || user?.email?.split('@')[0] || "User";
     const firstName = displayName.split(" ")[0];
+    const avatarUrl = getAvatarUrl(user);
     
     const getInitials = (name: string) => {
         const parts = name.trim().split(" ").filter(Boolean);
@@ -50,10 +52,20 @@ export function ProfileDropdown() {
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="h-[37.6px] px-3 bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] rounded-[24px] flex items-center gap-2.5 hover:bg-[rgba(124,58,237,0.2)] transition-all focus:outline-none cursor-pointer"
             >
-                {/* Gradient Avatar */}
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#F472B6] flex items-center justify-center text-[10px] font-bold text-[#F0EEFF] shrink-0">
-                    {initials}
-                </div>
+                {/* Gradient Avatar or Image */}
+                {avatarUrl ? (
+                    <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-[rgba(124,58,237,0.4)]">
+                        <img
+                            src={avatarUrl}
+                            alt={firstName}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                ) : (
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#F472B6] flex items-center justify-center text-[10px] font-bold text-[#F0EEFF] shrink-0">
+                        {initials}
+                    </div>
+                )}
 
                 {/* Name */}
                 <span className="font-semibold text-sm text-white">{firstName}</span>

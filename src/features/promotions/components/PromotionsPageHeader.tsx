@@ -22,7 +22,7 @@ export function PromotionsPageHeader({
             <button
                 type="button"
                 onClick={onCreatePromotion}
-                className="w-[190px] h-[40px] px-5 py-[10px] rounded-[14px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_22px_rgba(124,58,237,0.45)] flex items-center justify-center gap-2 font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0"
+                className="h-[42px] px-6 rounded-[100px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_22px_rgba(124,58,237,0.45)] flex items-center justify-center gap-2 font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0"
             >
                 {/* Plus Icon */}
                 <svg className="w-4 h-4 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

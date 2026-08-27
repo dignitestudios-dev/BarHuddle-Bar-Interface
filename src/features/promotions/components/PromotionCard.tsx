@@ -3,12 +3,12 @@
 import React from "react";
 
 export interface PromotionData {
-    id: number;
+    id: number | string;
     title: string;
     description: string;
     tagText: string; // "Special", "25% OFF", "BOGO"
     tagVariant: "green" | "yellow" | "purple";
-    status: "Active" | "Expired";
+    status: string;
     category: string; // "Special Offers", "Discounts", "Buy One Get One"
     dateRange: string;
     activeDays: string[]; // ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -41,6 +41,8 @@ export function PromotionCard({
     const isGreenTag = promotion.tagVariant === "green";
     const isYellowTag = promotion.tagVariant === "yellow";
     const isPurpleTag = promotion.tagVariant === "purple";
+
+    const isActive = promotion.status?.toLowerCase() === "active";
 
     return (
         <div
@@ -77,19 +79,19 @@ export function PromotionCard({
                 {/* Top Right Status Badge (Expired / Active) */}
                 <div
                     className={`absolute top-3.5 right-3.5 px-2.5 py-1 rounded-full border flex items-center gap-1.5 backdrop-blur-md text-[10px] font-bold ${
-                        promotion.status === "Active"
+                        isActive
                             ? "bg-[rgba(74,222,128,0.1)] border-[rgba(74,222,128,0.25)] text-[#4ADE80]"
                             : "bg-[rgba(139,126,200,0.1)] border-[rgba(139,126,200,0.25)] text-[#8B7EC8]"
                     }`}
                 >
                     <span
                         className={`w-1.5 h-1.5 rounded-full ${
-                            promotion.status === "Active"
+                            isActive
                                 ? "bg-[#4ADE80] shadow-[0px_0px_5px_#4ADE80]"
                                 : "bg-[#8B7EC8] shadow-[0px_0px_5px_#8B7EC8]"
                         }`}
                     />
-                    <span>{promotion.status}</span>
+                    <span className="capitalize">{promotion.status}</span>
                 </div>
 
                 {/* Bottom Left Category Badge */}
@@ -205,81 +207,29 @@ export function PromotionCard({
 
                 {/* Bottom Action Row */}
                 <div className="flex items-center gap-2 w-full pt-1">
-                    {promotion.status === "Active" ? (
-                        <>
-                            {/* Edit Button */}
-                            <button
-                                type="button"
-                                onClick={() => onEdit?.(promotion)}
-                                className="flex-1 h-[36px] rounded-[100px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_16px_rgba(124,58,237,0.4)] flex items-center justify-center gap-1.5 font-extrabold text-[12px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                            >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                                <span>Edit</span>
-                            </button>
+                    {/* Edit Button */}
+                    <button
+                        type="button"
+                        onClick={() => onEdit?.(promotion)}
+                        className="flex-1 h-[36px] rounded-[100px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_16px_rgba(124,58,237,0.4)] flex items-center justify-center gap-1.5 font-extrabold text-[12px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        <span>Edit</span>
+                    </button>
 
-                            {/* Duplicate Icon Button */}
-                            <button
-                                type="button"
-                                onClick={() => onDuplicate?.(promotion)}
-                                className="w-9 h-[36px] rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)] flex items-center justify-center text-[#C4B5FD] hover:bg-[rgba(124,58,237,0.25)] transition-all cursor-pointer"
-                                aria-label="Duplicate"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            </button>
-
-                            {/* Play / Toggle Active Button */}
-                            <button
-                                type="button"
-                                onClick={() => onToggleActive?.(promotion)}
-                                className="w-9 h-[36px] rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)] flex items-center justify-center text-[#4ADE80] hover:bg-[rgba(74,222,128,0.15)] transition-all cursor-pointer"
-                                aria-label="Toggle active"
-                            >
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                            </button>
-
-                            {/* Delete Icon Button */}
-                            <button
-                                type="button"
-                                onClick={() => onDelete?.(promotion)}
-                                className="w-9 h-[36px] rounded-[24px] bg-[rgba(248,113,113,0.08)] border border-[rgba(248,113,113,0.2)] flex items-center justify-center text-[#F87171] hover:bg-[rgba(248,113,113,0.2)] transition-all cursor-pointer"
-                                aria-label="Delete"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </>
-                    ) : (
-                        /* Expired State Action Buttons (Copy & Delete) */
-                        <div className="flex items-center justify-end gap-2 w-full">
-                            <button
-                                type="button"
-                                onClick={() => onDuplicate?.(promotion)}
-                                className="w-9 h-[36px] rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)] flex items-center justify-center text-[#C4B5FD] hover:bg-[rgba(124,58,237,0.25)] transition-all cursor-pointer"
-                                aria-label="Duplicate"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onDelete?.(promotion)}
-                                className="w-9 h-[36px] rounded-[24px] bg-[rgba(248,113,113,0.08)] border border-[rgba(248,113,113,0.2)] flex items-center justify-center text-[#F87171] hover:bg-[rgba(248,113,113,0.2)] transition-all cursor-pointer"
-                                aria-label="Delete"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </div>
-                    )}
+                    {/* Delete Icon Button */}
+                    <button
+                        type="button"
+                        onClick={() => onDelete?.(promotion)}
+                        className="w-9 h-[36px] rounded-[24px] bg-[rgba(248,113,113,0.08)] border border-[rgba(248,113,113,0.2)] flex items-center justify-center text-[#F87171] hover:bg-[rgba(248,113,113,0.2)] transition-all cursor-pointer shrink-0"
+                        aria-label="Delete"
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>

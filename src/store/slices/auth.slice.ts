@@ -4,10 +4,13 @@ import Cookies from "js-cookie";
 export interface User {
   id: string;
   email: string;
+  name?: string;
+  profileImage?: string;
   isClaimed?: "none" | "pending" | "approved";
   isSubscribed?: boolean;
   isProfileCompleted?: boolean;
-  // add other user fields as needed
+  venue?: any;
+  [key: string]: any;
 }
 
 interface AuthState {

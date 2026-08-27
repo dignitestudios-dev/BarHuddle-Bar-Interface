@@ -7,62 +7,7 @@ import { VenueCard, type VenueCardData } from "./VenueCard";
 import { VenueDetailView } from "./VenueDetailView";
 import { ClaimFormModal } from "./ClaimFormModal";
 
-const SAMPLE_VENUES: VenueCardData[] = [
-    {
-        id: 1,
-        title: "Barcelona Wine Bar",
-        category: "Wine Bar",
-        address: "1622 14th St NW, Washington, DC",
-        capacity: "~ 25",
-        imageUrl: "/images/venue-barcelona.png",
-        demographics: { male: 60, female: 25, nonBinary: 15 },
-    },
-    {
-        id: 2,
-        title: "Barcelona Wine Bar",
-        category: "Wine Bar",
-        address: "1622 14th St NW, Washington, DC",
-        capacity: "~ 25",
-        imageUrl: "/images/venue-barcelona.png",
-        demographics: { male: 60, female: 25, nonBinary: 15 },
-    },
-    {
-        id: 3,
-        title: "Barcelona Wine Bar",
-        category: "Wine Bar",
-        address: "1622 14th St NW, Washington, DC",
-        capacity: "~ 25",
-        imageUrl: "/images/venue-barcelona.png",
-        demographics: { male: 60, female: 25, nonBinary: 15 },
-    },
-    {
-        id: 4,
-        title: "Barcelona Wine Bar",
-        category: "Wine Bar",
-        address: "1622 14th St NW, Washington, DC",
-        capacity: "~ 25",
-        imageUrl: "/images/venue-barcelona.png",
-        demographics: { male: 40, female: 45, nonBinary: 15 },
-    },
-    {
-        id: 5,
-        title: "Barcelona Wine Bar",
-        category: "Wine Bar",
-        address: "1622 14th St NW, Washington, DC",
-        capacity: "~ 25",
-        imageUrl: "/images/venue-barcelona.png",
-        demographics: { male: 60, female: 25, nonBinary: 15 },
-    },
-    {
-        id: 6,
-        title: "Barcelona Wine Bar",
-        category: "Wine Bar",
-        address: "1622 14th St NW, Washington, DC",
-        capacity: "~ 25",
-        imageUrl: "/images/venue-barcelona.png",
-        demographics: { male: 60, female: 25, nonBinary: 15 },
-    },
-];
+
 
 import { useMyVenuesQuery } from "../api/venue.queries";
 import { useSearchParams } from "next/navigation";

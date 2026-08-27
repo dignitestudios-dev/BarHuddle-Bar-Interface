@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 
 export interface EventCardData {
-    id: number;
+    id: number | string;
     title: string;
     venueName: string;
     dateTime: string;
@@ -18,20 +18,43 @@ export interface EventCardData {
 
 export interface EventCardProps {
     event: EventCardData;
+    rawEvent?: any;
     variant?: "default" | "boosting";
     onActionClick?: (event: EventCardData) => void;
     onBoostToggle?: (event: EventCardData) => void;
+    onEdit?: (event: EventCardData, raw?: any) => void;
+    onDelete?: (event: EventCardData, raw?: any) => void;
     className?: string;
 }
 
 export function EventCard({
     event,
+    rawEvent,
     variant = "default",
     onActionClick,
     onBoostToggle,
+    onEdit,
+    onDelete,
     className = "",
 }: EventCardProps) {
     const router = useRouter();
+    const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+    const menuRef = React.useRef<HTMLDivElement>(null);
+
+    // Close menu on click outside
+    React.useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        if (isMenuOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [isMenuOpen]);
 
     const handleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -74,16 +97,60 @@ export function EventCard({
                 {/* Teal/Green Gradient Touch */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[rgba(74,222,128,0.2)] to-[rgba(34,211,238,0.12)] opacity-50 pointer-events-none" />
 
-                {/* Top Right Options Menu Button (3 Dots) */}
-                <button
-                    type="button"
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[rgba(124,58,237,0.7)] backdrop-blur-md flex items-center justify-center text-white hover:bg-[#7C3AED] transition-colors shadow-md cursor-pointer z-10"
-                    aria-label="Event options menu"
-                >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                    </svg>
-                </button>
+                {/* Top Right Options Menu Button (3 Dots) & Dropdown */}
+                <div ref={menuRef} className="absolute top-3 right-3 z-30">
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(!isMenuOpen);
+                        }}
+                        className="w-8 h-8 rounded-full bg-[rgba(124,58,237,0.7)] hover:bg-[#7C3AED] backdrop-blur-md flex items-center justify-center text-white transition-colors shadow-md cursor-pointer"
+                        aria-label="Event options menu"
+                    >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                        </svg>
+                    </button>
+
+                    {/* Options Dropdown Menu */}
+                    {isMenuOpen && (
+                        <div
+                            className="absolute right-0 mt-2 w-36 bg-[#080530] border border-[rgba(124,58,237,0.3)] shadow-[0px_8px_32px_rgba(0,0,0,0.6)] rounded-[14px] p-1.5 flex flex-col gap-1 z-40 animate-in fade-in zoom-in-95 duration-150 text-white"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Edit Option */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMenuOpen(false);
+                                    onEdit?.(event, rawEvent);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-left"
+                            >
+                                <svg className="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                                <span>Edit Event</span>
+                            </button>
+
+                            {/* Delete Option */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsMenuOpen(false);
+                                    onDelete?.(event, rawEvent);
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors cursor-pointer text-left"
+                            >
+                                <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                <span>Delete Event</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Card Body Container */}

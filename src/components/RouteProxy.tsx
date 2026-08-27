@@ -51,7 +51,7 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
 
                 // If user is on an auth route OR they are on a protected route that doesn't match their allowed onboarding route
                 // Exceptions: If they are subscribed, they can access ANY /app/* route.
-                
+
                 if (isAuthRoute || pathname === "/auth/profile-setup") {
                     // Redirect logged-in user away from auth pages
                     router.replace(targetRoute);
