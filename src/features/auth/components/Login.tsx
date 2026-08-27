@@ -24,6 +24,7 @@ const passwordSchema = z.object({
         .max(50, { message: "Password must be less than 50 characters" })
         .regex(/[A-Z]/, { message: "Password must contain at least 1 uppercase letter" })
         .regex(/[^a-zA-Z0-9]/, { message: "Password must contain at least 1 special character" }),
+    confirmPassword: z.string().optional(),
 });
 
 type EmailFormValues = z.infer<typeof emailSchema>;
@@ -34,7 +35,9 @@ export function Login() {
     const dispatch = useAppDispatch();
     const [step, setStep] = useState<1 | 2>(1);
     const [emailValue, setEmailValue] = useState("");
+    const [isExistingUser, setIsExistingUser] = useState<boolean>(true);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(true);
 
     const checkEmailMutation = useCheckEmailMutation();
@@ -50,25 +53,31 @@ export function Login() {
         defaultValues: { email: "" },
     });
 
-    // RHF for Step 2 (Password)
+    // RHF for Step 2 (Password / Confirm Password)
     const {
         control: passwordControl,
         handleSubmit: handlePasswordSubmit,
+        reset: resetPasswordForm,
         formState: { errors: passwordErrors },
     } = useForm<PasswordFormValues>({
         resolver: zodResolver(passwordSchema),
-        defaultValues: { password: "" },
+        defaultValues: { password: "", confirmPassword: "" },
     });
 
     const onEmailSubmit = async (data: EmailFormValues) => {
         try {
-            await checkEmailMutation.mutateAsync(data.email);
+            const response = await checkEmailMutation.mutateAsync(data.email);
+            const exists = Boolean(response?.data?.exists ?? (response as any)?.exists);
+            setIsExistingUser(exists);
             setEmailValue(data.email);
+            resetPasswordForm({ password: "", confirmPassword: "" });
             setStep(2);
         } catch (error: any) {
             console.error("Check email error", error);
-            toast.error(error?.response?.data?.message || error.message || "Failed to check email");
+            const exists = Boolean(error?.response?.data?.data?.exists);
+            setIsExistingUser(exists);
             setEmailValue(data.email);
+            resetPasswordForm({ password: "", confirmPassword: "" });
             setStep(2);
         }
     };
@@ -77,6 +86,18 @@ export function Login() {
         if (!acceptedTerms) {
             toast.error("Please accept the Terms & Conditions and Privacy Policy to proceed");
             return;
+        }
+
+        // Validate confirm password for new users
+        if (!isExistingUser) {
+            if (!data.confirmPassword) {
+                toast.error("Please confirm your password");
+                return;
+            }
+            if (data.password !== data.confirmPassword) {
+                toast.error("Passwords do not match");
+                return;
+            }
         }
 
         try {
@@ -90,10 +111,10 @@ export function Login() {
                 if (response.data.user) {
                     dispatch(updateUser(response.data.user));
                 }
-                router.push(`/auth/verify-email?email=${encodeURIComponent(emailValue)}&mode=login`);
+                router.push(`/auth/verify-email?email=${encodeURIComponent(emailValue)}&mode=${isExistingUser ? "login" : "signup"}`);
             } else {
                 dispatch(setAuth({ token: response.data.token || "", user: response.data.user }));
-                toast.success("Logged in successfully!");
+                toast.success(isExistingUser ? "Logged in successfully!" : "Account created successfully!");
                 if (!response.data.user?.isProfileCompleted) {
                     router.push(`/auth/profile-setup`);
                 } else {
@@ -102,7 +123,7 @@ export function Login() {
             }
         } catch (error: any) {
             console.error("Login error", error);
-            toast.error(error?.response?.data?.message || error.message || "Failed to login");
+            toast.error(error?.response?.data?.message || error.message || "Failed to proceed");
         }
     };
 
@@ -122,10 +143,14 @@ export function Login() {
             {/* Header Text */}
             <div className="flex flex-col items-center gap-1.5 mb-6 text-center">
                 <h1 className="font-semibold text-[32px] sm:text-[36px] leading-[44px] sm:leading-[49px] text-white tracking-tight">
-                    Welcome back!
+                    {step === 1 ? "Welcome back!" : isExistingUser ? "Welcome back!" : "Create Account"}
                 </h1>
                 <p className="font-normal text-[15px] leading-[22px] text-white/80">
-                    Enter your details below to login.
+                    {step === 1
+                        ? "Enter your details below to continue."
+                        : isExistingUser
+                        ? "Enter your password below to login."
+                        : "Set a password to create your account."}
                 </p>
             </div>
 
@@ -182,19 +207,22 @@ export function Login() {
                         />
                     </div>
 
-                    {/* Forgot Password Link & Password Field */}
+                    {/* Password Field */}
                     <div className="flex flex-col gap-1 w-full">
                         <div className="flex justify-between items-center mb-1">
                             <label className="font-semibold text-[14px] leading-[19px] text-white">
                                 Password
                             </label>
-                            <button
-                                type="button"
-                                onClick={() => router.push('/auth/forgot-password')}
-                                className="font-medium text-[13px] leading-[18px] text-[#B972FC] hover:underline transition-colors focus:outline-none cursor-pointer"
-                            >
-                                Forgot Password?
-                            </button>
+                            {/* Forgot Password link only for existing users */}
+                            {isExistingUser && (
+                                <button
+                                    type="button"
+                                    onClick={() => router.push('/auth/forgot-password')}
+                                    className="font-medium text-[13px] leading-[18px] text-[#B972FC] hover:underline transition-colors focus:outline-none cursor-pointer"
+                                >
+                                    Forgot Password?
+                                </button>
+                            )}
                         </div>
                         <Controller
                             name="password"
@@ -229,6 +257,46 @@ export function Login() {
                         />
                     </div>
 
+                    {/* Confirm Password Field (Only when user does not exist: exists === false) */}
+                    {!isExistingUser && (
+                        <div className="flex flex-col gap-1 w-full animate-in fade-in duration-200">
+                            <label className="font-semibold text-[14px] leading-[19px] text-white mb-1">
+                                Confirm Password
+                            </label>
+                            <Controller
+                                name="confirmPassword"
+                                control={passwordControl}
+                                render={({ field }) => (
+                                    <InputField
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        placeholder="•••••••••"
+                                        error={passwordErrors.confirmPassword?.message}
+                                        rightElement={
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                className="focus:outline-none p-1 hover:text-[#B972FC] transition-colors cursor-pointer"
+                                                aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                            >
+                                                {showConfirmPassword ? (
+                                                    <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.025 10.025 0 0111.44 3.029C20.268 10.057 16.478 13 12 13c-.88 0-1.737-.113-2.553-.326m-4.52-4.52l12.14 12.14" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        }
+                                        {...field}
+                                    />
+                                )}
+                            />
+                        </div>
+                    )}
+
                     {/* Terms and Conditions Checkbox */}
                     <div className="flex items-center justify-center gap-2.5 mt-1">
                         <button
@@ -262,7 +330,13 @@ export function Login() {
                         disabled={loginMutation.isPending}
                         className="w-full h-[52px] rounded-full font-bold text-[15px] cursor-pointer mt-1"
                     >
-                        {loginMutation.isPending ? "Logging in..." : "Login"}
+                        {loginMutation.isPending
+                            ? isExistingUser
+                                ? "Logging in..."
+                                : "Creating Account..."
+                            : isExistingUser
+                            ? "Login"
+                            : "Create Account"}
                     </Button>
                 </form>
             )}
