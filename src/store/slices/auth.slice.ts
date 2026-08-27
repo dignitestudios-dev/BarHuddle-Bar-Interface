@@ -4,7 +4,9 @@ import Cookies from "js-cookie";
 export interface User {
   id: string;
   email: string;
-  status: "new" | "pending" | "approved" | "subscribed";
+  isClaimed?: "none" | "pending" | "approved";
+  isSubscribed?: boolean;
+  isProfileCompleted?: boolean;
   // add other user fields as needed
 }
 
@@ -37,7 +39,7 @@ const authSlice = createSlice({
         localStorage.setItem("auth-token", action.payload.token);
         localStorage.setItem("auth-user", JSON.stringify(action.payload.user));
         // We set the cookie for proxy.ts to read on the server side
-        Cookies.set("auth-token", action.payload.token, { expires: 7 }); 
+        Cookies.set("auth-token", action.payload.token, { expires: 7, path: '/' }); 
       }
     },
     logout: (state) => {
@@ -46,7 +48,7 @@ const authSlice = createSlice({
       if (typeof window !== "undefined") {
         localStorage.removeItem("auth-token");
         localStorage.removeItem("auth-user");
-        Cookies.remove("auth-token");
+        Cookies.remove("auth-token", { path: '/' });
       }
     },
     rehydrate: (state, action: PayloadAction<{ token: string | null; user: User | null }>) => {
@@ -57,9 +59,12 @@ const authSlice = createSlice({
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
-        if (typeof window !== "undefined") {
-          localStorage.setItem("auth-user", JSON.stringify(state.user));
-        }
+      } else {
+        state.user = action.payload as User;
+      }
+      
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth-user", JSON.stringify(state.user));
       }
     },
   },

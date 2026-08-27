@@ -6,6 +6,7 @@ import type { DemographicsData } from "./VenueCard";
 
 export interface VenueInfoSectionProps {
     demographics?: DemographicsData;
+    address?: string;
     className?: string;
 }
 
@@ -17,6 +18,7 @@ const DEFAULT_DEMOGRAPHICS: DemographicsData = {
 
 export function VenueInfoSection({
     demographics = DEFAULT_DEMOGRAPHICS,
+    address = "Unknown Address",
     className = "",
 }: VenueInfoSectionProps) {
     const pieData = [
@@ -138,7 +140,7 @@ export function VenueInfoSection({
                             rel="noopener noreferrer"
                             className="font-medium text-[12px] leading-[16px] text-white underline capitalize truncate hover:text-[#E8FF57] transition-colors"
                         >
-                            Three Sugar Creek , Sugarland , Texas, USA
+                            {address}
                         </a>
 
                         <svg className="w-[18px] h-[18px] text-[#DAB2FF] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

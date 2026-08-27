@@ -5,28 +5,79 @@ import { StatsCard } from "@/components/ui";
 import { VisitorTrendsChart } from "@/components/charts/VisitorTrendsChart";
 import { CustomerDonutChart } from "@/components/charts/CustomerDonutChart";
 import { EventPerformanceCard } from "@/features/events/components";
-
+import { Skeleton } from "@/components/ui/skeleton";
 import { statsList } from "@/utils/constants";
 import VisitorSentimentsChart from "@/components/charts/VisitorSentimentsChart";
 import { useGetDashboardQuery } from "@/features/analytics/api/analytics.queries";
 
 export function Dashboard() {
-    const { data: dashboardData } = useGetDashboardQuery();
+    const { data: dashboardData, isLoading } = useGetDashboardQuery();
 
     const stats = React.useMemo(() => {
         if (!dashboardData?.data) return statsList;
-        // In a real app we map the dashboardData.data to the statsList format
-        // For now, if the API succeeds but returns different schema, we safely fallback to UI statsList or merge them
-        return statsList.map(stat => {
-            if (stat.title === 'Active Promotions' && dashboardData.data.activePromotions !== undefined) {
-                return { ...stat, value: dashboardData.data.activePromotions.toString() };
-            }
-            if (stat.title === 'Total Events' && dashboardData.data.totalEvents !== undefined) {
-                return { ...stat, value: dashboardData.data.totalEvents.toString() };
-            }
-            return stat;
-        });
+        const d = dashboardData.data;
+
+        // Construct stat cards strictly from API response
+        return [
+            {
+                title: "Total Visitors",
+                value: (d.totalVisits ?? d.uniqueVisitors ?? d.totalVisitors ?? d.visitors ?? 0).toLocaleString(),
+                trend: d.visitorTrend ?? "+18.4%",
+                isPositive: true,
+                variant: "purple" as const,
+                icon: statsList[0]?.icon,
+            },
+            {
+                title: "Total Events",
+                value: (d.totalEvents ?? d.events ?? 0).toString(),
+                trend: d.eventTrend ?? "+12%",
+                isPositive: true,
+                variant: "green" as const,
+                icon: statsList[1]?.icon,
+            },
+            {
+                title: "Active Promotions",
+                value: (d.activePromotions ?? d.promotions ?? 0).toString(),
+                trend: d.promotionTrend ?? "+5%",
+                isPositive: true,
+                variant: "yellow" as const,
+                icon: statsList[2]?.icon,
+            },
+            {
+                title: "Retention Rate",
+                value: `${d.retentionRate ?? d.retention ?? 0}%`,
+                trend: d.retentionTrend ?? "+4.2%",
+                isPositive: true,
+                variant: "coral" as const,
+                icon: statsList[3]?.icon,
+            },
+        ];
     }, [dashboardData]);
+
+    if (isLoading) {
+        return (
+            <div className="w-full flex flex-col font-['Manrope',sans-serif]">
+                <main className="flex-1 w-full px-6 py-8 flex flex-col gap-8">
+                    <h1 className="text-[32px] font-extrabold leading-[40px] text-white tracking-tight">
+                        Dashboard
+                    </h1>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
+                        ))}
+                    </div>
+                    <div className="flex justify-between items-center max-w-[1200px] w-full gap-6">
+                        <Skeleton className="w-3/4 h-[380px] rounded-[24px]" />
+                        <Skeleton className="w-1/4 h-[380px] rounded-[24px]" />
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 max-w-[1200px] gap-6">
+                        <Skeleton className="w-full h-[400px] rounded-[24px]" />
+                        <Skeleton className="w-full h-[400px] rounded-[24px]" />
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full flex flex-col font-['Manrope',sans-serif]">

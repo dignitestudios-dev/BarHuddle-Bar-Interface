@@ -11,10 +11,18 @@ export const venueKeys = {
   hours: (id: string) => [...venueKeys.detail(id), "hours"] as const,
 };
 
-export const useMyVenuesQuery = () => {
+export const useMyVenuesQuery = (page: number = 1, limit: number = 10, search: string = "") => {
   return useQuery({
-    queryKey: venueKeys.lists(),
-    queryFn: () => venueService.getMyVenues(),
+    queryKey: [...venueKeys.lists(), { page, limit, search }],
+    queryFn: () => venueService.getMyVenues(page, limit, search),
+    enabled: !!search.trim(),
+  });
+};
+
+export const useGetOwnerVenuesQuery = () => {
+  return useQuery({
+    queryKey: [...venueKeys.all, "owner-venues"],
+    queryFn: () => venueService.getOwnerVenues(),
   });
 };
 

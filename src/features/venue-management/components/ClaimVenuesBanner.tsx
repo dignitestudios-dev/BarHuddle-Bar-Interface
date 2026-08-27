@@ -21,14 +21,14 @@ export function ClaimVenuesBanner({
             <div className="absolute right-[-40px] top-[-40px] w-[300px] h-[200px] bg-[radial-gradient(57.2%_102.96%_at_50%_50%,rgba(124,58,237,0.35)_0%,rgba(0,0,0,0)_70%)] opacity-[0.25] rounded-full pointer-events-none z-0" />
 
             {/* Content Section */}
-            <div className="relative z-10 flex flex-col gap-2 max-w-[672px]">
+            <div className="relative z-10 flex flex-col items-center text-center gap-2 max-w-[672px] mx-auto">
                 {/* Title */}
                 <h1 className="font-extrabold text-[32px] sm:text-[36px] leading-[40px] sm:leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
                     {title}
                 </h1>
 
                 {/* Description */}
-                <p className="font-normal text-[14px] sm:text-[16px] leading-[22px] sm:leading-[24px] text-[#9D8FD0] max-w-[512px]">
+                <p className="font-normal text-[14px] sm:text-[16px] leading-[22px] sm:leading-[24px] text-[#9D8FD0] max-w-[512px] mx-auto">
                     {description}
                 </p>
             </div>

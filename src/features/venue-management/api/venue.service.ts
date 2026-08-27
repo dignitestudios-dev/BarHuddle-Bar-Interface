@@ -10,25 +10,30 @@ export interface Venue {
   // add other fields as per your backend schema
 }
 
-export interface ClaimVenuePayload {
-  name: string;
-  address: string;
-  role: string;
-  proofUrl: string; // example of file or string
-}
+export type ClaimVenuePayload = FormData;
 
 export const venueService = {
   // 3. Venue Management Endpoints
-  
+
   // List My Venues
-  getMyVenues: async (): Promise<Venue[]> => {
-    const response = await axiosInstance.get("/venue-owner/venues");
-    return response.data;
+  getMyVenues: async (page = 1, limit = 10, search = ""): Promise<Venue[]> => {
+    const response = await axiosInstance.get("/venues", {
+      params: { page, limit, search }
+    });
+    return response.data?.data || [];
   },
 
-  // Claim a Venue
+  getOwnerVenues: async (): Promise<Venue[]> => {
+    const response = await axiosInstance.get("/venue-owner/venues");
+    return response.data?.data || response.data || [];
+  },
+
   claimVenue: async (data: ClaimVenuePayload) => {
-    const response = await axiosInstance.post("/venue-owner/claim", data);
+    const response = await axiosInstance.post("/venue-owner/claim", data, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data;
   },
 

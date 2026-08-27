@@ -2,12 +2,12 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 export function ProfileDropdown() {
     const router = useRouter();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    const { firstName, initials } = useProfile();
+    const { user, handleLogout } = useAuth();
     const profileRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown on click outside
@@ -28,6 +28,19 @@ export function ProfileDropdown() {
         setShowProfileMenu(false);
         router.push("/app/profile");
     };
+
+    // Calculate display name and initials
+    const displayName = (user as any)?.firstName || (user as any)?.name || (user as any)?.fullName || user?.email?.split('@')[0] || "User";
+    const firstName = displayName.split(" ")[0];
+    
+    const getInitials = (name: string) => {
+        const parts = name.trim().split(" ").filter(Boolean);
+        if (parts.length === 0) return "U";
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+    
+    const initials = getInitials(displayName);
 
     return (
         <div ref={profileRef} className="relative font-['Manrope',sans-serif]">
@@ -76,7 +89,7 @@ export function ProfileDropdown() {
                         type="button"
                         onClick={() => {
                             setShowProfileMenu(false);
-                            router.push("/auth/login");
+                            handleLogout();
                         }}
                         className="w-full text-left font-medium text-sm text-[#FF3636] hover:text-red-400 py-1.5 px-2 rounded hover:bg-white/5 transition-colors cursor-pointer"
                     >

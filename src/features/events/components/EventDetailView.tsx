@@ -5,40 +5,60 @@ import { VenueCarouselSection } from "@/features/venue-management/components";
 
 
 export interface EventDetailViewProps {
-    event?: EventCardData;
+    event?: any;
+    isLoading?: boolean;
     onBack?: () => void;
     className?: string;
 }
 
-const DEFAULT_EVENT_DETAIL: EventCardData = {
-    id: 1,
-    title: "Music Night",
-    venueName: "Barcelona Wine Bar",
-    dateTime: "09/06/2026 · 09:00 - 11:30 PM",
-    imageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80",
-    views: "4.3K",
-    ratio: "45/55",
-    conversionRate: "18.2%",
-    performancePercent: 38,
-    isBoosted: false,
-};
-
-const INSTRUCTIONS_LIST = [
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-    "Lorem ipsum dolor sit amet, consectetur elit. Lorem ipsum dolor sit amet, consectetur elit.",
-];
-
 export function EventDetailView({
-    event = DEFAULT_EVENT_DETAIL,
+    event,
+    isLoading,
     onBack,
     className = "",
 }: EventDetailViewProps) {
+    if (isLoading) {
+        return (
+            <div className="w-full max-w-[1200px] flex items-center justify-center p-16 text-white/70 font-semibold text-lg">
+                Loading event details...
+            </div>
+        );
+    }
+
+    const title = event?.title || event?.name || "Event Details";
+    const description = event?.description || "No description provided for this event.";
+    const startDateFormatted = event?.startAt 
+        ? new Date(event.startAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) 
+        : "N/A";
+    const startTimeFormatted = event?.startAt && event?.endAt 
+        ? `${new Date(event.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : "N/A";
+    const artist = event?.artist || "N/A";
+    const venueName = event?.venue?.name || "Venue";
+    const venueAddress = event?.venue?.address || "";
+    const city = venueAddress ? venueAddress.split(",").slice(-2, -1)[0]?.trim() || "Location" : "";
+
+    const customSlides = event ? [
+        {
+            id: 1,
+            title: venueName,
+            category: event?.venue?.category || "Bar",
+            locationCity: city,
+            fullAddress: venueAddress,
+            isOpen: true,
+            imageUrl: event?.banner || event?.venue?.coverImage || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80",
+        },
+        ...(event?.venue?.coverImage && event?.banner ? [{
+            id: 2,
+            title: venueName,
+            category: event?.venue?.category || "Bar",
+            locationCity: city,
+            fullAddress: venueAddress,
+            isOpen: true,
+            imageUrl: event.venue.coverImage,
+        }] : [])
+    ] : undefined;
+
     return (
         <div className={`w-full max-w-[1200px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
             {/* Top Bar: Back Button, Event Detail Heading & Options Menu */}
@@ -57,7 +77,7 @@ export function EventDetailView({
                         </button>
                     )}
                     <h1 className="font-extrabold text-[32px] sm:text-[36px] leading-[44px] text-white tracking-tight">
-                        Event Detail
+                        {title}
                     </h1>
                 </div>
 
@@ -74,11 +94,11 @@ export function EventDetailView({
             </div>
 
             {/* Venue Hero & Image Carousel Section */}
-            <VenueCarouselSection />
+            <VenueCarouselSection slides={customSlides} />
 
             {/* 2-Column Grid Below Carousel: Event Details (Description) + Other Information */}
             <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* Left Card (lg:col-span-7): Event Details - Description/Instructions */}
+                {/* Left Card (lg:col-span-7): Event Details - Description */}
                 <div className="lg:col-span-7 w-full p-6 sm:p-7 rounded-[20px] bg-[rgba(20,14,80,0.6)] border border-[rgba(124,58,237,0.22)] shadow-[0px_8px_32px_rgba(0,0,0,0.35),inset_0px_1px_0px_rgba(255,255,255,0.05)] backdrop-blur-xl flex flex-col gap-5">
                     {/* Section Label: Indicator Pill + Text */}
                     <div className="flex items-center gap-2">
@@ -93,16 +113,11 @@ export function EventDetailView({
                         Description/Instructions
                     </h2>
 
-                    {/* Instructions Bullet List */}
+                    {/* Instructions Text */}
                     <div className="flex flex-col gap-3">
-                        {INSTRUCTIONS_LIST.map((text, idx) => (
-                            <div key={idx} className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-white shrink-0" />
-                                <p className="font-normal text-[13px] leading-[18px] tracking-[-0.408px] text-white">
-                                    {text}
-                                </p>
-                            </div>
-                        ))}
+                        <p className="font-normal text-[14px] leading-[22px] text-white/90 whitespace-pre-wrap">
+                            {description}
+                        </p>
                     </div>
                 </div>
 
@@ -132,7 +147,7 @@ export function EventDetailView({
                                     Date
                                 </span>
                                 <span className="font-normal text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-white">
-                                    09/06/2026
+                                    {startDateFormatted}
                                 </span>
                             </div>
 
@@ -142,30 +157,30 @@ export function EventDetailView({
                                     Time
                                 </span>
                                 <span className="font-normal text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-white">
-                                    09:00 - 11:30 PM
+                                    {startTimeFormatted}
                                 </span>
                             </div>
                         </div>
 
-                        {/* Bottom Row: Live DJ (Left) & Artist (Right) */}
+                        {/* Bottom Row: Artist (Left) & Status (Right) */}
                         <div className="grid grid-cols-2 gap-4 relative z-10">
-                            {/* Live DJ */}
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-[#FDF88F]">
-                                    Live DJ
-                                </span>
-                                <span className="font-normal text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-white">
-                                    Mike Smith
-                                </span>
-                            </div>
-
                             {/* Artist */}
-                            <div className="flex flex-col gap-1 items-end text-right">
+                            <div className="flex flex-col gap-1">
                                 <span className="font-bold text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-[#FDF88F]">
                                     Artist
                                 </span>
                                 <span className="font-normal text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-white">
-                                    Alexander
+                                    {artist}
+                                </span>
+                            </div>
+
+                            {/* Status */}
+                            <div className="flex flex-col gap-1 items-end text-right">
+                                <span className="font-bold text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-[#FDF88F]">
+                                    Status
+                                </span>
+                                <span className="font-normal text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-white">
+                                    {event?.status || "Published"}
                                 </span>
                             </div>
                         </div>

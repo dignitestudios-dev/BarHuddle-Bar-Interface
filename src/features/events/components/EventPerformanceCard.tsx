@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import { useGetEventsAnalyticsQuery } from "@/features/analytics/api/analytics.queries";
 
 export interface EventPerformanceItem {
     id: number;
@@ -53,9 +54,28 @@ const DEFAULT_EVENTS: EventPerformanceItem[] = [
 ];
 
 export function EventPerformanceCard({
-    events = DEFAULT_EVENTS,
+    events,
     className = "",
 }: EventPerformanceCardProps) {
+    const { data: apiEventsData } = useGetEventsAnalyticsQuery();
+
+    const finalEvents: EventPerformanceItem[] = React.useMemo(() => {
+        if (events) return events;
+        const apiPerf = apiEventsData?.data?.eventPerformance;
+        if (apiPerf && Array.isArray(apiPerf) && apiPerf.length > 0) {
+            return apiPerf.map((evt: any, idx: number) => ({
+                id: evt.id || idx + 1,
+                title: evt.title || evt.name || "Event",
+                date: evt.date 
+                    ? new Date(evt.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                    : "TBD",
+                attendees: evt.attendees || evt.views || 0,
+                engagement: evt.engagement || evt.performancePercent || 0,
+                imageSrc: evt.imageSrc || "/images/event-ladies-night.png",
+            }));
+        }
+        return [];
+    }, [events, apiEventsData]);
     return (
         <div
             className={`relative w-full max-w-[598px] h-[496px] p-6 flex flex-col justify-between bg-[#0E093C]/75 backdrop-blur-xl border border-[rgba(124,58,237,0.2)] shadow-[0px_4px_24px_rgba(0,0,0,0.4),inset_0px_1px_0px_rgba(255,255,255,0.06)] rounded-[24px] overflow-hidden select-none font-['Manrope',sans-serif] ${className}`}
@@ -97,63 +117,70 @@ export function EventPerformanceCard({
 
             {/* Event Cards Scrollable List */}
             <div className="flex-1 w-full flex flex-col gap-3 overflow-y-auto pr-1 relative z-10 custom-scrollbar">
-                {events.map((event, idx) => (
-                    <div
-                        key={`${event.id}-${idx}`}
-                        className="relative w-full min-h-[103px] p-2.5 bg-[rgba(10,6,45,0.6)] border border-[rgba(124,58,237,0.15)] rounded-[18px] flex items-center gap-3 transition-all hover:border-[rgba(124,58,237,0.35)]"
-                    >
-                        {/* Event Thumbnail */}
-                        <div className="relative w-[100px] h-[87px] rounded-[12px] overflow-hidden shrink-0 bg-gradient-to-br from-[#1E0938] to-[#0B0633] flex items-center justify-center">
-                            {/* Neon Green Laser Cover Accent */}
-                            <div className="absolute inset-0 bg-gradient-to-tr from-[#0B0633] via-[#009706]/40 to-[#E8FF57]/30 opacity-80" />
-                            <div className="relative z-10 text-center flex flex-col items-center">
-                                <svg className="w-6 h-6 text-[#E8FF57]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                </svg>
-                            </div>
-                        </div>
-
-                        {/* Event Info & Engagement Progress */}
-                        <div className="flex-1 flex flex-col justify-between py-1 min-w-0 pr-2">
-                            {/* Top Title & Date Row */}
-                            <div className="flex flex-col">
-                                <h4 className="font-extrabold text-[16px] leading-[22px] text-white capitalize truncate">
-                                    {event.title}
-                                </h4>
-                                <span className="font-normal text-[11px] leading-[18px] text-[#E8C7FF] capitalize">
-                                    {event.date}
-                                </span>
-                            </div>
-
-                            {/* Bottom Attendees & Engagement Progress Row */}
-                            <div className="flex items-end justify-between gap-4 mt-2">
-                                {/* Attendees Count */}
-                                <div className="flex flex-col">
-                                    <span className="font-extrabold text-[16px] leading-[20px] text-white">
-                                        {event.attendees}
-                                    </span>
-                                    <span className="font-normal text-[11px] leading-[16px] text-[#E8C7FF] capitalize">
-                                        Attendees
-                                    </span>
-                                </div>
-
-                                {/* Engagement Bar */}
-                                <div className="flex-1 flex flex-col gap-1 max-w-[260px]">
-                                    <div className="flex items-center justify-between text-[11px]">
-                                        <span className="font-normal text-[#E8C7FF]">Engagement</span>
-                                        <span className="font-bold text-[#FDF88F]">{event.engagement}%</span>
-                                    </div>
-                                    <div className="w-full h-[6px] bg-[#0B083C] rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full rounded-full bg-gradient-to-r from-[#C27AFF] to-[#FDF88F] transition-all duration-500"
-                                            style={{ width: `${event.engagement}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                {finalEvents.length === 0 ? (
+                    <div className="w-full h-full min-h-[220px] flex flex-col items-center justify-center gap-2 text-center p-6 border border-dashed border-[rgba(124,58,237,0.2)] rounded-[18px] bg-[rgba(10,6,45,0.4)]">
+                        <span className="text-sm font-semibold text-white/70">No event performance data available</span>
+                        <span className="text-xs text-white/40">Events created will show performance metrics here.</span>
                     </div>
-                ))}
+                ) : (
+                    finalEvents.map((event, idx) => (
+                        <div
+                            key={`${event.id}-${idx}`}
+                            className="relative w-full min-h-[103px] p-2.5 bg-[rgba(10,6,45,0.6)] border border-[rgba(124,58,237,0.15)] rounded-[18px] flex items-center gap-3 transition-all hover:border-[rgba(124,58,237,0.35)]"
+                        >
+                            {/* Event Thumbnail */}
+                            <div className="relative w-[100px] h-[87px] rounded-[12px] overflow-hidden shrink-0 bg-gradient-to-br from-[#1E0938] to-[#0B0633] flex items-center justify-center">
+                                {/* Neon Green Laser Cover Accent */}
+                                <div className="absolute inset-0 bg-gradient-to-tr from-[#0B0633] via-[#009706]/40 to-[#E8FF57]/30 opacity-80" />
+                                <div className="relative z-10 text-center flex flex-col items-center">
+                                    <svg className="w-6 h-6 text-[#E8FF57]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            {/* Event Info & Engagement Progress */}
+                            <div className="flex-1 flex flex-col justify-between py-1 min-w-0 pr-2">
+                                {/* Top Title & Date Row */}
+                                <div className="flex flex-col">
+                                    <h4 className="font-extrabold text-[16px] leading-[22px] text-white capitalize truncate">
+                                        {event.title}
+                                    </h4>
+                                    <span className="font-normal text-[11px] leading-[18px] text-[#E8C7FF] capitalize">
+                                        {event.date}
+                                    </span>
+                                </div>
+
+                                {/* Bottom Attendees & Engagement Progress Row */}
+                                <div className="flex items-end justify-between gap-4 mt-2">
+                                    {/* Attendees Count */}
+                                    <div className="flex flex-col">
+                                        <span className="font-extrabold text-[16px] leading-[20px] text-white">
+                                            {event.attendees}
+                                        </span>
+                                        <span className="font-normal text-[11px] leading-[16px] text-[#E8C7FF] capitalize">
+                                            Attendees
+                                        </span>
+                                    </div>
+
+                                    {/* Engagement Bar */}
+                                    <div className="flex-1 flex flex-col gap-1 max-w-[260px]">
+                                        <div className="flex items-center justify-between text-[11px]">
+                                            <span className="font-normal text-[#E8C7FF]">Engagement</span>
+                                            <span className="font-bold text-[#FDF88F]">{event.engagement}%</span>
+                                        </div>
+                                        <div className="w-full h-[6px] bg-[#0B083C] rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full bg-gradient-to-r from-[#C27AFF] to-[#FDF88F] transition-all duration-500"
+                                                style={{ width: `${event.engagement}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );

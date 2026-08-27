@@ -6,8 +6,10 @@ export interface Promotion {
 }
 
 export const promotionService = {
-  getPromotions: async () => {
-    const response = await axiosInstance.get("/venue-owner/promotions");
+  getPromotions: async (page = 1, limit = 10) => {
+    const response = await axiosInstance.get("/venue-owner/promotions", {
+      params: { page, limit },
+    });
     return response.data;
   },
   createPromotion: async (data: any) => {

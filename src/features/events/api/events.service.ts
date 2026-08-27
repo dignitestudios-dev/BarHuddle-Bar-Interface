@@ -10,8 +10,12 @@ export const eventService = {
     const response = await axiosInstance.get("/venue-owner/events");
     return response.data;
   },
-  createEvent: async (data: any) => {
-    const response = await axiosInstance.post("/venue-owner/events", data);
+  createEvent: async (data: FormData) => {
+    const response = await axiosInstance.post("/venue-owner/events", data, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data;
   },
   getEventDetails: async (id: string) => {
@@ -28,6 +32,12 @@ export const eventService = {
   },
   getEventPerformance: async (id: string) => {
     const response = await axiosInstance.get(`/venue-owner/events/${id}/performance`);
+    return response.data;
+  },
+  getBoostedEvents: async (page = 1, limit = 10) => {
+    const response = await axiosInstance.get("/venue-owner/boosts", {
+      params: { page, limit },
+    });
     return response.data;
   },
 };

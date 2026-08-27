@@ -24,35 +24,39 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
                 // Not authenticated, trying to access protected route
                 router.replace("/auth/login");
             } else if (isAuthenticated) {
-                // Authenticated user routing logic based on status
-                // Status flow: Signup -> Claim -> Pending -> Subscription -> Dashboard
-                
-                const status = user?.status || "new"; // fallback to new if undefined
-                let targetRoute = "/app/dashboard"; // Default to dashboard if subscribed
-
-                switch (status) {
-                    case "new":
-                        targetRoute = "/app/venue-management"; // Needs to claim bar
-                        break;
-                    case "pending":
-                        targetRoute = "/app/pending"; // Waiting for approval
-                        break;
-                    case "approved":
-                        targetRoute = "/app/subscription"; // Needs to pick a plan
-                        break;
-                    case "subscribed":
-                        targetRoute = "/app/dashboard"; // All good
-                        break;
+                // If profile is not completed, they MUST be on profile-setup page
+                if (user && !user.isProfileCompleted) {
+                    if (pathname !== "/auth/profile-setup") {
+                        router.replace("/auth/profile-setup");
+                    }
+                    setIsChecking(false);
+                    return;
                 }
 
-                // If user is on an auth route OR they are on a protected route that doesn't match their allowed status route
+                // Authenticated user routing logic based on isClaimed and isSubscribed
+                const isClaimed = user?.isClaimed || "none"; // fallback to none
+                let targetRoute = "/app/dashboard"; // Default to dashboard if fully subscribed
+
+                // If approved and subscribed, they can access the dashboard.
+                // Otherwise, they are forced into onboarding steps.
+                if (isClaimed === "none") {
+                    targetRoute = "/venue-management"; // Needs to claim bar
+                } else if (isClaimed === "pending") {
+                    targetRoute = "/pending"; // Waiting for approval
+                } else if (isClaimed === "approved" && !user?.isSubscribed) {
+                    targetRoute = "/subscription"; // Needs to pick a plan
+                } else if (isClaimed === "approved" && user?.isSubscribed) {
+                    targetRoute = "/app/dashboard"; // All good
+                }
+
+                // If user is on an auth route OR they are on a protected route that doesn't match their allowed onboarding route
                 // Exceptions: If they are subscribed, they can access ANY /app/* route.
                 
-                if (isAuthRoute) {
+                if (isAuthRoute || pathname === "/auth/profile-setup") {
                     // Redirect logged-in user away from auth pages
                     router.replace(targetRoute);
                 } else if (
-                    (status !== "subscribed") &&
+                    !(isClaimed === "approved" && user?.isSubscribed) &&
                     !pathname?.startsWith(targetRoute)
                 ) {
                     // Force the user to stay on their required onboarding step

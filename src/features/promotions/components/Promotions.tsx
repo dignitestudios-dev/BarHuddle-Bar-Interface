@@ -5,6 +5,7 @@ import { PromotionsPageHeader } from "./PromotionsPageHeader";
 import { StatsCard } from "@/components/ui/stats-card";
 import { PromotionCard, PromotionData, CreatePromotionModal } from "./";
 import { SuccessModal } from "@/components/ui/success-modal";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useGetPromotionsQuery } from "../api/promotions.queries";
 import { useCreatePromotionMutation } from "../api/promotions.mutations";
 
@@ -111,32 +112,42 @@ export function Promotions() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
-    const { data: apiPromotionsData } = useGetPromotionsQuery();
+    const { data: apiPromotionsData, isLoading } = useGetPromotionsQuery(1, 10);
     const createPromotionMutation = useCreatePromotionMutation();
 
     const promotionsList: PromotionData[] = React.useMemo(() => {
         if (!apiPromotionsData?.data || apiPromotionsData.data.length === 0) return SAMPLE_PROMOTIONS;
         return apiPromotionsData.data.map((promo: any) => ({
             id: promo._id || promo.id,
-            title: promo.name || promo.title || "Promotion",
+            title: promo.title || promo.name || "Promotion",
             description: promo.description || "",
-            tagText: promo.tagText || "Special",
+            tagText: promo.tagText || promo.discountText || "Special",
             tagVariant: promo.tagVariant || "purple",
             status: promo.status || "Active",
             category: promo.category || "Special Offers",
-            dateRange: promo.dateRange || "Active",
+            dateRange: promo.startDate && promo.endDate 
+                ? `${new Date(promo.startDate).toLocaleDateString()} – ${new Date(promo.endDate).toLocaleDateString()}` 
+                : (promo.dateRange || "Active"),
             activeDays: promo.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
             views: promo.metrics?.views || "0",
             redemptions: promo.metrics?.redemptions || "0",
             rate: promo.metrics?.rate || "0%",
             performancePercent: promo.metrics?.performancePercent || 0,
-            imageUrl: promo.images?.[0] || SAMPLE_PROMOTIONS[0].imageUrl,
+            imageUrl: promo.banner || promo.imageUrl || promo.images?.[0] || SAMPLE_PROMOTIONS[0].imageUrl,
         }));
     }, [apiPromotionsData]);
 
-    const handleCreatePromotion = async (newPromoData: Partial<PromotionData>) => {
+    const handleCreatePromotion = async (newPromoData: any) => {
         try {
-            await createPromotionMutation.mutateAsync(newPromoData);
+            const payload = {
+                venueId: newPromoData.venueId,
+                title: newPromoData.title,
+                description: newPromoData.description,
+                startAt: newPromoData.startAt,
+                endAt: newPromoData.endAt,
+                status: newPromoData.status || "active",
+            };
+            await createPromotionMutation.mutateAsync(payload);
             setIsCreateModalOpen(false);
             setIsSuccessModalOpen(true);
         } catch (error) {
@@ -249,14 +260,22 @@ export function Promotions() {
             </div>
 
             {/* Promotions Cards Grid (3 Columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full items-stretch">
-                {promotionsList.map((promo) => (
-                    <PromotionCard
-                        key={promo.id}
-                        promotion={promo}
-                    />
-                ))}
-            </div>
+            {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <Skeleton key={i} className="h-[320px] w-full rounded-[24px]" />
+                    ))}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full items-stretch">
+                    {promotionsList.map((promo) => (
+                        <PromotionCard
+                            key={promo.id}
+                            promotion={promo}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

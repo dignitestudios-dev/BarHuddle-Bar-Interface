@@ -34,6 +34,7 @@ export const metadata: Metadata = {
 
 import Providers from "@/providers";
 import { RouteProxy } from "@/components/RouteProxy";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -48,6 +49,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col text-white">
         <Providers>
           <RouteProxy>{children}</RouteProxy>
+          <Toaster position="top-right" richColors />
         </Providers>
       </body>
     </html>

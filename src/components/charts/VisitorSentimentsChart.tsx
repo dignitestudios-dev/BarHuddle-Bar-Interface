@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useGetSentimentAnalyticsQuery } from "@/features/analytics/api/analytics.queries";
 
 export interface SentimentItem {
     name: string;
@@ -49,10 +50,47 @@ const DEFAULT_SENTIMENTS: SentimentItem[] = [
 export function VisitorSentimentsChart({
     title = "Visitor Sentiment Score",
     tagText = "DEMOGRAPHICS",
-    overallScore = 87,
-    sentiments = DEFAULT_SENTIMENTS,
+    overallScore,
+    sentiments,
     className = "",
 }: VisitorSentimentsChartProps) {
+    const { data: apiSentimentData } = useGetSentimentAnalyticsQuery();
+
+    const finalScore = React.useMemo(() => {
+        if (overallScore !== undefined) return overallScore;
+        return apiSentimentData?.data?.sentimentScore?.score ?? 0;
+    }, [overallScore, apiSentimentData]);
+
+    const finalSentiments = React.useMemo(() => {
+        if (sentiments) return sentiments;
+        const s = apiSentimentData?.data?.sentimentScore;
+        return [
+            {
+                name: "Worth It",
+                percentage: s?.worthIt ?? 0,
+                color: "#E8FF57",
+                bgColor: "rgba(232, 255, 87, 0.03)",
+                borderColor: "rgba(232, 255, 87, 0.094)",
+                offsetClass: "w-full",
+            },
+            {
+                name: "Mid",
+                percentage: s?.mid ?? 0,
+                color: "#22D3EE",
+                bgColor: "rgba(34, 211, 238, 0.03)",
+                borderColor: "rgba(34, 211, 238, 0.094)",
+                offsetClass: "w-full",
+            },
+            {
+                name: "Not Worth It",
+                percentage: s?.notWorthIt ?? 0,
+                color: "#F472B6",
+                bgColor: "rgba(244, 114, 182, 0.03)",
+                borderColor: "rgba(244, 114, 182, 0.094)",
+                offsetClass: "w-full",
+            },
+        ];
+    }, [sentiments, apiSentimentData]);
     return (
         <div
             className={`relative w-full max-w-[598px] min-h-[420px] p-6 flex flex-col justify-between bg-[#0E093C]/75 backdrop-blur-xl border border-[rgba(124,58,237,0.2)] shadow-[0px_4px_24px_rgba(0,0,0,0.4),inset_0px_1px_0px_rgba(255,255,255,0.06)] rounded-[24px] overflow-hidden select-none font-['Manrope',sans-serif] ${className}`}
@@ -136,7 +174,7 @@ export function VisitorSentimentsChart({
                     {/* Score Overlay Text */}
                     <div className="absolute inset-0 top-8 flex flex-col items-center justify-center pointer-events-none">
                         <span className="font-extrabold text-[32px] leading-[32px] text-[#E8FF57]">
-                            {overallScore}
+                            {finalScore}
                         </span>
                         <span className="font-bold text-[10px] leading-[15px] text-[#8B7EC8] mt-1">
                             / 100 Score
@@ -146,7 +184,7 @@ export function VisitorSentimentsChart({
 
                 {/* Right Sentiment Category Bars */}
                 <div className="flex flex-col gap-2.5 flex-1 w-full max-w-[280px]">
-                    {sentiments.map((item) => (
+                    {finalSentiments.map((item) => (
                         <div
                             key={item.name}
                             className="h-[44px] px-4 rounded-[20px] flex items-center justify-between border transition-all w-full"

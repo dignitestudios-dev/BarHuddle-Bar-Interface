@@ -3,19 +3,25 @@
 import React, { useState, useRef } from "react";
 import { SuccessModal } from "@/components/ui/success-modal";
 import { useClaimVenueMutation } from "../api/venue.mutations";
+import { useGetMeMutation } from "@/features/auth/api/auth.mutations";
+import { useAppDispatch } from "@/store";
+import { updateUser } from "@/store/slices/auth.slice";
 
 export interface ClaimFormModalProps {
     isOpen: boolean;
+    venue?: any;
     onClose: () => void;
     onSubmitted?: () => void;
 }
 
-export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalProps) {
-    const { mutateAsync: claimVenue, isPending } = useClaimVenueMutation();
+export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFormModalProps) {
+    const { mutateAsync: claimVenue, isPending: isClaiming } = useClaimVenueMutation();
+    const { mutateAsync: getMe, isPending: isFetchingMe } = useGetMeMutation();
+    const dispatch = useAppDispatch();
     const [name, setName] = useState("James Smith");
     const [email, setEmail] = useState("jamessmith@gmail.com");
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [hasDefaultFile, setHasDefaultFile] = useState(true);
+    const [hasDefaultFile, setHasDefaultFile] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -37,13 +43,33 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!venue) {
+            console.error("No venue selected");
+            return;
+        }
+
+        if (!uploadedFile) {
+            console.error("Please upload an ownership proof file.");
+            // Ideally show an error toast here
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("venueId", venue.id || venue._id || venue.placeId);
+        formData.append("name", name);
+        formData.append("email", email);
+        formData.append("ownershipProof", uploadedFile);
+
         try {
-            await claimVenue({
-                name: "Test Venue", // Or some dynamic venue name
-                address: "Test Address",
-                role: "owner",
-                proofUrl: uploadedFile ? uploadedFile.name : "default.pdf",
-            });
+            await claimVenue(formData);
+            
+            // Fetch latest profile to get updated isClaimed status
+            const profileResponse = await getMe();
+            if (profileResponse?.user) {
+                dispatch(updateUser(profileResponse.user));
+            }
+
             setShowSuccess(true);
         } catch (error) {
             console.error("Failed to claim venue:", error);
@@ -54,7 +80,7 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
     return (
         <>
             {/* Claim Form Modal Backdrop */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
                 {/* Modal Container */}
                 <div className="relative w-full max-w-[476px] bg-[#05033A] border border-[rgba(124,58,237,0.3)] shadow-[0px_4px_25px_rgba(0,0,0,0.5)] rounded-[16px] p-6 sm:p-7 flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
                     {/* Modal Header */}
@@ -135,11 +161,11 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
                                     </svg>
                                 </div>
                                 <span className="font-normal text-[15px] leading-[20px] text-white/80 group-hover:text-white transition-colors">
-                                    Choose file to upload
+                                    {hasDefaultFile ? "Change uploaded file" : "Choose file to upload"}
                                 </span>
                             </div>
 
-                            {/* Uploaded File Preview Thumbnail (PDF format) */}
+                            {/* Uploaded File Preview Thumbnail */}
                             {hasDefaultFile && (
                                 <div className="relative mt-2 w-[90px] h-[90px] rounded-[16px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex flex-col items-center justify-center gap-1">
                                     {/* Red Circular Close Badge */}
@@ -154,10 +180,10 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
                                         </svg>
                                     </button>
 
-                                    {/* Red PDF Icon Illustration */}
+                                    {/* Icon Illustration */}
                                     <div className="w-10 h-12 bg-[#DC1D00] rounded-md relative flex flex-col items-center justify-center p-1 shadow">
                                         <span className="font-bold text-[9px] leading-[10px] text-white bg-white/20 px-1 py-0.5 rounded tracking-tighter">
-                                            PDF
+                                            FILE
                                         </span>
                                         <svg className="w-4 h-4 text-white mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -173,10 +199,10 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
                         {/* Submit Request CTA Button */}
                         <button
                             type="submit"
-                            disabled={isPending}
-                            className="w-full h-[48px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-semibold text-[16px] leading-[22px] text-white capitalize hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                            disabled={isClaiming || isFetchingMe || !hasDefaultFile}
+                            className="w-full h-[48px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-semibold text-[16px] leading-[22px] text-white capitalize hover:brightness-110 active:scale-95 transition-all cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isPending ? "Submitting..." : "Submit Request"}
+                            {isClaiming || isFetchingMe ? "Submitting..." : "Submit Request"}
                         </button>
                     </form>
                 </div>
@@ -190,8 +216,8 @@ export function ClaimFormModal({ isOpen, onClose, onSubmitted }: ClaimFormModalP
                     onClose();
                     onSubmitted?.();
                 }}
-                title="Request Submitted"
-                description="Your request has been sent to the admin for review. As soon as it is approved, you'll be notified via email."
+                title="Claim Submitted"
+                description="Your claim request has been sent successfully. The admin will review and verify it shortly."
             />
         </>
     );

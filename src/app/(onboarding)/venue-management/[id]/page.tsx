@@ -48,7 +48,7 @@ export default function VenueDetailPage({
         <main className="w-full min-h-screen px-6 py-8 flex flex-col gap-8 font-['Manrope',sans-serif]">
             <VenueDetailView
                 venue={venue}
-                onBack={() => router.push("/app/venue-management")}
+                onBack={() => router.push("/venue-management")}
             />
         </main>
     );

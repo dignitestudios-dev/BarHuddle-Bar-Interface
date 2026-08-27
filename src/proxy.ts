@@ -4,9 +4,11 @@ import type { NextRequest } from 'next/server';
 export function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
-    // Check if the route is a protected app route
-    if (pathname.startsWith('/app')) {
-        // Here we could check for an auth cookie
+    const isAppRoute = pathname.startsWith('/app');
+    const isOnboardingRoute = ['/auth/profile-setup', '/venue-management', '/subscription', '/pending'].includes(pathname);
+
+    // Check if the route is a protected app route or profile setup
+    if (isAppRoute || isOnboardingRoute) {
         const token = request.cookies.get('auth-token')?.value;
         if (!token) {
             // Redirect to login if no token is found in cookies

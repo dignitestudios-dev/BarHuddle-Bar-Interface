@@ -4,28 +4,34 @@ import React from "react";
 import { VisitorTrendsChart } from "@/components/charts/VisitorTrendsChart";
 import { TrafficByTimeChart } from "@/components/charts/TrafficByTimeChart";
 import { CustomerDonutChart } from "@/components/charts/CustomerDonutChart";
-
-const VISITOR_BREAKDOWN_SEGMENTS = [
-    {
-        name: "New",
-        value: 4864,
-        percentage: 38,
-        color: "#4ADE80",
-        glowColor: "rgba(74, 222, 128, 0.6)",
-    },
-    {
-        name: "Returning",
-        value: 7936,
-        percentage: 62,
-        color: "#7C3AED",
-        glowColor: "rgba(124, 58, 237, 0.6)",
-    },
-];
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetVisitorAnalyticsQuery, useGetRetentionAnalyticsQuery } from "../api/analytics.queries";
 
 export function VisitorTab() {
+    const { data: visitorData, isLoading: isLoadingVisitor } = useGetVisitorAnalyticsQuery();
+    const { isLoading: isLoadingRetention } = useGetRetentionAnalyticsQuery();
+
+    const isLoading = isLoadingVisitor || isLoadingRetention;
+
+    if (isLoading) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <Skeleton className="h-[380px] max-w-[1200px] w-full rounded-[24px]" />
+                <div className="max-w-[1200px] w-full flex flex-col xl:flex-row gap-6 items-stretch">
+                    <Skeleton className="h-[380px] flex-1 w-full rounded-[24px]" />
+                    <Skeleton className="h-[380px] w-full xl:w-[288px] rounded-[24px]" />
+                </div>
+            </div>
+        );
+    }
+
+    const analytics = visitorData?.data;
+    const totalVisits = analytics?.totalVisits ?? 0;
+    const totalVisitorsStr = totalVisits >= 1000 ? `${(totalVisits / 1000).toFixed(1)}K` : totalVisits.toString();
+
     return (
         <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
-            {/* Live Analytics: Visitor Trends 12-Month Area Chart */}
+            {/* Live Analytics: Visitor Trends Area Chart */}
             <div className="max-w-[1200px] w-full">
                 <VisitorTrendsChart
                     showRetention={true}
@@ -40,9 +46,8 @@ export function VisitorTab() {
                     title="Visitor Breakdown"
                     tagText="VISITOR SPLIT"
                     showGradientBar={true}
-                    totalCustomers="12.8K"
+                    totalCustomers={totalVisitorsStr}
                     totalLabel="Total"
-                    segments={VISITOR_BREAKDOWN_SEGMENTS}
                     className="w-full xl:w-[288px] shrink-0"
                 />
             </div>

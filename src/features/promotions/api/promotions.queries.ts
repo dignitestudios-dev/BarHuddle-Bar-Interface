@@ -9,10 +9,10 @@ export const promotionsKeys = {
   detail: (id: string) => [...promotionsKeys.details(), id] as const,
 };
 
-export const useGetPromotionsQuery = () => {
+export const useGetPromotionsQuery = (page: number = 1, limit: number = 10) => {
   return useQuery({
-    queryKey: promotionsKeys.lists(),
-    queryFn: () => promotionService.getPromotions(),
+    queryKey: [...promotionsKeys.lists(), { page, limit }],
+    queryFn: () => promotionService.getPromotions(page, limit),
   });
 };
 

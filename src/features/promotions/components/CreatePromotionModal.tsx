@@ -1,12 +1,18 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { PromotionData } from "./PromotionCard";
+import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useRef, useState } from "react";
 
 export interface CreatePromotionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreate?: (newPromotion: Partial<PromotionData>) => void;
+    onCreate?: (newPromotion: any) => void;
 }
 
 export function CreatePromotionModal({
@@ -15,15 +21,19 @@ export function CreatePromotionModal({
     onCreate,
 }: CreatePromotionModalProps) {
     const [step, setStep] = useState<1 | 2>(1);
+    const [venueId, setVenueId] = useState("");
     const [promoTitle, setPromoTitle] = useState("");
     const [promoType, setPromoType] = useState("Happy Hours");
     const [offerLabel, setOfferLabel] = useState("");
     const [description, setDescription] = useState("");
-    const [validFrom, setValidFrom] = useState("");
-    const [validTo, setValidTo] = useState("");
+    const [validFrom, setValidFrom] = useState<Date | undefined>(undefined);
+    const [validTo, setValidTo] = useState<Date | undefined>(undefined);
+    const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
+    const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
     const [images, setImages] = useState<string[]>([]);
     
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const { data: venues = [] } = useGetOwnerVenuesQuery();
 
     if (!isOpen) return null;
 
@@ -46,41 +56,27 @@ export function CreatePromotionModal({
     };
 
     const handlePublish = () => {
-        let dateRangeStr = "Jun 1 – Jul 31";
-        if (validFrom || validTo) {
-            dateRangeStr = `${validFrom || "Start"} – ${validTo || "End"}`;
-        }
-
-        const tagVariantMap: Record<string, "green" | "yellow" | "purple"> = {
-            "Happy Hours": "purple",
-            "Discounts": "yellow",
-            "Buy One Get One": "green",
-            "Special Offers": "green",
-        };
+        const selectedVenueId = venueId || ((venues as any[])[0]?.venue?._id || (venues as any[])[0]?.venue?.id || (venues as any[])[0]?._id || (venues as any[])[0]?.id || "");
+        const startAt = validFrom ? validFrom.toISOString() : new Date().toISOString();
+        const endAt = validTo ? validTo.toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
         onCreate?.({
-            title: promoTitle || "Summer Rooftop Special",
-            description: description || "Exclusive summer cocktail bundles on the rooftop.",
-            tagText: offerLabel || "20% OFF",
-            tagVariant: tagVariantMap[promoType] || "purple",
-            status: "Active",
-            category: promoType,
-            dateRange: dateRangeStr,
-            activeDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-            views: "0",
-            redemptions: "0",
-            rate: "0%",
-            performancePercent: 0,
-            imageUrl: images[0] || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
+            venueId: selectedVenueId,
+            title: promoTitle || "2 for 1",
+            description: description || "Happy hour",
+            startAt: startAt,
+            endAt: endAt,
+            status: "active",
         });
 
         // Reset state
         setStep(1);
+        setVenueId("");
         setPromoTitle("");
         setOfferLabel("");
         setDescription("");
-        setValidFrom("");
-        setValidTo("");
+        setValidFrom(undefined);
+        setValidTo(undefined);
         setImages([]);
         onClose();
     };
@@ -92,7 +88,7 @@ export function CreatePromotionModal({
 
     // Formatted date string for preview
     const datePreviewText = (validFrom || validTo)
-        ? `${validFrom || "Jun 1"} – ${validTo || "Jul 31"}`
+        ? `${validFrom ? format(validFrom, "MMM d, yyyy") : "Start"} – ${validTo ? format(validTo, "MMM d, yyyy") : "End"}`
         : "Jun 1 – Jul 31";
 
     return (
@@ -130,6 +126,43 @@ export function CreatePromotionModal({
                 {step === 1 && (
                     <form onSubmit={handleContinueToPreview} className="flex flex-col gap-5 w-full">
                         
+                        {/* Venue Selection */}
+                        <div className="flex flex-col gap-1.5 w-full">
+                            <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
+                                SELECT VENUE
+                            </label>
+                            <Select onValueChange={(val: any) => setVenueId(val || "")} value={venueId}>
+                                <SelectTrigger className="w-full h-[44px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white focus:outline-none focus:border-[#B45FF2] transition-colors">
+                                    <SelectValue placeholder="Select a venue">
+                                        {(() => {
+                                            if (!venueId) return null;
+                                            const selectedItem = (venues as any[])?.find((item: any) => {
+                                                const venue = item.venue || item;
+                                                return (venue?.id || venue?._id) === venueId;
+                                            });
+                                            const selectedVenue = selectedItem?.venue || selectedItem;
+                                            return selectedVenue?.name || selectedVenue?.title || venueId;
+                                        })()}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent side="bottom" alignItemWithTrigger={false} className="bg-[#0A074A] border-[rgba(124,58,237,0.25)] text-white p-2" style={{ zIndex: 9999 }}>
+                                    {(venues as any[])?.length > 0 ? (venues as any[]).map((item: any) => {
+                                        const venue = item.venue || item;
+                                        const vId = venue?.id || venue?._id;
+                                        const vName = venue?.name || venue?.title || "Unnamed Venue";
+                                        if (!vId) return null;
+                                        return (
+                                            <SelectItem key={vId} value={vId} className="px-4 py-3 !text-white hover:!text-white focus:!text-white data-[highlighted]:!text-white hover:bg-purple-900/40 focus:bg-purple-900/40 cursor-pointer rounded-lg" style={{ color: "#ffffff" }}>
+                                                {vName}
+                                            </SelectItem>
+                                        );
+                                    }) : (
+                                        <div className="p-4 text-center text-white/50 text-sm">No venues found</div>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
                         {/* Upload Images Section */}
                         <div className="flex flex-col gap-2 w-full">
                             <label className="font-semibold text-[14px] leading-[19px] text-white">
@@ -220,24 +253,18 @@ export function CreatePromotionModal({
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
                                     PROMO TYPE
                                 </label>
-                                <div className="relative w-full">
-                                    <select
-                                        value={promoType}
-                                        onChange={(e) => setPromoType(e.target.value)}
-                                        className="w-full h-[44px] px-[14px] pr-9 rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white font-medium text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors appearance-none cursor-pointer"
-                                    >
-                                        <option value="Happy Hours" className="bg-[#0D0B52] text-white">Happy Hours</option>
-                                        <option value="Discounts" className="bg-[#0D0B52] text-white">Discounts</option>
-                                        <option value="Buy One Get One" className="bg-[#0D0B52] text-white">Buy One Get One</option>
-                                        <option value="Special Offers" className="bg-[#0D0B52] text-white">Special Offers</option>
-                                    </select>
-                                    {/* Chevron Icon */}
-                                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#8B7EC8]">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <Select value={promoType} onValueChange={(val: any) => setPromoType(val || "")}>
+                                    <SelectTrigger className="w-full h-[44px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white focus:outline-none focus:border-[#B45FF2] transition-colors">
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent side="bottom" alignItemWithTrigger={false} className="bg-[#0A074A] border-[rgba(124,58,237,0.25)] text-white p-2" style={{ zIndex: 9999 }}>
+                                        {["Happy Hours", "Discounts", "Buy One Get One", "Special Offers"].map((type) => (
+                                            <SelectItem key={type} value={type} className="px-4 py-3 !text-white hover:!text-white focus:!text-white data-[highlighted]:!text-white hover:bg-purple-900/40 focus:bg-purple-900/40 cursor-pointer rounded-lg" style={{ color: "#ffffff" }}>
+                                                {type}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 
@@ -275,13 +302,30 @@ export function CreatePromotionModal({
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
                                     Valid From
                                 </label>
-                                <input
-                                    type="text"
-                                    value={validFrom}
-                                    onChange={(e) => setValidFrom(e.target.value)}
-                                    placeholder="mm/dd/yyyy"
-                                    className="w-full h-[41.1px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
-                                />
+                                <Popover open={isFromCalendarOpen} onOpenChange={setIsFromCalendarOpen}>
+                                    <PopoverTrigger className="w-full text-left">
+                                        <div
+                                            className={cn(
+                                                "w-full h-[44px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer",
+                                                !validFrom ? "text-[rgba(240,238,255,0.5)]" : "text-white"
+                                            )}
+                                        >
+                                            {validFrom ? format(validFrom, "PPP") : <span>mm/dd/yyyy</span>}
+                                            <CalendarIcon className="w-4 h-4 text-[#8B7EC8]" />
+                                        </div>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white" align="start" style={{ zIndex: 9999 }}>
+                                        <Calendar
+                                            mode="single"
+                                            selected={validFrom}
+                                            onSelect={(date) => {
+                                                setValidFrom(date);
+                                                setIsFromCalendarOpen(false);
+                                            }}
+                                            className="bg-[#0A074A] text-white"
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
 
                             {/* Valid To */}
@@ -289,13 +333,30 @@ export function CreatePromotionModal({
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
                                     Valid To
                                 </label>
-                                <input
-                                    type="text"
-                                    value={validTo}
-                                    onChange={(e) => setValidTo(e.target.value)}
-                                    placeholder="mm/dd/yyyy"
-                                    className="w-full h-[41.1px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
-                                />
+                                <Popover open={isToCalendarOpen} onOpenChange={setIsToCalendarOpen}>
+                                    <PopoverTrigger className="w-full text-left">
+                                        <div
+                                            className={cn(
+                                                "w-full h-[44px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer",
+                                                !validTo ? "text-[rgba(240,238,255,0.5)]" : "text-white"
+                                            )}
+                                        >
+                                            {validTo ? format(validTo, "PPP") : <span>mm/dd/yyyy</span>}
+                                            <CalendarIcon className="w-4 h-4 text-[#8B7EC8]" />
+                                        </div>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white" align="start" style={{ zIndex: 9999 }}>
+                                        <Calendar
+                                            mode="single"
+                                            selected={validTo}
+                                            onSelect={(date) => {
+                                                setValidTo(date);
+                                                setIsToCalendarOpen(false);
+                                            }}
+                                            className="bg-[#0A074A] text-white"
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
 

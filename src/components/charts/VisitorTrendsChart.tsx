@@ -10,6 +10,7 @@ import {
     Tooltip,
     CartesianGrid,
 } from "recharts";
+import { useGetVisitorAnalyticsQuery } from "@/features/analytics/api/analytics.queries";
 
 export interface TrendDataPoint {
     name: string;
@@ -115,7 +116,7 @@ const CustomTooltip = ({ active, payload, isRetentionVariant }: any) => {
 };
 
 export function VisitorTrendsChart({
-    data = DEFAULT_MONTHLY_DATA,
+    data,
     className = "",
     showRetention = true,
     variant = "default",
@@ -124,6 +125,32 @@ export function VisitorTrendsChart({
 }: VisitorTrendsChartProps) {
     const [selectedTimeframe, setSelectedTimeframe] = useState(defaultTimeframe);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+
+    const { data: apiVisitorData } = useGetVisitorAnalyticsQuery();
+
+    const chartData = React.useMemo(() => {
+        if (data) return data;
+        const apiTrends = apiVisitorData?.data?.visitorTrends;
+        if (apiTrends && Array.isArray(apiTrends) && apiTrends.length > 0) {
+            return apiTrends.map((t: any) => ({
+                name: t.month || t.date || "Day",
+                visitors: t.visitors || t.count || 0,
+                checkIns: t.checkIns || t.count || 0,
+                retention: t.retention || 0,
+                new: t.new || 0,
+                repeat: t.repeat || t.retention || 0,
+                lost: t.lost || 0,
+            }));
+        }
+        return [
+            { name: "Jan", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Feb", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Mar", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Apr", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "May", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Jun", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+        ];
+    }, [data, apiVisitorData]);
 
     const isRetentionVariant = variant === "retention";
 
@@ -242,7 +269,7 @@ export function VisitorTrendsChart({
             {/* Recharts Container */}
             <div className="w-full h-[270px] relative z-10">
                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                             <linearGradient id="retentionGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor="#22D3EE" stopOpacity={0.35} />

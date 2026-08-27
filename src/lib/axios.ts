@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.dev.barhuddle.com",
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
 });
@@ -11,7 +11,7 @@ axiosInstance.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("auth-token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
-    
+
     // Add required device headers
     config.headers.deviceuniqueid = "web-client-id"; // You can use a library like fingerprintjs for actual unique ID if needed
     config.headers.devicemodel = navigator.userAgent;

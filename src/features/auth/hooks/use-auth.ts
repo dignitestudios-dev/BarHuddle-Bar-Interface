@@ -43,16 +43,21 @@ export function useAuth() {
   const handleVerifyOtp = async (codeToVerify: string, mode: "login" | "register" | "reset-password", targetEmail: string) => {
     try {
       const response = await verifyOtpMutation.mutateAsync({ email: targetEmail, otp: codeToVerify });
-      dispatch(setAuth({ token: response.token, user: response.user }));
-      
+      dispatch(setAuth({ 
+        token: response.data.token, 
+        user: response.data.user || user 
+      }));
+
       if (mode === "reset-password") {
         router.push("/auth/create-new-password");
         return;
       }
-      
-      // Routing based on user status (new, pending, approved, subscribed) is handled by the proxy or a global component, 
-      // but we can also push them to a safe base route here, e.g., `/app/dashboard` or `/app/venue-management`.
-      router.push("/app/venue-management"); // Default entry, let proxy sort it out or route specifically here
+      console.log(response, "here////////////////////")
+      if (!response?.data?.user?.isProfileCompleted) {
+        router.push("/auth/profile-setup");
+      } else {
+        router.push("/app/dashboard");
+      }
     } catch (error) {
       console.error("Verify OTP error", error);
       throw error;

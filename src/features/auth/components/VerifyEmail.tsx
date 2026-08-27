@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button, OtpInput, SuccessModal } from "@/components/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../hooks/use-auth";
+import { toast } from "sonner";
 
 export interface VerifyEmailProps {
     email?: string;
@@ -72,23 +73,17 @@ export function VerifyEmail({
     };
 
     const handleVerificationSubmit = async (codeToVerify: string = otpCode) => {
-        if (codeToVerify.length < 5) return;
+        if (codeToVerify.length < 4) return;
         setIsSubmitting(true);
         
         try {
             await handleVerifyOtp(codeToVerify, mode, email);
             setIsSubmitting(false);
-            setShowSuccessModal(true);
-        } catch (error) {
+            // Redirection is handled inside handleVerifyOtp
+        } catch (error: any) {
             setIsSubmitting(false);
-            // Handle error, e.g. show toast
-        }
-    };
-
-    const handleModalClose = () => {
-        setShowSuccessModal(false);
-        if (targetRedirect) {
-            router.push(targetRedirect);
+            toast.error(error.message || "Failed to verify OTP");
+            setOtpCode(""); // clear OTP so user can try again
         }
     };
 
@@ -105,16 +100,16 @@ export function VerifyEmail({
                     Verification
                 </h1>
                 <p className="font-['Manrope',sans-serif] font-normal text-[16px] leading-[22px] text-white/80">
-                    Enetr the code sent to{" "}
+                    Enter the code sent to{" "}
                     <span className="text-[#FDF88F] font-medium">{email}</span>
                 </p>
             </div>
 
             {/* OTP Form */}
             <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-8">
-                {/* 5-Digit OTP Input */}
+                {/* 4-Digit OTP Input */}
                 <OtpInput
-                    length={5}
+                    length={4}
                     value={otpCode}
                     onChange={setOtpCode}
                     onComplete={(code) => {
@@ -149,30 +144,13 @@ export function VerifyEmail({
                     <Button
                         type="submit"
                         variant="gradient"
-                        disabled={otpCode.length < 5 || isSubmitting}
+                        disabled={otpCode.length < 4 || isSubmitting}
                         className="w-full h-[52px] font-['Manrope',sans-serif] font-bold text-[16px] leading-[22px]"
                     >
                         {isSubmitting ? "Verifying..." : "Verify"}
                     </Button>
                 </div>
             </form>
-
-            {/* Reusable Success Modal */}
-            <SuccessModal
-                isOpen={showSuccessModal}
-                onClose={handleModalClose}
-                title="Email Verified"
-                description="Your email has been verified successfully"
-                actionButton={
-                    <Button
-                        onClick={handleModalClose}
-                        variant="gradient"
-                        className="w-full h-[48px]"
-                    >
-                        {modalButtonText}
-                    </Button>
-                }
-            />
         </div>
     );
 }

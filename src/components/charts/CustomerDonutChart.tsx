@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useGetRetentionAnalyticsQuery } from "@/features/analytics/api/analytics.queries";
 
 export interface CustomerSegment {
     name: string;
@@ -49,11 +50,55 @@ export function CustomerDonutChart({
     title = "Customer Breakdown",
     tagText = "Demographics",
     showGradientBar = false,
-    totalCustomers = "9.3K",
+    totalCustomers,
     totalLabel = "Customers",
-    segments = DEFAULT_SEGMENTS,
+    segments,
     className = "",
 }: CustomerDonutChartProps) {
+    const { data: retentionData } = useGetRetentionAnalyticsQuery();
+
+    const finalTotal = React.useMemo(() => {
+        if (totalCustomers) return totalCustomers;
+        const total = retentionData?.data?.totalUsers;
+        if (total !== undefined && total !== null) {
+            return total >= 1000 ? `${(total / 1000).toFixed(1)}K` : total.toString();
+        }
+        return "0";
+    }, [totalCustomers, retentionData]);
+
+    const finalSegments = React.useMemo(() => {
+        if (segments) return segments;
+        const r = retentionData?.data;
+        const total = r?.totalUsers || 0;
+
+        const nowPct = r?.customerBreakdown?.now ?? (total ? Math.round(((r?.oneTimeUsers || 0) / total) * 100) : 0);
+        const repeatPct = r?.customerBreakdown?.repeat ?? (total ? Math.round(((r?.returningUsers || 0) / total) * 100) : 0);
+        const lostPct = r?.customerBreakdown?.lost ?? (total ? Math.round(((r?.lostCustomers || 0) / total) * 100) : 0);
+
+        return [
+            {
+                name: "New",
+                value: r?.oneTimeUsers || 0,
+                percentage: nowPct,
+                color: "#4ADE80",
+                glowColor: "rgba(74, 222, 128, 0.6)",
+            },
+            {
+                name: "Repeat",
+                value: r?.returningUsers || 0,
+                percentage: repeatPct,
+                color: "#7C3AED",
+                glowColor: "rgba(124, 58, 237, 0.6)",
+            },
+            {
+                name: "Lost",
+                value: r?.lostCustomers || 0,
+                percentage: lostPct,
+                color: "#F87171",
+                glowColor: "rgba(248, 113, 113, 0.6)",
+            },
+        ];
+    }, [segments, retentionData]);
     return (
         <div
             className={`relative w-full max-w-[288px] h-[420px] p-6 flex flex-col justify-between bg-[#0E093C]/75 backdrop-blur-xl border border-[rgba(124,58,237,0.2)] shadow-[0px_4px_24px_rgba(0,0,0,0.4),inset_0px_1px_0px_rgba(255,255,255,0.06)] rounded-[24px] overflow-hidden select-none font-['Manrope',sans-serif] ${className}`}
@@ -93,7 +138,7 @@ export function CustomerDonutChart({
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
-                            data={segments}
+                            data={finalSegments}
                             cx="50%"
                             cy="50%"
                             innerRadius={68}
@@ -103,7 +148,7 @@ export function CustomerDonutChart({
                             stroke="#0E093C"
                             strokeWidth={2}
                         >
-                            {segments.map((entry, index) => (
+                            {finalSegments.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                         </Pie>
@@ -113,7 +158,7 @@ export function CustomerDonutChart({
                 {/* Donut Center Overlay Text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="font-extrabold text-[28px] leading-[28px] text-[#F0EEFF]">
-                        {totalCustomers}
+                        {finalTotal}
                     </span>
                     <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] mt-1">
                         {totalLabel}
@@ -123,7 +168,7 @@ export function CustomerDonutChart({
 
             {/* Bottom Progress Bars Section */}
             <div className="flex flex-col gap-2.5 w-full relative z-10 pt-2 border-t border-[rgba(124,58,237,0.15)]">
-                {segments.map((seg) => (
+                {finalSegments.map((seg) => (
                     <div key={seg.name} className="flex items-center justify-between gap-3 w-full">
                         {/* Dot & Label */}
                         <div className="flex items-center gap-2 min-w-[75px]">

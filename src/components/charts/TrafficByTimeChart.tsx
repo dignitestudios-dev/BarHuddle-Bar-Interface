@@ -86,14 +86,21 @@ const Y_AXIS_TICKS = [
     { label: "0", positionPx: 241 },
 ];
 
+const ZERO_SLOTS: TimeSlotData[] = [
+    { id: "morning", label: "Morning", value: 0, heightPx: 4, color: "#22D3EE", glowColor: "rgba(34, 211, 238, 0.4)" },
+    { id: "afternoon", label: "Afternoon", value: 0, heightPx: 4, color: "#A855F7", glowColor: "rgba(168, 85, 247, 0.4)" },
+    { id: "evening", label: "Evening", value: 0, heightPx: 4, color: "#7C3AED", glowColor: "rgba(124, 58, 237, 0.4)" },
+    { id: "late-night", label: "Late Night", value: 0, heightPx: 4, color: "#E8FF57", glowColor: "rgba(232, 255, 87, 0.4)" },
+];
+
 export function TrafficByTimeChart({
     className = "",
-    slots = DEFAULT_SLOTS,
+    slots = ZERO_SLOTS,
     variant = "default",
     title,
     tagText,
     subtitle,
-    groups = DEFAULT_ORGANIC_BOOSTED_GROUPS,
+    groups = [],
 }: TrafficByTimeChartProps) {
     const [activeSlot, setActiveSlot] = useState<string | null>(null);
 

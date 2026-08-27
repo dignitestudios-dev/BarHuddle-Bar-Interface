@@ -5,6 +5,8 @@ import { StatsCard, StatsColorVariant } from "@/components/ui/stats-card";
 import { VisitorTrendsChart } from "@/components/charts/VisitorTrendsChart";
 import { VisitorSentimentsChart } from "@/components/charts/VisitorSentimentsChart";
 import { AvgVisitDurationCard } from "@/components/charts/AvgVisitDurationCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetRetentionAnalyticsQuery } from "../api/analytics.queries";
 
 export interface RetentionCardItem {
     id: string;
@@ -15,39 +17,61 @@ export interface RetentionCardItem {
     variant: StatsColorVariant;
 }
 
-const RETENTION_CARDS: RetentionCardItem[] = [
-    {
-        id: "new-customers",
-        title: "New Customers",
-        value: "12,840",
-        trend: "+18.4%",
-        isPositive: true,
-        variant: "green",
-    },
-    {
-        id: "repeat-customers",
-        title: "Repeat Customers",
-        value: "12,840",
-        trend: "+18.4%",
-        isPositive: true,
-        variant: "purple",
-    },
-    {
-        id: "lost-customers",
-        title: "Lost Customers",
-        value: "12,840",
-        trend: "+18.4%",
-        isPositive: true,
-        variant: "coral",
-    },
-];
-
 export function RetentionTab() {
+    const { data: retentionData, isLoading } = useGetRetentionAnalyticsQuery();
+    const data = retentionData?.data;
+
+    const cards: RetentionCardItem[] = React.useMemo(() => {
+        return [
+            {
+                id: "new-customers",
+                title: "New Customers",
+                value: data?.oneTimeUsers !== undefined ? data.oneTimeUsers.toLocaleString() : "0",
+                trend: "+0%",
+                isPositive: true,
+                variant: "green",
+            },
+            {
+                id: "repeat-customers",
+                title: "Repeat Customers",
+                value: data?.returningUsers !== undefined ? data.returningUsers.toLocaleString() : "0",
+                trend: data?.retentionRate !== undefined ? `+${data.retentionRate}%` : "0%",
+                isPositive: true,
+                variant: "purple",
+            },
+            {
+                id: "lost-customers",
+                title: "Lost Customers",
+                value: data?.lostCustomers !== undefined ? data.lostCustomers.toLocaleString() : "0",
+                trend: "0%",
+                isPositive: false,
+                variant: "coral",
+            },
+        ];
+    }, [data]);
+
+    if (isLoading) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <div className="max-w-[1200px] grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
+                    ))}
+                </div>
+                <Skeleton className="h-[380px] max-w-[1200px] w-full rounded-[24px]" />
+                <div className="max-w-[1200px] w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                    <Skeleton className="h-[380px] w-full rounded-[24px]" />
+                    <Skeleton className="h-[380px] w-full rounded-[24px]" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
             {/* Top Row: 3 Retention Stat Cards Grid */}
             <div className="max-w-[1200px] grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-                {RETENTION_CARDS.map((card) => (
+                {cards.map((card) => (
                     <StatsCard
                         key={card.id}
                         title={card.title}
@@ -60,7 +84,7 @@ export function RetentionTab() {
                 ))}
             </div>
 
-            {/* Mid Section: Visitor Trends Chart (Retention Mode with New, Repeat, Lost) */}
+            {/* Mid Section: Visitor Trends Chart */}
             <div className="max-w-[1200px] w-full">
                 <VisitorTrendsChart
                     variant="retention"
@@ -68,13 +92,12 @@ export function RetentionTab() {
                 />
             </div>
 
-            {/* Lower Section: 2 Columns (Avg Visit Duration & Visitor Sentiment Score) */}
+            {/* Lower Section: Avg Visit Duration & Visitor Sentiment */}
             <div className="max-w-[1200px] w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 <AvgVisitDurationCard className="w-full h-full" />
                 <VisitorSentimentsChart
                     title="Visitor Sentiment Score"
                     tagText="DEMOGRAPHICS"
-                    overallScore={87}
                     className="w-full h-full"
                 />
             </div>

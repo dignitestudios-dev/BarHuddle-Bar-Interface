@@ -32,3 +32,10 @@ export const useGetEventPerformanceQuery = (id: string) => {
   });
 };
 
+export const useGetBoostedEventsQuery = (page: number = 1, limit: number = 10) => {
+  return useQuery({
+    queryKey: [...eventsKeys.all, 'boosted', { page, limit }],
+    queryFn: () => eventService.getBoostedEvents(page, limit),
+  });
+};
+

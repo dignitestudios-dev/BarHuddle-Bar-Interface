@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/store";
 import { updateUser } from "@/store/slices/auth.slice";
+import { useSubscriptionPlans } from "@/features/subscription/api/subscription.queries";
 
 export interface SubscriptionPlansScreenProps {
     onBack?: () => void;
@@ -20,42 +21,44 @@ export function SubscriptionPlansScreen({
     const dispatch = useAppDispatch();
     const router = useRouter();
 
-    const handleContinue = async () => {
-        onSelectPlan?.(selectedPlan);
-        
-        // For now, simulate purchasing a plan by updating the user status to 'subscribed' in Redux
-        // This will trigger the RouteProxy to redirect to /app/dashboard
-        dispatch(updateUser({ status: "subscribed" }));
-        
-        if (onBack) {
-            onBack();
-        } else {
+    const { data: plansData, isLoading } = useSubscriptionPlans();
+
+    React.useEffect(() => {
+        if (plansData?.data?.isSubscribed) {
+            dispatch(updateUser({ isSubscribed: true }));
             router.push("/app/dashboard");
         }
+    }, [plansData, dispatch, router]);
+
+    const handleContinue = async () => {
+        onSelectPlan?.(selectedPlan);
+
+        // Simulating the actual purchase logic for now
+        // Normally this would be a mutation to subscribe to a plan
+        dispatch(updateUser({ isSubscribed: true, isClaimed: "approved" }));
+        router.push("/app/dashboard");
     };
 
+    if (isLoading) {
+        return <div className="text-white">Loading plans...</div>;
+    }
+
+    // For now we'll keep the hardcoded UI to retain the beautiful design, 
+    // but in a real implementation we would map over plansData?.data?.plans.
     return (
-        <div className={`w-full max-w-[1136px] flex flex-col gap-8 py-4 font-['Manrope',sans-serif] animate-in fade-in duration-300 ${className}`}>
+        <div className={`w-full  flex flex-col gap-8 py-4 font-['Manrope',sans-serif] animate-in fade-in duration-300 ${className}`}>
             {/* Top Navigation Header with Back Button */}
             <div className="w-full flex items-center justify-between min-h-[57px]">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[rgba(124,58,237,0.2)] hover:bg-[rgba(124,58,237,0.4)] border border-[rgba(255,255,255,0.2)] text-white font-semibold text-[14px] transition-all cursor-pointer"
-                >
-                    <svg className="w-5 h-5 text-[#C4B5FD]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span>Back to Venue Details</span>
-                </button>
+
                 {/* Bottom Action Button ("Next" CTA) */}
 
                 <button
                     type="button"
                     onClick={handleContinue}
-                    className="w-[98px] h-[57px] px-[30px] py-3 rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-extrabold text-[16px] leading-[45px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    className="w-[98px] h-[57px] px-[30px] py-3 rounded-[24px] bg-gradient-to-br  from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-extrabold text-[16px] leading-[45px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
                 >
-                    Next
+                
+                    Skip
                 </button>
 
             </div>

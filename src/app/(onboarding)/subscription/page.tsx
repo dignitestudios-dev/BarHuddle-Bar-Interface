@@ -2,7 +2,7 @@ import { SubscriptionPlansScreen } from "@/features/venue-management/components/
 
 export default function SubscriptionPage() {
     return (
-        <div className="min-h-screen bg-[#07051a] flex flex-col items-center justify-center p-4 md:p-8">
+        <div className="min-h-screenbg-[#07051a] flex flex-col items-center justify-center p-4 md:p-8">
             {/* The SubscriptionPlansScreen is a client component but we render it here */}
             {/* We will need a wrapper to handle the actual selection logic, but for now we render it directly */}
             <SubscriptionPlansScreen />

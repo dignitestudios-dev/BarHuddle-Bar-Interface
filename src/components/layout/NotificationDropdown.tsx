@@ -1,17 +1,40 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useGetNotificationsQuery } from "@/features/notifications/api/notifications.queries";
 
 export interface NotificationItem {
-    id: number;
+    id: string | number;
     title: string;
     message: string;
     time: string;
 }
 
+const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
+    {
+        id: 1,
+        title: "New Booking Request",
+        message: "Lorem ipsum dolor sit amet consectetur. In volutpat et mattis ut tristique.",
+        time: "7:30 PM",
+    },
+    {
+        id: 2,
+        title: "Event Boost Approved",
+        message: "Lorem ipsum dolor sit amet consectetur. In volutpat et mattis ut tristique.",
+        time: "6:15 PM",
+    },
+    {
+        id: 3,
+        title: "Weekly Analytics Ready",
+        message: "Lorem ipsum dolor sit amet consectetur. In volutpat et mattis ut tristique.",
+        time: "4:00 PM",
+    },
+];
+
 export function NotificationDropdown() {
     const [showNotifications, setShowNotifications] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
+    const { data: apiNotificationsData } = useGetNotificationsQuery();
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -27,26 +50,15 @@ export function NotificationDropdown() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const notifications: NotificationItem[] = [
-        {
-            id: 1,
-            title: "New Booking Request",
-            message: "Lorem ipsum dolor sit amet consectetur. In volutpat et mattis ut tristique.",
-            time: "7:30 PM",
-        },
-        {
-            id: 2,
-            title: "Event Boost Approved",
-            message: "Lorem ipsum dolor sit amet consectetur. In volutpat et mattis ut tristique.",
-            time: "6:15 PM",
-        },
-        {
-            id: 3,
-            title: "Weekly Analytics Ready",
-            message: "Lorem ipsum dolor sit amet consectetur. In volutpat et mattis ut tristique.",
-            time: "4:00 PM",
-        },
-    ];
+    const notifications: NotificationItem[] = React.useMemo(() => {
+        if (!apiNotificationsData?.data || apiNotificationsData.data.length === 0) return DEFAULT_NOTIFICATIONS;
+        return apiNotificationsData.data.map((item: any) => ({
+            id: item._id || item.id,
+            title: item.notificationContent?.title || item.title || "Notification",
+            message: item.notificationContent?.body || item.message || item.body || "",
+            time: item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (item.time || "Recently"),
+        }));
+    }, [apiNotificationsData]);
 
     return (
         <div ref={notifRef} className="relative">
