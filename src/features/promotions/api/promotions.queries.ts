@@ -24,3 +24,10 @@ export const useGetPromotionDetailsQuery = (id: string) => {
   });
 };
 
+export const useGetPromotionAnalyticsQuery = () => {
+  return useQuery({
+    queryKey: [...promotionsKeys.all, 'analytics'],
+    queryFn: () => promotionService.getPromotionAnalytics(),
+  });
+};
+

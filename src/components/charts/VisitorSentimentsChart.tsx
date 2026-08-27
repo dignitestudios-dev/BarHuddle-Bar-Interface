@@ -25,24 +25,24 @@ const DEFAULT_SENTIMENTS: SentimentItem[] = [
         name: "Worth It",
         percentage: 62,
         color: "#E8FF57",
-        bgColor: "rgba(232, 255, 87, 0.03)",
-        borderColor: "rgba(232, 255, 87, 0.094)",
+        bgColor: "rgba(232, 255, 87, 0.04)",
+        borderColor: "rgba(232, 255, 87, 0.18)",
         offsetClass: "w-full",
     },
     {
         name: "Mid",
         percentage: 25,
         color: "#22D3EE",
-        bgColor: "rgba(34, 211, 238, 0.03)",
-        borderColor: "rgba(34, 211, 238, 0.094)",
+        bgColor: "rgba(34, 211, 238, 0.04)",
+        borderColor: "rgba(34, 211, 238, 0.18)",
         offsetClass: "w-full",
     },
     {
         name: "Not Worth It",
         percentage: 13,
         color: "#F472B6",
-        bgColor: "rgba(244, 114, 182, 0.03)",
-        borderColor: "rgba(244, 114, 182, 0.094)",
+        bgColor: "rgba(244, 114, 182, 0.04)",
+        borderColor: "rgba(244, 114, 182, 0.18)",
         offsetClass: "w-full",
     },
 ];
@@ -58,39 +58,61 @@ export function VisitorSentimentsChart({
 
     const finalScore = React.useMemo(() => {
         if (overallScore !== undefined) return overallScore;
-        return apiSentimentData?.data?.sentimentScore?.score ?? 0;
+        return apiSentimentData?.data?.sentimentScore?.score ?? 87;
     }, [overallScore, apiSentimentData]);
 
-    const finalSentiments = React.useMemo(() => {
-        if (sentiments) return sentiments;
+    const finalSentiments = React.useMemo<SentimentItem[]>(() => {
+        if (sentiments && sentiments.length > 0) return sentiments;
         const s = apiSentimentData?.data?.sentimentScore;
-        return [
-            {
-                name: "Worth It",
-                percentage: s?.worthIt ?? 0,
-                color: "#E8FF57",
-                bgColor: "rgba(232, 255, 87, 0.03)",
-                borderColor: "rgba(232, 255, 87, 0.094)",
-                offsetClass: "w-full",
-            },
-            {
-                name: "Mid",
-                percentage: s?.mid ?? 0,
-                color: "#22D3EE",
-                bgColor: "rgba(34, 211, 238, 0.03)",
-                borderColor: "rgba(34, 211, 238, 0.094)",
-                offsetClass: "w-full",
-            },
-            {
-                name: "Not Worth It",
-                percentage: s?.notWorthIt ?? 0,
-                color: "#F472B6",
-                bgColor: "rgba(244, 114, 182, 0.03)",
-                borderColor: "rgba(244, 114, 182, 0.094)",
-                offsetClass: "w-full",
-            },
-        ];
+        if (s) {
+            return [
+                {
+                    name: "Worth It",
+                    percentage: s.worthIt ?? 62,
+                    color: "#E8FF57",
+                    bgColor: "rgba(232, 255, 87, 0.04)",
+                    borderColor: "rgba(232, 255, 87, 0.18)",
+                    offsetClass: "w-full",
+                },
+                {
+                    name: "Mid",
+                    percentage: s.mid ?? 25,
+                    color: "#22D3EE",
+                    bgColor: "rgba(34, 211, 238, 0.04)",
+                    borderColor: "rgba(34, 211, 238, 0.18)",
+                    offsetClass: "w-full",
+                },
+                {
+                    name: "Not Worth It",
+                    percentage: s.notWorthIt ?? 13,
+                    color: "#F472B6",
+                    bgColor: "rgba(244, 114, 182, 0.04)",
+                    borderColor: "rgba(244, 114, 182, 0.18)",
+                    offsetClass: "w-full",
+                },
+            ];
+        }
+        return DEFAULT_SENTIMENTS;
     }, [sentiments, apiSentimentData]);
+
+    // Calculate dynamic arc stroke lengths
+    // Semi-circle length = Math.PI * radius
+    const worthItPct = finalSentiments.find((s) => s.name.toLowerCase().includes("worth") && !s.name.toLowerCase().includes("not"))?.percentage ?? 62;
+    const midPct = finalSentiments.find((s) => s.name.toLowerCase() === "mid")?.percentage ?? 25;
+    const notWorthItPct = finalSentiments.find((s) => s.name.toLowerCase().includes("not"))?.percentage ?? 13;
+
+    const r1 = 100;
+    const len1 = Math.PI * r1;
+    const dash1 = (Math.max(0, Math.min(100, worthItPct)) / 100) * len1;
+
+    const r2 = 75;
+    const len2 = Math.PI * r2;
+    const dash2 = (Math.max(0, Math.min(100, midPct)) / 100) * len2;
+
+    const r3 = 50;
+    const len3 = Math.PI * r3;
+    const dash3 = (Math.max(0, Math.min(100, notWorthItPct)) / 100) * len3;
+
     return (
         <div
             className={`relative w-full max-w-[598px] min-h-[420px] p-6 flex flex-col justify-between bg-[#0E093C]/75 backdrop-blur-xl border border-[rgba(124,58,237,0.2)] shadow-[0px_4px_24px_rgba(0,0,0,0.4),inset_0px_1px_0px_rgba(255,255,255,0.06)] rounded-[24px] overflow-hidden select-none font-['Manrope',sans-serif] ${className}`}
@@ -142,38 +164,44 @@ export function VisitorSentimentsChart({
                         </defs>
 
                         {/* Background Dark Tracks */}
-                        <path d="M 20 130 A 100 100 0 0 1 220 130" stroke="rgba(124, 58, 237, 0.12)" strokeWidth="14" strokeLinecap="round" />
-                        <path d="M 45 130 A 75 75 0 0 1 195 130" stroke="rgba(124, 58, 237, 0.12)" strokeWidth="14" strokeLinecap="round" />
-                        <path d="M 70 130 A 50 50 0 0 1 170 130" stroke="rgba(124, 58, 237, 0.12)" strokeWidth="14" strokeLinecap="round" />
+                        <path d="M 20 130 A 100 100 0 0 1 220 130" stroke="rgba(124, 58, 237, 0.15)" strokeWidth="13" strokeLinecap="round" />
+                        <path d="M 45 130 A 75 75 0 0 1 195 130" stroke="rgba(124, 58, 237, 0.15)" strokeWidth="13" strokeLinecap="round" />
+                        <path d="M 70 130 A 50 50 0 0 1 170 130" stroke="rgba(124, 58, 237, 0.15)" strokeWidth="13" strokeLinecap="round" />
 
-                        {/* Outer Arc (Worth It 62%) */}
+                        {/* Outer Dynamic Arc (Worth It) */}
                         <path
-                            d="M 20 130 A 100 100 0 0 1 202 65"
+                            d="M 20 130 A 100 100 0 0 1 220 130"
                             stroke="url(#gaugeYellowGrad)"
-                            strokeWidth="14"
+                            strokeWidth="13"
                             strokeLinecap="round"
+                            strokeDasharray={`${dash1} ${len1}`}
+                            className="transition-all duration-700 ease-out"
                         />
 
-                        {/* Middle Arc (Mid 25%) */}
+                        {/* Middle Dynamic Arc (Mid) */}
                         <path
-                            d="M 45 130 A 75 75 0 0 1 120 55"
+                            d="M 45 130 A 75 75 0 0 1 195 130"
                             stroke="url(#gaugeCyanGrad)"
-                            strokeWidth="14"
+                            strokeWidth="13"
                             strokeLinecap="round"
+                            strokeDasharray={`${dash2} ${len2}`}
+                            className="transition-all duration-700 ease-out"
                         />
 
-                        {/* Inner Arc (Not Worth It 13%) */}
+                        {/* Inner Dynamic Arc (Not Worth It) */}
                         <path
-                            d="M 70 130 A 50 50 0 0 1 95 90"
+                            d="M 70 130 A 50 50 0 0 1 170 130"
                             stroke="url(#gaugePinkGrad)"
-                            strokeWidth="14"
+                            strokeWidth="13"
                             strokeLinecap="round"
+                            strokeDasharray={`${dash3} ${len3}`}
+                            className="transition-all duration-700 ease-out"
                         />
                     </svg>
 
                     {/* Score Overlay Text */}
-                    <div className="absolute inset-0 top-8 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="font-extrabold text-[32px] leading-[32px] text-[#E8FF57]">
+                    <div className="absolute inset-0 top-7 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="font-extrabold text-[32px] leading-[32px] text-[#E8FF57] tracking-tight">
                             {finalScore}
                         </span>
                         <span className="font-bold text-[10px] leading-[15px] text-[#8B7EC8] mt-1">
@@ -182,19 +210,19 @@ export function VisitorSentimentsChart({
                     </div>
                 </div>
 
-                {/* Right Sentiment Category Bars */}
-                <div className="flex flex-col gap-2.5 flex-1 w-full max-w-[280px]">
+                {/* Right Sentiment Category Bars with Integrated Progress Track */}
+                <div className="flex flex-col gap-2.5 flex-1 w-full max-w-[290px]">
                     {finalSentiments.map((item) => (
                         <div
                             key={item.name}
-                            className="h-[44px] px-4 rounded-[20px] flex items-center justify-between border transition-all w-full"
+                            className="h-[46px] px-3.5 rounded-[20px] flex items-center justify-between border transition-all w-full relative overflow-hidden"
                             style={{
                                 backgroundColor: item.bgColor,
                                 borderColor: item.borderColor,
                             }}
                         >
                             {/* Dot & Name */}
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-2 min-w-[90px] shrink-0">
                                 <span
                                     className="w-2.5 h-2.5 rounded-full shrink-0"
                                     style={{
@@ -202,14 +230,26 @@ export function VisitorSentimentsChart({
                                         boxShadow: `0px 0px 6px ${item.color}`,
                                     }}
                                 />
-                                <span className="font-semibold text-[12px] leading-[16px] text-[#C4B5FD]">
+                                <span className="font-semibold text-[12px] leading-[16px] text-[#C4B5FD] whitespace-nowrap">
                                     {item.name}
                                 </span>
                             </div>
 
+                            {/* Embedded Progress Bar */}
+                            <div className="flex-1 h-[6px] bg-[rgba(124,58,237,0.15)] rounded-full overflow-hidden mx-2.5">
+                                <div
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{
+                                        width: `${Math.min(100, Math.max(0, item.percentage))}%`,
+                                        backgroundColor: item.color,
+                                        boxShadow: `0px 0px 4px ${item.color}`,
+                                    }}
+                                />
+                            </div>
+
                             {/* Percentage */}
                             <span
-                                className="font-extrabold text-[12px] leading-[16px] text-right"
+                                className="font-extrabold text-[12px] leading-[16px] text-right shrink-0 min-w-[34px]"
                                 style={{ color: item.color }}
                             >
                                 {item.percentage}%

@@ -11,16 +11,29 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
+const getTodayStart = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+};
+
 const createPromotionSchema = z.object({
     title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
     promoType: z.string().min(1, "Promo type is required"),
-    offerLabel: z.string().min(1, "Discount/Offer label is required").max(50, "Label is too long"),
     description: z.string().min(5, "Description must be at least 5 characters").max(500, "Description is too long"),
     validFrom: z.date({
         message: "Valid From date is required",
+    }).refine((date) => {
+        return date >= getTodayStart();
+    }, {
+        message: "Start date must be today or in the future",
     }),
     validTo: z.date({
         message: "Valid To date is required",
+    }).refine((date) => {
+        return date >= getTodayStart();
+    }, {
+        message: "End date must be in the future",
     }),
     images: z.array(z.any()),
 }).refine(
@@ -31,7 +44,7 @@ const createPromotionSchema = z.object({
         return true;
     },
     {
-        message: "Valid To date cannot be earlier than Valid From date",
+        message: "End date cannot be earlier than start date",
         path: ["validTo"],
     }
 );
@@ -44,6 +57,8 @@ export interface CreatePromotionModalProps {
     onCreate?: (newPromotion: any) => void;
     onUpdate?: (id: string, updatedData: any) => void;
     promotionToEdit?: any | null;
+    venueId?: string;
+    isLoading?: boolean;
 }
 
 export function CreatePromotionModal({
@@ -52,6 +67,8 @@ export function CreatePromotionModal({
     onCreate,
     onUpdate,
     promotionToEdit,
+    venueId,
+    isLoading = false,
 }: CreatePromotionModalProps) {
     const [step, setStep] = useState<1 | 2>(1);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -74,7 +91,6 @@ export function CreatePromotionModal({
         defaultValues: {
             title: "",
             promoType: "Happy Hours",
-            offerLabel: "",
             description: "",
             validFrom: undefined,
             validTo: undefined,
@@ -84,7 +100,7 @@ export function CreatePromotionModal({
 
     const watchImages = watch("images");
     const watchTitle = watch("title");
-    const watchOfferLabel = watch("offerLabel");
+    const watchPromoType = watch("promoType");
     const watchDescription = watch("description");
     const watchValidFrom = watch("validFrom");
     const watchValidTo = watch("validTo");
@@ -99,7 +115,6 @@ export function CreatePromotionModal({
                 reset({
                     title: promotionToEdit.title || promotionToEdit.name || "",
                     promoType: promotionToEdit.category || promotionToEdit.promoType || "Happy Hours",
-                    offerLabel: promotionToEdit.tagText || promotionToEdit.discountText || "",
                     description: promotionToEdit.description || "",
                     validFrom: from ? new Date(from) : undefined,
                     validTo: to ? new Date(to) : undefined,
@@ -117,7 +132,6 @@ export function CreatePromotionModal({
                 reset({
                     title: "",
                     promoType: "Happy Hours",
-                    offerLabel: "",
                     description: "",
                     validFrom: undefined,
                     validTo: undefined,
@@ -180,7 +194,7 @@ export function CreatePromotionModal({
         const startAt = formValues.validFrom ? formValues.validFrom.toISOString() : new Date().toISOString();
         const endAt = formValues.validTo ? formValues.validTo.toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-        const payload = {
+        const payload: any = {
             title: formValues.title,
             description: formValues.description,
             startAt: startAt,
@@ -190,9 +204,14 @@ export function CreatePromotionModal({
         };
 
         if (promotionToEdit) {
+            // Edit mode: DO NOT send venueId
             const promoId = String(promotionToEdit._id || promotionToEdit.id);
             onUpdate?.(promoId, payload);
         } else {
+            // Create mode: send venueId if available
+            if (venueId) {
+                payload.venueId = venueId;
+            }
             onCreate?.(payload);
         }
 
@@ -358,21 +377,7 @@ export function CreatePromotionModal({
                             </div>
                         </div>
 
-                        {/* Row 2: Discount / Offer Label */}
-                        <div className="flex flex-col gap-1.5 w-full">
-                            <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
-                                DISCOUNT / OFFER LABEL
-                            </label>
-                            <input
-                                type="text"
-                                {...register("offerLabel")}
-                                placeholder="e.g. 30% OFF, Buy 1 Get 1 Free, Free Drink"
-                                className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
-                            />
-                            {errors.offerLabel && <span className="text-red-400 text-xs">{errors.offerLabel.message}</span>}
-                        </div>
-
-                        {/* Row 3: Description */}
+                        {/* Row 2: Description */}
                         <div className="flex flex-col gap-1.5 w-full">
                             <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
                                 DESCRIPTION
@@ -412,6 +417,7 @@ export function CreatePromotionModal({
                                                 <Calendar
                                                     mode="single"
                                                     selected={field.value}
+                                                    disabled={(date) => date < getTodayStart()}
                                                     onSelect={(date) => {
                                                         field.onChange(date);
                                                         setIsFromCalendarOpen(false);
@@ -450,6 +456,7 @@ export function CreatePromotionModal({
                                                 <Calendar
                                                     mode="single"
                                                     selected={field.value}
+                                                    disabled={(date) => date < (watchValidFrom ? watchValidFrom : getTodayStart())}
                                                     onSelect={(date) => {
                                                         field.onChange(date);
                                                         setIsToCalendarOpen(false);
@@ -498,10 +505,10 @@ export function CreatePromotionModal({
                                 {/* Gradient Cyan/Green Glow Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-[#4ADE80]/20 to-[#22D3EE]/12 opacity-50 pointer-events-none" />
 
-                                {/* Offer Tag Badge */}
+                                {/* Promo Type Badge */}
                                 <div className="absolute top-[18px] left-[19px] px-3 py-1 rounded-full bg-[#E8FF57] flex items-center justify-center">
                                     <span className="font-extrabold text-[12px] leading-[16px] text-[#04022E] tracking-tight">
-                                        {watchOfferLabel || "20% OFF"}
+                                        {watchPromoType || "Promotion"}
                                     </span>
                                 </div>
                             </div>
@@ -544,10 +551,23 @@ export function CreatePromotionModal({
                             {/* Publish / Update Promotion Button */}
                             <button
                                 type="button"
+                                disabled={isLoading}
                                 onClick={handlePublish}
-                                className="flex-1 h-[52px] rounded-[24px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer"
+                                className="flex-1 h-[52px] rounded-[24px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
                             >
-                                {isEditMode ? "Update Promotion" : "Publish Promotion"}
+                                {isLoading ? (
+                                    <div className="flex items-center gap-2">
+                                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                        </svg>
+                                        <span>{isEditMode ? "Updating..." : "Publishing Promotion..."}</span>
+                                    </div>
+                                ) : isEditMode ? (
+                                    "Update Promotion"
+                                ) : (
+                                    "Publish Promotion"
+                                )}
                             </button>
                         </div>
                     </div>

@@ -6,7 +6,15 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ["/auth/login", "/auth/verify-email"];
+const PUBLIC_ROUTES = [
+    "/auth/login",
+    "/auth/register",
+    "/auth/verify-email",
+    "/auth/forgot-password",
+    "/auth/create-new-password",
+    "/terms",
+    "/privacy",
+];
 
 export function RouteProxy({ children }: { children: React.ReactNode }) {
     const router = useRouter();

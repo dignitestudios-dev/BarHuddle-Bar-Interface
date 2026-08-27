@@ -7,9 +7,10 @@ import { PromotionCard, PromotionData, CreatePromotionModal } from "./";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import { SuccessModal } from "@/components/ui/success-modal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetPromotionsQuery } from "../api/promotions.queries";
+import { useGetPromotionsQuery, useGetPromotionAnalyticsQuery } from "../api/promotions.queries";
 import { useCreatePromotionMutation, useUpdatePromotionMutation, useDeletePromotionMutation } from "../api/promotions.mutations";
 import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
+import { useAppSelector } from "@/store";
 import { toast } from "sonner";
 
 const DEFAULT_PROMOTION_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
@@ -20,18 +21,22 @@ export function Promotions() {
     const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
     const [deletingPromotion, setDeletingPromotion] = useState<{ id: string; title: string } | null>(null);
 
+    const user = useAppSelector((state) => state.auth.user);
     const { data: apiPromotionsData, isLoading } = useGetPromotionsQuery(1, 20);
+    const { data: apiAnalyticsData, isLoading: isAnalyticsLoading } = useGetPromotionAnalyticsQuery();
     const { data: ownerVenuesData } = useGetOwnerVenuesQuery();
 
     const primaryVenueId = React.useMemo(() => {
         const rawVenues = Array.isArray((ownerVenuesData as any)?.data)
             ? (ownerVenuesData as any).data
-            : Array.isArray(ownerVenuesData)
-                ? ownerVenuesData
-                : [];
+            : Array.isArray((ownerVenuesData as any)?.venues)
+                ? (ownerVenuesData as any).venues
+                : Array.isArray(ownerVenuesData)
+                    ? ownerVenuesData
+                    : [];
         const first = rawVenues[0];
-        return first?.venue?._id || first?.venue?.id || first?._id || first?.id || "";
-    }, [ownerVenuesData]);
+        return first?.venue?._id || first?.venue?.id || first?._id || first?.id || (user as any)?.venueId || (user as any)?.claimedVenueId || "";
+    }, [ownerVenuesData, user]);
 
     const createPromotionMutation = useCreatePromotionMutation();
     const updatePromotionMutation = useUpdatePromotionMutation();
@@ -54,23 +59,53 @@ export function Promotions() {
         const list: PromotionData[] = rawPromotions.map((promo: any) => {
             const id = String(promo._id || promo.id);
             map.set(id, promo);
+
+            // Date formatting
+            let dateRangeStr = "Active";
+            if (promo.startAt && promo.endAt) {
+                dateRangeStr = `${new Date(promo.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(promo.endAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            } else if (promo.startDate && promo.endDate) {
+                dateRangeStr = `${new Date(promo.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(promo.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            } else if (promo.dateRange) {
+                dateRangeStr = promo.dateRange;
+            }
+
+            // Tag & Category
+            const tag = promo.tagText || promo.discountText || promo.offerLabel || promo.promoType || "Special";
+            const categoryName = promo.category || promo.promoType || promo.venue?.name || "Special Offers";
+
+            // Metrics
+            const viewsCount = String(promo.views ?? promo.viewCount ?? promo.metrics?.views ?? "0");
+            const redeemedCount = String(promo.redeemedCount ?? promo.redemptions ?? promo.metrics?.redemptions ?? "0");
+            const redemptionRateStr = String(
+                promo.redemptionRate !== undefined
+                    ? `${promo.redemptionRate}%`
+                    : promo.rate !== undefined
+                    ? `${promo.rate}%`
+                    : promo.metrics?.rate || "0%"
+            );
+            const performancePercentNum = Number(
+                promo.performanceRate ?? promo.performancePercent ?? promo.metrics?.performancePercent ?? (promo.redemptionRate ?? 0)
+            );
+
+            // Image
+            const img = promo.banner || promo.imageUrl || promo.coverImage || promo.venue?.coverImage || promo.images?.[0] || DEFAULT_PROMOTION_IMAGE;
+
             return {
                 id,
                 title: promo.title || promo.name || "Promotion",
                 description: promo.description || "",
-                tagText: promo.tagText || promo.discountText || "Special",
+                tagText: tag,
                 tagVariant: promo.tagVariant || "purple",
-                status: promo.status || "Active",
-                category: promo.category || "Special Offers",
-                dateRange: promo.startDate && promo.endDate 
-                    ? `${new Date(promo.startDate).toLocaleDateString()} – ${new Date(promo.endDate).toLocaleDateString()}` 
-                    : (promo.dateRange || "Active"),
-                activeDays: promo.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
-                views: String(promo.metrics?.views || promo.views || "0"),
-                redemptions: String(promo.metrics?.redemptions || promo.redemptions || "0"),
-                rate: String(promo.metrics?.rate || promo.rate || "0%"),
-                performancePercent: Number(promo.metrics?.performancePercent || promo.performancePercent || 0),
-                imageUrl: promo.banner || promo.imageUrl || promo.images?.[0] || DEFAULT_PROMOTION_IMAGE,
+                status: promo.status || "active",
+                category: categoryName,
+                dateRange: dateRangeStr,
+                activeDays: promo.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                views: viewsCount,
+                redemptions: redeemedCount,
+                rate: redemptionRateStr,
+                performancePercent: performancePercentNum,
+                imageUrl: img,
             };
         });
 
@@ -79,10 +114,14 @@ export function Promotions() {
 
     const handleCreatePromotion = async (newPromoData: any) => {
         try {
+            const venueId = newPromoData.venueId || primaryVenueId;
             const hasFiles = newPromoData.images && Array.isArray(newPromoData.images) && newPromoData.images.some((img: any) => img instanceof File);
 
             if (hasFiles) {
                 const formData = new FormData();
+                if (venueId) {
+                    formData.append("venueId", venueId);
+                }
                 formData.append("title", newPromoData.title);
                 formData.append("description", newPromoData.description);
                 formData.append("startAt", newPromoData.startAt);
@@ -95,13 +134,16 @@ export function Promotions() {
                 });
                 await createPromotionMutation.mutateAsync(formData);
             } else {
-                const payload = {
+                const payload: any = {
                     title: newPromoData.title,
                     description: newPromoData.description,
                     startAt: newPromoData.startAt,
                     endAt: newPromoData.endAt,
                     status: newPromoData.status || "active",
                 };
+                if (venueId) {
+                    payload.venueId = venueId;
+                }
                 await createPromotionMutation.mutateAsync(payload);
             }
 
@@ -120,6 +162,7 @@ export function Promotions() {
 
             if (hasFiles) {
                 const formData = new FormData();
+                // Explicitly DO NOT append venueId on edit
                 formData.append("title", updatedPromoData.title);
                 formData.append("description", updatedPromoData.description);
                 formData.append("startAt", updatedPromoData.startAt);
@@ -133,6 +176,7 @@ export function Promotions() {
                 await updatePromotionMutation.mutateAsync({ id, data: formData });
             } else {
                 const payload = {
+                    // Explicitly DO NOT include venueId on edit
                     title: updatedPromoData.title,
                     description: updatedPromoData.description,
                     startAt: updatedPromoData.startAt,
@@ -171,6 +215,8 @@ export function Promotions() {
         setDeletingPromotion({ id: String(promo.id), title: promo.title });
     };
 
+    const analytics = (apiAnalyticsData as any)?.data;
+
     const activePromotionsCount = promotionsList.filter((p) => p.status?.toLowerCase() === "active").length;
     const totalViewsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.views) || 0), 0);
     const totalRedemptionsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.redemptions) || 0), 0);
@@ -178,12 +224,17 @@ export function Promotions() {
         ? `${(promotionsList.reduce((acc, p) => acc + (parseFloat(p.rate) || 0), 0) / promotionsList.length).toFixed(1)}%`
         : "0%";
 
+    const activePromoCard = analytics?.cards?.find((c: any) => c.id === "active_promotions");
+    const totalViewsCard = analytics?.cards?.find((c: any) => c.id === "total_views");
+    const totalRedemptionsCard = analytics?.cards?.find((c: any) => c.id === "total_redemptions");
+    const avgRedemptionRateCard = analytics?.cards?.find((c: any) => c.id === "avg_redemption_rate");
+
     const statsData = [
         {
             id: "active-promotions",
-            title: "Active Promotions",
-            value: activePromotionsCount.toString(),
-            trend: "+0 this week",
+            title: activePromoCard?.label || "Active Promotions",
+            value: activePromoCard?.formattedValue || (analytics?.activePromotions !== undefined ? String(analytics.activePromotions) : activePromotionsCount.toString()),
+            trend: activePromoCard?.subText || analytics?.activePromotionsSubText || "+0 this week",
             isPositive: true,
             variant: "purple" as const,
             icon: (
@@ -194,9 +245,9 @@ export function Promotions() {
         },
         {
             id: "total-views",
-            title: "Total Views",
-            value: totalViewsCount.toLocaleString(),
-            trend: "+0% this month",
+            title: totalViewsCard?.label || "Total Views",
+            value: totalViewsCard?.formattedValue || (analytics?.totalViews !== undefined ? Number(analytics.totalViews).toLocaleString() : totalViewsCount.toLocaleString()),
+            trend: totalViewsCard?.subText || analytics?.totalViewsSubText || "+0% this month",
             isPositive: true,
             variant: "purple" as const,
             icon: (
@@ -208,9 +259,9 @@ export function Promotions() {
         },
         {
             id: "total-redemptions",
-            title: "Total Redemptions",
-            value: totalRedemptionsCount.toLocaleString(),
-            trend: "+0% this month",
+            title: totalRedemptionsCard?.label || "Total Redemptions",
+            value: totalRedemptionsCard?.formattedValue || (analytics?.totalRedemptions !== undefined ? Number(analytics.totalRedemptions).toLocaleString() : totalRedemptionsCount.toLocaleString()),
+            trend: totalRedemptionsCard?.subText || analytics?.totalRedemptionsSubText || "+0% this month",
             isPositive: true,
             variant: "yellow" as const,
             icon: (
@@ -221,9 +272,9 @@ export function Promotions() {
         },
         {
             id: "avg-redemption-rate",
-            title: "Avg Redemption Rate",
-            value: avgRate,
-            trend: "+0% vs last mo.",
+            title: avgRedemptionRateCard?.label || "Avg Redemption Rate",
+            value: avgRedemptionRateCard?.formattedValue || analytics?.avgRedemptionRateFormatted || (analytics?.avgRedemptionRate !== undefined ? `${analytics.avgRedemptionRate}%` : avgRate),
+            trend: avgRedemptionRateCard?.subText || analytics?.avgRedemptionRateSubText || "+0% vs last mo.",
             isPositive: true,
             variant: "green" as const,
             icon: (
@@ -242,6 +293,8 @@ export function Promotions() {
             {/* Create Promotion Modal */}
             <CreatePromotionModal
                 isOpen={isCreateModalOpen}
+                venueId={primaryVenueId}
+                isLoading={createPromotionMutation.isPending}
                 onClose={() => setIsCreateModalOpen(false)}
                 onCreate={handleCreatePromotion}
             />
@@ -250,6 +303,7 @@ export function Promotions() {
             <CreatePromotionModal
                 isOpen={Boolean(editingPromotion)}
                 promotionToEdit={editingPromotion}
+                isLoading={updatePromotionMutation.isPending}
                 onClose={() => setEditingPromotion(null)}
                 onUpdate={handleUpdatePromotion}
             />
@@ -284,18 +338,24 @@ export function Promotions() {
 
             {/* Stats Cards Grid (Rendered using loop) */}
             <div className="max-w-[1200px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-                {statsData.map((stat) => (
-                    <StatsCard
-                        key={stat.id}
-                        title={stat.title}
-                        value={stat.value}
-                        trend={stat.trend}
-                        isPositive={stat.isPositive}
-                        variant={stat.variant}
-                        icon={stat.icon}
-                        className="w-full"
-                    />
-                ))}
+                {isAnalyticsLoading && isLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-[120px] w-full rounded-[24px] bg-purple-900/20" />
+                    ))
+                ) : (
+                    statsData.map((stat) => (
+                        <StatsCard
+                            key={stat.id}
+                            title={stat.title}
+                            value={stat.value}
+                            trend={stat.trend}
+                            isPositive={stat.isPositive}
+                            variant={stat.variant}
+                            icon={stat.icon}
+                            className="w-full"
+                        />
+                    ))
+                )}
             </div>
 
             {/* Promotions Cards Grid (3 Columns) */}

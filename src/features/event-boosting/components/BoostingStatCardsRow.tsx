@@ -43,10 +43,12 @@ export function BoostingStatCardsRow({
                     ? apiBoostsData
                     : [];
 
-        const totalEventsCount = apiBoostsData?.totalEvents ?? rawEvents.length ?? 0;
-        const boostedEventsCount = apiBoostsData?.boostedEvents ?? rawBoosts.filter((b: any) => b.status === "active" || b.isBoosted).length ?? 0;
-        const totalReachVal = apiBoostsData?.totalReach ? `${(apiBoostsData.totalReach / 1000).toFixed(0)}K` : "0";
-        const avgEngagementVal = apiBoostsData?.attendRateLift ? `${apiBoostsData.attendRateLift}%` : "0%";
+        const totalEventsCount = apiBoostsData?.totalEvents ?? rawEvents.length ?? rawBoosts.length ?? 0;
+        const boostedEventsCount = apiBoostsData?.boostedEvents ?? rawBoosts.filter((b: any) => b.isBoosted || b.activeBoosts > 0 || b.status === "active").length ?? 0;
+        const totalReachVal = apiBoostsData?.totalReach !== undefined && apiBoostsData?.totalReach !== null
+            ? (apiBoostsData.totalReach >= 1000 ? `${(apiBoostsData.totalReach / 1000).toFixed(0)}K` : String(apiBoostsData.totalReach))
+            : "0";
+        const avgEngagementVal = `${apiBoostsData?.avgEngagement ?? apiBoostsData?.attendRateLift ?? 0}%`;
 
         return [
             {

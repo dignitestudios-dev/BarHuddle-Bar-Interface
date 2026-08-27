@@ -194,7 +194,7 @@ export function PromotionCard({
                             Performance
                         </span>
                         <span className="font-extrabold text-[10px] leading-[15px] text-[#4ADE80]">
-                            {promotion.rate} rate
+                            {promotion.performancePercent}%
                         </span>
                     </div>
                     <div className="w-full h-[6px] rounded-full bg-[rgba(124,58,237,0.12)] overflow-hidden">
