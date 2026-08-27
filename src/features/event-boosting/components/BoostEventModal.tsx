@@ -8,22 +8,48 @@ export interface BoostEventModalProps {
     isOpen: boolean;
     onClose: () => void;
     event?: EventCardData | null;
-    onConfirmBoost?: (event: EventCardData, duration: string) => void;
+    isPending?: boolean;
+    onConfirmBoost?: (
+        event: EventCardData,
+        duration: string,
+        payload: { eventId: string; startAt: string; endAt: string; amount: number }
+    ) => void;
 }
 
 export function BoostEventModal({
     isOpen,
     onClose,
     event,
+    isPending = false,
     onConfirmBoost,
 }: BoostEventModalProps) {
-    const [selectedDuration, setSelectedDuration] = useState("14 Days");
+    const [selectedDuration, setSelectedDuration] = useState("7 Days");
 
     if (!isOpen || !event) return null;
 
     const handleConfirm = () => {
-        onConfirmBoost?.(event, selectedDuration);
-        onClose();
+        let days = 7;
+        let amount = 9.99;
+
+        if (selectedDuration === "14 Days") {
+            days = 14;
+            amount = 19.99;
+        } else if (selectedDuration === "21 Days") {
+            days = 21;
+            amount = 29.99;
+        }
+
+        const startAt = new Date().toISOString();
+        const endAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+        const payload = {
+            eventId: String(event.id),
+            startAt,
+            endAt,
+            amount,
+        };
+
+        onConfirmBoost?.(event, selectedDuration, payload);
     };
 
     return (
@@ -119,7 +145,7 @@ export function BoostEventModal({
                     <button
                         type="button"
                         onClick={() => setSelectedDuration("7 Days")}
-                        className={`h-[63px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
+                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
                             selectedDuration === "7 Days"
                                 ? "bg-[rgba(124,58,237,0.18)] border-2 border-[#7C3AED] shadow-[0px_0px_16px_rgba(124,58,237,0.3)]"
                                 : "bg-[rgba(124,58,237,0.047)] border border-[rgba(124,58,237,0.133)] hover:bg-[rgba(124,58,237,0.1)]"
@@ -128,8 +154,8 @@ export function BoostEventModal({
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#7C3AED]">
                             7 Days
                         </span>
-                        <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] mt-0.5">
-                            Duration
+                        <span className="font-bold text-[11px] text-white/90 mt-0.5">
+                            $9.99
                         </span>
                     </button>
 
@@ -137,7 +163,7 @@ export function BoostEventModal({
                     <button
                         type="button"
                         onClick={() => setSelectedDuration("14 Days")}
-                        className={`h-[63px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
+                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
                             selectedDuration === "14 Days"
                                 ? "bg-[rgba(232,255,87,0.18)] border-2 border-[#E8FF57] shadow-[0px_0px_16px_rgba(232,255,87,0.3)]"
                                 : "bg-[rgba(232,255,87,0.047)] border border-[rgba(232,255,87,0.133)] hover:bg-[rgba(232,255,87,0.1)]"
@@ -146,8 +172,8 @@ export function BoostEventModal({
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#E8FF57]">
                             14 Days
                         </span>
-                        <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] mt-0.5">
-                            Duration
+                        <span className="font-bold text-[11px] text-white/90 mt-0.5">
+                            $19.99
                         </span>
                     </button>
 
@@ -155,7 +181,7 @@ export function BoostEventModal({
                     <button
                         type="button"
                         onClick={() => setSelectedDuration("21 Days")}
-                        className={`h-[63px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
+                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
                             selectedDuration === "21 Days"
                                 ? "bg-[rgba(34,211,238,0.18)] border-2 border-[#22D3EE] shadow-[0px_0px_16px_rgba(34,211,238,0.3)]"
                                 : "bg-[rgba(34,211,238,0.047)] border border-[rgba(34,211,238,0.133)] hover:bg-[rgba(34,211,238,0.1)]"
@@ -164,8 +190,8 @@ export function BoostEventModal({
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#22D3EE]">
                             21 Days
                         </span>
-                        <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] mt-0.5">
-                            Duration
+                        <span className="font-bold text-[11px] text-white/90 mt-0.5">
+                            $29.99
                         </span>
                     </button>
                 </div>
@@ -174,9 +200,10 @@ export function BoostEventModal({
                 <button
                     type="button"
                     onClick={handleConfirm}
-                    className="w-full h-[52px] rounded-[14px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer mt-1"
+                    disabled={isPending}
+                    className="w-full h-[52px] rounded-[14px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer mt-1 disabled:opacity-50"
                 >
-                    Boost Now
+                    {isPending ? "Boosting Event..." : `Boost Now ($${selectedDuration === "7 Days" ? "9.99" : selectedDuration === "14 Days" ? "19.99" : "29.99"})`}
                 </button>
             </div>
         </div>

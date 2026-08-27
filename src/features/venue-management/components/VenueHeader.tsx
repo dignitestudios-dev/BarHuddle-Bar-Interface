@@ -59,14 +59,14 @@ export function VenueHeader({
 
                 {/* Right Side Action Buttons: Edit Details & Claim Now */}
                 <div className="flex items-center gap-3 shrink-0">
-                    {/* Edit Details Button */}
+                    {/* Edit Details Button
                     <button
                         type="button"
                         onClick={() => setIsEditModalOpen(true)}
                         className="h-[57px] px-5 py-3 rounded-[24px] bg-[rgba(124,58,237,0.25)] hover:bg-[rgba(124,58,237,0.4)] border border-[rgba(124,58,237,0.4)] flex items-center justify-center font-bold text-[15px] text-[#C4B5FD] hover:text-white transition-all cursor-pointer"
                     >
                         Edit Details
-                    </button>
+                    </button> */}
 
                     {/* Claim Now Button */}
                     <button
@@ -82,6 +82,7 @@ export function VenueHeader({
             {/* Claim Form Modal */}
             <ClaimFormModal
                 isOpen={isClaimModalOpen}
+                venue={venue}
                 onClose={() => setIsClaimModalOpen(false)}
                 onSubmitted={handleClaimSubmitted}
             />

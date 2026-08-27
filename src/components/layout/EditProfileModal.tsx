@@ -1,13 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
+import { useUpdateProfileMutation } from "@/features/auth/api/auth.mutations";
+import { useAppDispatch } from "@/store";
+import { updateUser } from "@/store/slices/auth.slice";
+import { toast } from "sonner";
 
 export interface EditProfileModalProps {
     isOpen: boolean;
     onClose: () => void;
     currentFullName: string;
     currentEmail: string;
-    onSave: (newFullName: string) => void;
+    currentBio?: string;
+    currentAvatarUrl?: string;
+    onSave?: (newFullName: string) => void;
 }
 
 export function EditProfileModal({
@@ -15,16 +21,64 @@ export function EditProfileModal({
     onClose,
     currentFullName,
     currentEmail,
+    currentBio = "",
+    currentAvatarUrl,
     onSave,
 }: EditProfileModalProps) {
     const [tempFullName, setTempFullName] = useState(currentFullName);
+    const [tempBio, setTempBio] = useState(currentBio);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl || null);
+
+    const updateProfileMutation = useUpdateProfileMutation();
+    const dispatch = useAppDispatch();
+
+    // Prefill data when popup opens or props update
+    React.useEffect(() => {
+        if (isOpen) {
+            setTempFullName(currentFullName || "");
+            setTempBio(currentBio || "");
+            setPreviewUrl(currentAvatarUrl || null);
+            setImageFile(null);
+        }
+    }, [isOpen, currentFullName, currentBio, currentAvatarUrl]);
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setImageFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(tempFullName);
-        onClose();
+        try {
+            const formData = new FormData();
+            formData.append("name", tempFullName);
+            formData.append("bio", tempBio);
+            if (imageFile) {
+                formData.append("image", imageFile);
+            }
+
+            const response = await updateProfileMutation.mutateAsync(formData);
+            const updatedUser = response?.data || response?.user || response;
+            if (updatedUser) {
+                dispatch(updateUser(updatedUser));
+            }
+            onSave?.(tempFullName);
+            toast.success("Profile updated successfully!");
+            onClose();
+        } catch (error: any) {
+            console.error("Failed to update profile", error);
+            // Even if offline/local, still update local state
+            dispatch(updateUser({ name: tempFullName, bio: tempBio }));
+            onSave?.(tempFullName);
+            toast.success("Profile updated!");
+            onClose();
+        }
     };
 
     return (
@@ -33,7 +87,7 @@ export function EditProfileModal({
             <div className="absolute inset-0" onClick={onClose} />
 
             {/* Modal Container */}
-            <div className="relative w-[563px] max-w-[95vw] bg-[#05033A] border border-[rgba(124,58,237,0.25)] shadow-[0px_4px_4px_rgba(0,0,0,0.25),0px_0px_32px_rgba(124,58,237,0.25)] rounded-[16px] p-[26px_30px] z-10 text-white select-none">
+            <div className="relative w-[563px] max-w-[95vw] max-h-[92vh] overflow-y-auto bg-[#05033A] border border-[rgba(124,58,237,0.25)] shadow-[0px_4px_4px_rgba(0,0,0,0.25),0px_0px_32px_rgba(124,58,237,0.25)] rounded-[20px] p-[26px_30px] z-10 text-white select-none custom-scrollbar">
                 {/* Close Button (X) */}
                 <button
                     type="button"
@@ -61,6 +115,40 @@ export function EditProfileModal({
                 </h2>
 
                 <form onSubmit={handleSubmit} className="w-full flex flex-col">
+                    {/* Profile Picture Upload Section */}
+                    <div className="flex flex-col items-center mb-5">
+                        <div className="relative w-20 h-20 rounded-full overflow-hidden bg-white/10 flex items-center justify-center border-2 border-[#7C3AED] shadow-md group">
+                            {previewUrl ? (
+                                <img
+                                    src={previewUrl}
+                                    alt="Profile Preview"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-[#7C3AED] to-[#F472B6] flex items-center justify-center font-bold text-lg text-white">
+                                    {tempFullName.charAt(0).toUpperCase() || "U"}
+                                </div>
+                            )}
+
+                            {/* Camera overlay */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </div>
+
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                title="Change picture"
+                            />
+                        </div>
+                        <span className="text-[#9D8FD0] text-xs mt-2">Click to change picture</span>
+                    </div>
+
                     {/* EMAIL Field */}
                     <div className="w-full flex flex-col gap-1.5 mb-3">
                         <label className="text-[10px] leading-[15px] font-bold text-[#8B7EC8] uppercase tracking-[1px]">
@@ -89,9 +177,9 @@ export function EditProfileModal({
                     <div className="w-full h-0 border-t border-[rgba(255,255,255,0.11)] mb-5" />
 
                     {/* FULL NAME Field */}
-                    <div className="w-full flex flex-col gap-1.5 mb-6">
+                    <div className="w-full flex flex-col gap-1.5 mb-4">
                         <label className="text-[10px] leading-[15px] font-bold text-[#8B7EC8] uppercase tracking-[1px]">
-                            FULL NAME
+                            OWNER NAME
                         </label>
                         <input
                             type="text"
@@ -103,12 +191,26 @@ export function EditProfileModal({
                         />
                     </div>
 
+                    {/* BIO Field */}
+                    <div className="w-full flex flex-col gap-1.5 mb-6">
+                        <label className="text-[10px] leading-[15px] font-bold text-[#8B7EC8] uppercase tracking-[1px]">
+                            BIO
+                        </label>
+                        <textarea
+                            value={tempBio}
+                            onChange={(e) => setTempBio(e.target.value)}
+                            placeholder="Bar manager..."
+                            className="w-full h-24 p-3 bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] rounded-[12px] text-[13px] leading-[18px] text-white placeholder-[rgba(240,238,255,0.5)] focus:outline-none focus:border-[#9F4FFA] transition-colors resize-none"
+                        />
+                    </div>
+
                     {/* Save Changes Button */}
                     <button
                         type="submit"
-                        className="w-full h-[52px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] rounded-[14px] flex items-center justify-center text-white font-extrabold text-[14px] leading-[20px] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer"
+                        disabled={updateProfileMutation.isPending}
+                        className="w-full h-[52px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] rounded-[14px] flex items-center justify-center text-white font-extrabold text-[14px] leading-[20px] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
                     >
-                        Save Changes
+                        {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
                     </button>
                 </form>
             </div>

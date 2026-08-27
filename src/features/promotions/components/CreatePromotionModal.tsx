@@ -1,99 +1,217 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { PromotionData } from "./PromotionCard";
+import React, { useRef, useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+
+const createPromotionSchema = z.object({
+    title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
+    promoType: z.string().min(1, "Promo type is required"),
+    offerLabel: z.string().min(1, "Discount/Offer label is required").max(50, "Label is too long"),
+    description: z.string().min(5, "Description must be at least 5 characters").max(500, "Description is too long"),
+    validFrom: z.date({
+        message: "Valid From date is required",
+    }),
+    validTo: z.date({
+        message: "Valid To date is required",
+    }),
+    images: z.array(z.any()),
+}).refine(
+    (data) => {
+        if (data.validFrom && data.validTo) {
+            return data.validTo >= data.validFrom;
+        }
+        return true;
+    },
+    {
+        message: "Valid To date cannot be earlier than Valid From date",
+        path: ["validTo"],
+    }
+);
+
+export type CreatePromotionFormValues = z.infer<typeof createPromotionSchema>;
 
 export interface CreatePromotionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreate?: (newPromotion: Partial<PromotionData>) => void;
+    onCreate?: (newPromotion: any) => void;
+    onUpdate?: (id: string, updatedData: any) => void;
+    promotionToEdit?: any | null;
 }
 
 export function CreatePromotionModal({
     isOpen,
     onClose,
     onCreate,
+    onUpdate,
+    promotionToEdit,
 }: CreatePromotionModalProps) {
     const [step, setStep] = useState<1 | 2>(1);
-    const [promoTitle, setPromoTitle] = useState("");
-    const [promoType, setPromoType] = useState("Happy Hours");
-    const [offerLabel, setOfferLabel] = useState("");
-    const [description, setDescription] = useState("");
-    const [validFrom, setValidFrom] = useState("");
-    const [validTo, setValidTo] = useState("");
-    const [images, setImages] = useState<string[]>([]);
-    
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [isFromCalendarOpen, setIsFromCalendarOpen] = useState(false);
+    const [isToCalendarOpen, setIsToCalendarOpen] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const {
+        register,
+        handleSubmit,
+        setValue,
+        watch,
+        reset,
+        getValues,
+        control,
+        formState: { errors },
+    } = useForm<CreatePromotionFormValues>({
+        resolver: zodResolver(createPromotionSchema),
+        defaultValues: {
+            title: "",
+            promoType: "Happy Hours",
+            offerLabel: "",
+            description: "",
+            validFrom: undefined,
+            validTo: undefined,
+            images: [],
+        },
+    });
+
+    const watchImages = watch("images");
+    const watchTitle = watch("title");
+    const watchOfferLabel = watch("offerLabel");
+    const watchDescription = watch("description");
+    const watchValidFrom = watch("validFrom");
+    const watchValidTo = watch("validTo");
+
+    // Pre-populate fields when in edit mode or when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            if (promotionToEdit) {
+                const from = promotionToEdit.startAt || promotionToEdit.startDate;
+                const to = promotionToEdit.endAt || promotionToEdit.endDate;
+
+                reset({
+                    title: promotionToEdit.title || promotionToEdit.name || "",
+                    promoType: promotionToEdit.category || promotionToEdit.promoType || "Happy Hours",
+                    offerLabel: promotionToEdit.tagText || promotionToEdit.discountText || "",
+                    description: promotionToEdit.description || "",
+                    validFrom: from ? new Date(from) : undefined,
+                    validTo: to ? new Date(to) : undefined,
+                    images: [],
+                });
+
+                const existingImg = promotionToEdit.imageUrl || promotionToEdit.banner || promotionToEdit.image;
+                if (existingImg) {
+                    setImagePreviews([existingImg]);
+                } else {
+                    setImagePreviews([]);
+                }
+            } else {
+                setStep(1);
+                reset({
+                    title: "",
+                    promoType: "Happy Hours",
+                    offerLabel: "",
+                    description: "",
+                    validFrom: undefined,
+                    validTo: undefined,
+                    images: [],
+                });
+                setImagePreviews([]);
+            }
+        }
+    }, [isOpen, promotionToEdit, reset]);
+
+    // Handle image preview cleanup and generation
+    useEffect(() => {
+        if (!watchImages || watchImages.length === 0) {
+            if (!promotionToEdit) {
+                setImagePreviews([]);
+            }
+            return;
+        }
+
+        const newPreviews = watchImages.map((file) => {
+            if (file instanceof File) {
+                return URL.createObjectURL(file);
+            }
+            return file;
+        });
+
+        setImagePreviews(newPreviews);
+
+        return () => {
+            newPreviews.forEach((url) => {
+                if (url && typeof url === "string" && url.startsWith("blob:")) {
+                    URL.revokeObjectURL(url);
+                }
+            });
+        };
+    }, [watchImages, promotionToEdit]);
 
     if (!isOpen) return null;
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const filesArray = Array.from(e.target.files).map((file) =>
-                URL.createObjectURL(file)
-            );
-            setImages((prev) => [...prev, ...filesArray]);
+            const newFiles = Array.from(e.target.files);
+            setValue("images", [...(watchImages || []), ...newFiles], { shouldValidate: true });
         }
     };
 
     const handleRemoveImage = (index: number) => {
-        setImages((prev) => prev.filter((_, i) => i !== index));
+        const newImages = [...(watchImages || [])];
+        newImages.splice(index, 1);
+        setValue("images", newImages, { shouldValidate: true });
+        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const handleContinueToPreview = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleContinueToPreview = () => {
         setStep(2);
     };
 
     const handlePublish = () => {
-        let dateRangeStr = "Jun 1 – Jul 31";
-        if (validFrom || validTo) {
-            dateRangeStr = `${validFrom || "Start"} – ${validTo || "End"}`;
-        }
+        const formValues = getValues();
+        const startAt = formValues.validFrom ? formValues.validFrom.toISOString() : new Date().toISOString();
+        const endAt = formValues.validTo ? formValues.validTo.toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-        const tagVariantMap: Record<string, "green" | "yellow" | "purple"> = {
-            "Happy Hours": "purple",
-            "Discounts": "yellow",
-            "Buy One Get One": "green",
-            "Special Offers": "green",
+        const payload = {
+            title: formValues.title,
+            description: formValues.description,
+            startAt: startAt,
+            endAt: endAt,
+            status: "active",
+            images: formValues.images,
         };
 
-        onCreate?.({
-            title: promoTitle || "Summer Rooftop Special",
-            description: description || "Exclusive summer cocktail bundles on the rooftop.",
-            tagText: offerLabel || "20% OFF",
-            tagVariant: tagVariantMap[promoType] || "purple",
-            status: "Active",
-            category: promoType,
-            dateRange: dateRangeStr,
-            activeDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-            views: "0",
-            redemptions: "0",
-            rate: "0%",
-            performancePercent: 0,
-            imageUrl: images[0] || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
-        });
+        if (promotionToEdit) {
+            const promoId = String(promotionToEdit._id || promotionToEdit.id);
+            onUpdate?.(promoId, payload);
+        } else {
+            onCreate?.(payload);
+        }
 
-        // Reset state
         setStep(1);
-        setPromoTitle("");
-        setOfferLabel("");
-        setDescription("");
-        setValidFrom("");
-        setValidTo("");
-        setImages([]);
+        reset();
         onClose();
     };
 
     const handleCloseAll = () => {
         setStep(1);
+        reset();
         onClose();
     };
 
-    // Formatted date string for preview
-    const datePreviewText = (validFrom || validTo)
-        ? `${validFrom || "Jun 1"} – ${validTo || "Jul 31"}`
+    const datePreviewText = watchValidFrom || watchValidTo
+        ? `${watchValidFrom ? format(watchValidFrom, "MMM d, yyyy") : "Start"} – ${watchValidTo ? format(watchValidTo, "MMM d, yyyy") : "End"}`
         : "Jun 1 – Jul 31";
+
+    const isEditMode = Boolean(promotionToEdit);
 
     return (
         <div 
@@ -102,16 +220,16 @@ export function CreatePromotionModal({
                 if (e.target === e.currentTarget) handleCloseAll();
             }}
         >
-            {/* Modal Container: matching 563px width, background #05033A, border-radius 16px */}
-            <div className="relative w-full max-w-[563px] bg-[#05033A] border border-[rgba(124,58,237,0.25)] shadow-[0px_4px_24px_rgba(0,0,0,0.5)] rounded-[16px] p-6 sm:p-[30px] flex flex-col gap-6 max-h-[92vh] overflow-y-auto scrollbar-none">
+            {/* Modal Container */}
+            <div className="relative w-full max-w-[563px] bg-[#05033A] border border-[rgba(124,58,237,0.25)] shadow-[0px_4px_24px_rgba(0,0,0,0.5)] rounded-[24px] p-6 sm:p-[30px] flex flex-col gap-6 max-h-[92vh] overflow-y-auto scrollbar-none">
                 
                 {/* Modal Header */}
                 <div className="flex items-center justify-between">
                     <h2 className="font-bold text-[20px] leading-[27px] text-white capitalize tracking-tight">
-                        Create Promotion
+                        {isEditMode ? "Edit Promotion" : "Create Promotion"}
                     </h2>
 
-                    {/* Close Button (40x40 container) */}
+                    {/* Close Button */}
                     <button
                         type="button"
                         onClick={handleCloseAll}
@@ -128,8 +246,7 @@ export function CreatePromotionModal({
 
                 {/* STEP 1: FORM INPUTS */}
                 {step === 1 && (
-                    <form onSubmit={handleContinueToPreview} className="flex flex-col gap-5 w-full">
-                        
+                    <form onSubmit={handleSubmit(handleContinueToPreview)} className="flex flex-col gap-5 w-full">
                         {/* Upload Images Section */}
                         <div className="flex flex-col gap-2 w-full">
                             <label className="font-semibold text-[14px] leading-[19px] text-white">
@@ -150,7 +267,6 @@ export function CreatePromotionModal({
                                 onClick={() => fileInputRef.current?.click()}
                                 className="w-full h-[151px] rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-[rgba(124,58,237,0.18)] transition-all group"
                             >
-                                {/* Gallery Icon */}
                                 <div className="w-[30px] h-[30px] flex items-center justify-center text-[#B45FF2] mb-1">
                                     <svg className="w-[30px] h-[30px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path 
@@ -170,13 +286,13 @@ export function CreatePromotionModal({
                                 </span>
                             </div>
 
-                            {/* Thumbnails Row if images uploaded */}
-                            {images.length > 0 && (
+                            {/* Thumbnails Row */}
+                            {imagePreviews.length > 0 && (
                                 <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-none pt-2 w-full">
-                                    {images.map((imgUrl, idx) => (
+                                    {imagePreviews.map((imgUrl, idx) => (
                                         <div
                                             key={idx}
-                                            className="relative w-[76px] h-[76px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
+                                            className="relative w-[76px] h-[76px] rounded-[16px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                         >
                                             <img
                                                 src={imgUrl}
@@ -208,11 +324,11 @@ export function CreatePromotionModal({
                                 </label>
                                 <input
                                     type="text"
-                                    value={promoTitle}
-                                    onChange={(e) => setPromoTitle(e.target.value)}
+                                    {...register("title")}
                                     placeholder="e.g. Happy Hour Special"
-                                    className="w-full h-[44px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
+                                    className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
                                 />
+                                {errors.title && <span className="text-red-400 text-xs">{errors.title.message}</span>}
                             </div>
 
                             {/* Promo Type */}
@@ -220,24 +336,25 @@ export function CreatePromotionModal({
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
                                     PROMO TYPE
                                 </label>
-                                <div className="relative w-full">
-                                    <select
-                                        value={promoType}
-                                        onChange={(e) => setPromoType(e.target.value)}
-                                        className="w-full h-[44px] px-[14px] pr-9 rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white font-medium text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors appearance-none cursor-pointer"
-                                    >
-                                        <option value="Happy Hours" className="bg-[#0D0B52] text-white">Happy Hours</option>
-                                        <option value="Discounts" className="bg-[#0D0B52] text-white">Discounts</option>
-                                        <option value="Buy One Get One" className="bg-[#0D0B52] text-white">Buy One Get One</option>
-                                        <option value="Special Offers" className="bg-[#0D0B52] text-white">Special Offers</option>
-                                    </select>
-                                    {/* Chevron Icon */}
-                                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#8B7EC8]">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
-                                </div>
+                                <Controller
+                                    control={control}
+                                    name="promoType"
+                                    render={({ field }) => (
+                                        <Select value={field.value} onValueChange={field.onChange}>
+                                            <SelectTrigger className="w-full h-[46px]! px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white focus:outline-none focus:border-[#B45FF2] transition-colors">
+                                                <SelectValue placeholder="Select type" />
+                                            </SelectTrigger>
+                                            <SelectContent side="bottom" alignItemWithTrigger={false} className="bg-[#0A074A] border-[rgba(124,58,237,0.25)] text-white p-2" style={{ zIndex: 9999 }}>
+                                                {["Happy Hours", "Discounts", "Buy One Get One", "Special Offers"].map((type) => (
+                                                    <SelectItem key={type} value={type} className="px-4 py-3 !text-white hover:!text-white focus:!text-white data-[highlighted]:!text-white hover:bg-purple-900/40 focus:bg-purple-900/40 cursor-pointer rounded-lg" style={{ color: "#ffffff" }}>
+                                                        {type}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                />
+                                {errors.promoType && <span className="text-red-400 text-xs">{errors.promoType.message}</span>}
                             </div>
                         </div>
 
@@ -248,11 +365,11 @@ export function CreatePromotionModal({
                             </label>
                             <input
                                 type="text"
-                                value={offerLabel}
-                                onChange={(e) => setOfferLabel(e.target.value)}
+                                {...register("offerLabel")}
                                 placeholder="e.g. 30% OFF, Buy 1 Get 1 Free, Free Drink"
-                                className="w-full h-[41.1px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
+                                className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
                             />
+                            {errors.offerLabel && <span className="text-red-400 text-xs">{errors.offerLabel.message}</span>}
                         </div>
 
                         {/* Row 3: Description */}
@@ -261,11 +378,11 @@ export function CreatePromotionModal({
                                 DESCRIPTION
                             </label>
                             <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
+                                {...register("description")}
                                 placeholder="Describe your promotion in a few words…"
-                                className="w-full h-[86px] p-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[20px] focus:outline-none focus:border-[#B45FF2] transition-colors resize-none"
+                                className="w-full h-[90px] p-4 rounded-[20px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[20px] focus:outline-none focus:border-[#B45FF2] transition-colors resize-none"
                             />
+                            {errors.description && <span className="text-red-400 text-xs">{errors.description.message}</span>}
                         </div>
 
                         {/* Row 4: Valid From & Valid To */}
@@ -275,13 +392,37 @@ export function CreatePromotionModal({
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
                                     Valid From
                                 </label>
-                                <input
-                                    type="text"
-                                    value={validFrom}
-                                    onChange={(e) => setValidFrom(e.target.value)}
-                                    placeholder="mm/dd/yyyy"
-                                    className="w-full h-[41.1px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
+                                <Controller
+                                    control={control}
+                                    name="validFrom"
+                                    render={({ field }) => (
+                                        <Popover open={isFromCalendarOpen} onOpenChange={setIsFromCalendarOpen}>
+                                            <PopoverTrigger className="w-full text-left">
+                                                <div
+                                                    className={cn(
+                                                        "w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer",
+                                                        !field.value ? "text-[rgba(240,238,255,0.5)]" : "text-white"
+                                                    )}
+                                                >
+                                                    {field.value ? format(field.value, "PPP") : <span>mm/dd/yyyy</span>}
+                                                    <CalendarIcon className="w-4 h-4 text-[#8B7EC8]" />
+                                                </div>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white" align="start" style={{ zIndex: 9999 }}>
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={(date) => {
+                                                        field.onChange(date);
+                                                        setIsFromCalendarOpen(false);
+                                                    }}
+                                                    className="bg-[#0A074A] text-white"
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
                                 />
+                                {errors.validFrom && <span className="text-red-400 text-xs">{errors.validFrom.message}</span>}
                             </div>
 
                             {/* Valid To */}
@@ -289,18 +430,42 @@ export function CreatePromotionModal({
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
                                     Valid To
                                 </label>
-                                <input
-                                    type="text"
-                                    value={validTo}
-                                    onChange={(e) => setValidTo(e.target.value)}
-                                    placeholder="mm/dd/yyyy"
-                                    className="w-full h-[41.1px] px-[14px] rounded-[12px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
+                                <Controller
+                                    control={control}
+                                    name="validTo"
+                                    render={({ field }) => (
+                                        <Popover open={isToCalendarOpen} onOpenChange={setIsToCalendarOpen}>
+                                            <PopoverTrigger className="w-full text-left">
+                                                <div
+                                                    className={cn(
+                                                        "w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer",
+                                                        !field.value ? "text-[rgba(240,238,255,0.5)]" : "text-white"
+                                                    )}
+                                                >
+                                                    {field.value ? format(field.value, "PPP") : <span>mm/dd/yyyy</span>}
+                                                    <CalendarIcon className="w-4 h-4 text-[#8B7EC8]" />
+                                                </div>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white" align="start" style={{ zIndex: 9999 }}>
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={(date) => {
+                                                        field.onChange(date);
+                                                        setIsToCalendarOpen(false);
+                                                    }}
+                                                    className="bg-[#0A074A] text-white"
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    )}
                                 />
+                                {errors.validTo && <span className="text-red-400 text-xs">{errors.validTo.message}</span>}
                             </div>
                         </div>
 
                         {/* Notice Box */}
-                        <div className="w-full rounded-[14px] bg-[rgba(232,255,87,0.06)] border border-[rgba(232,255,87,0.18)] p-4 flex items-start">
+                        <div className="w-full rounded-[20px] bg-[rgba(232,255,87,0.06)] border border-[rgba(232,255,87,0.18)] p-4 flex items-start">
                             <p className="font-semibold text-[11px] leading-[16px] text-[#E8FF57]">
                                 ✦ Promotions will appear on your venue page during selected days and will be visible to all BarHuddle users in your area.
                             </p>
@@ -309,7 +474,7 @@ export function CreatePromotionModal({
                         {/* Continue Button */}
                         <button
                             type="submit"
-                            className="w-full h-[52px] rounded-[14px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer mt-1"
+                            className="w-full h-[52px] rounded-[24px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer mt-1"
                         >
                             Continue
                         </button>
@@ -319,13 +484,13 @@ export function CreatePromotionModal({
                 {/* STEP 2: PREVIEW & PUBLISH MODAL */}
                 {step === 2 && (
                     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
-                        {/* Promotion Card Preview Container (503px x 256px) */}
+                        {/* Promotion Card Preview Container */}
                         <div className="relative w-full h-[256px] bg-[rgba(10,6,48,0.8)] border border-[#2C166C] rounded-[24px] overflow-hidden flex flex-col justify-between p-0 shadow-lg">
                             
-                            {/* Top Image Banner (163px height) */}
+                            {/* Top Image Banner */}
                             <div className="relative w-full h-[163px] overflow-hidden rounded-t-[24px]">
                                 <img
-                                    src={images[0] || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"}
+                                    src={imagePreviews[0] || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80"}
                                     alt="Promotion preview cover"
                                     className="w-full h-full object-cover opacity-75"
                                 />
@@ -333,10 +498,10 @@ export function CreatePromotionModal({
                                 {/* Gradient Cyan/Green Glow Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-[#4ADE80]/20 to-[#22D3EE]/12 opacity-50 pointer-events-none" />
 
-                                {/* Offer Tag Badge (e.g. 20% OFF) */}
+                                {/* Offer Tag Badge */}
                                 <div className="absolute top-[18px] left-[19px] px-3 py-1 rounded-full bg-[#E8FF57] flex items-center justify-center">
                                     <span className="font-extrabold text-[12px] leading-[16px] text-[#04022E] tracking-tight">
-                                        {offerLabel || "20% OFF"}
+                                        {watchOfferLabel || "20% OFF"}
                                     </span>
                                 </div>
                             </div>
@@ -345,17 +510,16 @@ export function CreatePromotionModal({
                             <div className="flex flex-col gap-1.5 px-[20px] pb-[18px] pt-1.5">
                                 {/* Promotion Title */}
                                 <h3 className="font-extrabold text-[14px] leading-[20px] text-white truncate">
-                                    {promoTitle || "Your Promotion Title"}
+                                    {watchTitle || "Your Promotion Title"}
                                 </h3>
 
                                 {/* Promotion Description */}
                                 <p className="font-normal text-[13px] leading-[16px] text-[#8B7EC8] truncate">
-                                    {description || "Your promotion description will appear here."}
+                                    {watchDescription || "Your promotion description will appear here."}
                                 </p>
 
                                 {/* Date Range Row */}
                                 <div className="flex items-center gap-1.5 text-[#8B7EC8] mt-0.5">
-                                    {/* Solar Calendar Icon */}
                                     <svg className="w-3.5 h-3.5 text-[#DAB2FF] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
@@ -372,18 +536,18 @@ export function CreatePromotionModal({
                             <button
                                 type="button"
                                 onClick={() => setStep(1)}
-                                className="w-[91.6px] h-[52px] px-5 py-2.5 rounded-[14px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.22)] flex items-center justify-center font-bold text-[14px] leading-[20px] text-[#C4B5FD] hover:bg-[rgba(124,58,237,0.2)] transition-all cursor-pointer shrink-0"
+                                className="w-[91.6px] h-[52px] px-5 py-2.5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.22)] flex items-center justify-center font-bold text-[14px] leading-[20px] text-[#C4B5FD] hover:bg-[rgba(124,58,237,0.2)] transition-all cursor-pointer shrink-0"
                             >
                                 ← Back
                             </button>
 
-                            {/* Publish Promotion Button */}
+                            {/* Publish / Update Promotion Button */}
                             <button
                                 type="button"
                                 onClick={handlePublish}
-                                className="flex-1 h-[52px] rounded-[14px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer"
+                                className="flex-1 h-[52px] rounded-[24px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer"
                             >
-                                Publish Promotion
+                                {isEditMode ? "Update Promotion" : "Publish Promotion"}
                             </button>
                         </div>
                     </div>

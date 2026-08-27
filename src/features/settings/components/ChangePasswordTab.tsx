@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { toast } from "sonner";
+import { useUpdatePasswordMutation } from "@/features/auth/api/auth.mutations";
 
 export function ChangePasswordTab() {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -10,18 +12,53 @@ export function ChangePasswordTab() {
     const [showNewPass, setShowNewPass] = useState(false);
     const [showConfirmPass, setShowConfirmPass] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const updatePasswordMutation = useUpdatePasswordMutation();
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setSuccessMessage("");
+        setErrorMessage("");
+
         if (newPassword !== confirmPassword) {
-            alert("New passwords do not match!");
+            const msg = "New passwords do not match!";
+            setErrorMessage(msg);
+            toast.error(msg);
             return;
         }
-        setSuccessMessage("Password updated successfully!");
-        setTimeout(() => setSuccessMessage(""), 4000);
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
+
+        if (currentPassword === newPassword) {
+            const msg = "New password must be different from your current password.";
+            setErrorMessage(msg);
+            toast.error(msg);
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            const msg = "New password must be at least 6 characters long.";
+            setErrorMessage(msg);
+            toast.error(msg);
+            return;
+        }
+
+        try {
+            const res = await updatePasswordMutation.mutateAsync({
+                currentPassword,
+                newPassword,
+            });
+            const msg = res?.message || "Password updated successfully!";
+            setSuccessMessage(msg);
+            toast.success(msg);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setTimeout(() => setSuccessMessage(""), 5000);
+        } catch (error: any) {
+            const msg = error.response?.data?.message || error.message || "Failed to update password. Please verify your current password.";
+            setErrorMessage(msg);
+            toast.error(msg);
+        }
     };
 
     return (
@@ -63,6 +100,15 @@ export function ChangePasswordTab() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                             </svg>
                             {successMessage}
+                        </div>
+                    )}
+
+                    {errorMessage && (
+                        <div className="w-full max-w-[400px] p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-2">
+                            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {errorMessage}
                         </div>
                     )}
 
@@ -334,7 +380,8 @@ export function ChangePasswordTab() {
                     <div className="flex flex-col items-center pt-[8px] w-full max-w-[400px]">
                         <button
                             type="submit"
-                            className="flex flex-row justify-center items-center py-[14px] px-0 gap-[8px] w-full max-w-[400px] h-[48px] transition-all cursor-pointer hover:opacity-95 active:scale-98"
+                            disabled={updatePasswordMutation.isPending}
+                            className="flex flex-row justify-center items-center py-[14px] px-0 gap-[8px] w-full max-w-[400px] h-[48px] transition-all cursor-pointer hover:opacity-95 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
                             style={{
                                 background: "linear-gradient(135deg, #7C3AED 0%, #9F4FFA 100%)",
                                 boxShadow:
@@ -342,31 +389,40 @@ export function ChangePasswordTab() {
                                 borderRadius: "16px",
                             }}
                         >
-                            {/* Icon */}
-                            <div className="w-[14px] h-[14px] flex items-center justify-center shrink-0">
-                                <svg className="w-[14px] h-[14px]" viewBox="0 0 14 14" fill="none">
-                                    <rect
-                                        x="1.5"
-                                        y="6"
-                                        width="11"
-                                        height="6.5"
-                                        rx="1"
-                                        stroke="#FFFFFF"
-                                        strokeWidth="1.16667"
-                                    />
-                                    <path
-                                        d="M4.1 6V4C4.1 2.4 5.4 1.5 7 1.5C8.6 1.5 9.9 2.4 9.9 4V6"
-                                        stroke="#FFFFFF"
-                                        strokeWidth="1.16667"
-                                        strokeLinecap="round"
-                                    />
+                            {updatePasswordMutation.isPending ? (
+                                <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                 </svg>
-                            </div>
+                            ) : (
+                                <>
+                                    {/* Icon */}
+                                    <div className="w-[14px] h-[14px] flex items-center justify-center shrink-0">
+                                        <svg className="w-[14px] h-[14px]" viewBox="0 0 14 14" fill="none">
+                                            <rect
+                                                x="1.5"
+                                                y="6"
+                                                width="11"
+                                                height="6.5"
+                                                rx="1"
+                                                stroke="#FFFFFF"
+                                                strokeWidth="1.16667"
+                                            />
+                                            <path
+                                                d="M4.1 6V4C4.1 2.4 5.4 1.5 7 1.5C8.6 1.5 9.9 2.4 9.9 4V6"
+                                                stroke="#FFFFFF"
+                                                strokeWidth="1.16667"
+                                                strokeLinecap="round"
+                                            />
+                                        </svg>
+                                    </div>
 
-                            {/* Text */}
-                            <span className="font-extrabold text-[14px] leading-[20px] text-center text-white truncate">
-                                Update Password
-                            </span>
+                                    {/* Text */}
+                                    <span className="font-extrabold text-[14px] leading-[20px] text-center text-white truncate">
+                                        Update Password
+                                    </span>
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

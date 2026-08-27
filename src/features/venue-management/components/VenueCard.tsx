@@ -56,7 +56,7 @@ export function VenueCard({
         if (onViewDetails) {
             onViewDetails(venue);
         } else {
-            router.push(`/app/venue-management/${venue.id}`);
+            setShowDetailModal(true);
         }
     };
     const pieData = [
@@ -75,11 +75,21 @@ export function VenueCard({
                 <div className="relative w-full h-full">
                     {/* Dark Ambient Gradient Cover */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#140E50] via-transparent to-black/30 z-10" />
-                    <div className="w-full h-full bg-gradient-to-br from-[#2E1065] via-[#1E0B36] to-[#0A0524] flex items-center justify-center">
-                        <svg className="w-12 h-12 text-[#C27AFF]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4" />
-                        </svg>
-                    </div>
+                    
+                    {venue.imageUrl ? (
+                        <Image 
+                            src={venue.imageUrl} 
+                            alt={venue.title} 
+                            fill 
+                            className="object-cover" 
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#2E1065] via-[#1E0B36] to-[#0A0524] flex items-center justify-center">
+                            <svg className="w-12 h-12 text-[#C27AFF]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4" />
+                            </svg>
+                        </div>
+                    )}
                 </div>
 
                 {/* Yellow Category Badge (Top Left) */}
@@ -213,18 +223,7 @@ export function VenueCard({
                 </div>
             </div>
 
-            {/* Standalone Detail Modal (when card used without parent navigation) */}
-            {showDetailModal && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 backdrop-blur-md p-4 sm:p-8 overflow-y-auto animate-in fade-in duration-200">
-                    <div className="relative w-full max-w-[1136px] my-auto">
-                        <VenueDetailView
-                            venue={venue}
-                            onBack={() => setShowDetailModal(false)}
-                            onClaim={onClaim}
-                        />
-                    </div>
-                </div>
-            )}
+            {/* Standalone Detail Modal removed, now handled by parent to prevent clipping */}
         </div>
     );
 }

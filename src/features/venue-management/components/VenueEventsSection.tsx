@@ -56,7 +56,7 @@ const DEFAULT_EVENTS: VenueEvent[] = [
 
 export function VenueEventsSection({
     title = "Events",
-    events = DEFAULT_EVENTS,
+    events = [],
     className = "",
 }: VenueEventsSectionProps) {
     return (
@@ -78,43 +78,52 @@ export function VenueEventsSection({
                 </div>
 
                 {/* View All Pill Button */}
-                <button
-                    type="button"
-                    className="px-3 py-1.5 rounded-full bg-[rgba(232,255,87,0.08)] border border-[rgba(232,255,87,0.3)] font-semibold text-[12px] leading-[16px] text-[#E8FF57] hover:bg-[rgba(232,255,87,0.15)] transition-all cursor-pointer"
-                >
-                    View All
-                </button>
+                {events.length > 0 && (
+                    <button
+                        type="button"
+                        className="px-3 py-1.5 rounded-full bg-[rgba(232,255,87,0.08)] border border-[rgba(232,255,87,0.3)] font-semibold text-[12px] leading-[16px] text-[#E8FF57] hover:bg-[rgba(232,255,87,0.15)] transition-all cursor-pointer"
+                    >
+                        View All
+                    </button>
+                )}
             </div>
 
             {/* Event Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full pt-1">
-                {events.map((evt) => (
-                    <div
-                        key={evt.id}
-                        className="relative w-full h-[220px] rounded-[16px] overflow-hidden group shadow-[0px_4px_16px_rgba(0,0,0,0.3)] border border-[rgba(124,58,237,0.3)] bg-purple-950/40"
-                    >
-                        {/* Event Image */}
-                        <img
-                            src={evt.imageUrl}
-                            alt={evt.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+            {events.length === 0 ? (
+                <div className="w-full py-8 flex flex-col items-center justify-center gap-2 text-center">
+                    <span className="font-semibold text-sm text-white/70">No events listed</span>
+                    <span className="text-xs text-[#9D8FD0]">Events for this venue will appear here.</span>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full pt-1">
+                    {events.map((evt) => (
+                        <div
+                            key={evt.id}
+                            className="relative w-full h-[220px] rounded-[16px] overflow-hidden group shadow-[0px_4px_16px_rgba(0,0,0,0.3)] border border-[rgba(124,58,237,0.3)] bg-purple-950/40"
+                        >
+                            {/* Event Image */}
+                            <img
+                                src={evt.imageUrl}
+                                alt={evt.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
 
-                        {/* Dark Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/90" />
+                            {/* Dark Gradient Overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/90" />
 
-                        {/* Event Details Card (Bottom Overlay) */}
-                        <div className="absolute bottom-3 left-3 right-3 p-3 rounded-[12px] bg-[rgba(20,14,80,0.7)] backdrop-blur-md border border-[rgba(255,255,255,0.1)] flex flex-col gap-0.5">
-                            <h3 className="font-bold text-[15px] leading-[20px] text-white truncate">
-                                {evt.title}
-                            </h3>
-                            <span className="font-medium text-[12px] leading-[16px] text-[#E8FF57]">
-                                {evt.dateTime}
-                            </span>
+                            {/* Event Details Card (Bottom Overlay) */}
+                            <div className="absolute bottom-3 left-3 right-3 p-3 rounded-[12px] bg-[rgba(20,14,80,0.7)] backdrop-blur-md border border-[rgba(255,255,255,0.1)] flex flex-col gap-0.5">
+                                <h3 className="font-bold text-[15px] leading-[20px] text-white truncate">
+                                    {evt.title}
+                                </h3>
+                                <span className="font-medium text-[12px] leading-[16px] text-[#E8FF57]">
+                                    {evt.dateTime}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

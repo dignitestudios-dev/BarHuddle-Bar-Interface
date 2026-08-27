@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { useGetVisitorAnalyticsQuery, useGetEventsAnalyticsQuery } from "../api/analytics.queries";
+import { useGetBoostsQuery } from "@/features/event-boosting/api/boost.queries";
 
 export type ReportFilterOption = "Visitors" | "Events" | "Boost";
 
@@ -32,29 +34,6 @@ export interface BoostReportRow {
     statusVariant?: "active" | "ended" | "scheduled";
 }
 
-const VISITORS_MOCK: VisitorReportRow[] = [
-    { date: "Jun 20", checkIns: 410, visitors: 580, avgStay: "2h 08m", newCustomers: 142 },
-    { date: "Jun 21", checkIns: 520, visitors: 720, avgStay: "2h 45m", newCustomers: 186 },
-    { date: "Jun 22", checkIns: 390, visitors: 540, avgStay: "1h 55m", newCustomers: 128 },
-    { date: "Jun 23", checkIns: 450, visitors: 610, avgStay: "2h 15m", newCustomers: 154 },
-    { date: "Jun 24", checkIns: 680, visitors: 920, avgStay: "3h 10m", newCustomers: 240 },
-    { date: "Jun 25", checkIns: 890, visitors: 1240, avgStay: "3h 35m", newCustomers: 310 },
-];
-
-const EVENTS_MOCK: EventReportRow[] = [
-    { eventName: "Ladies Night", date: "Jun 20", attendance: 284, engagement: 91, sentiment: "87%", status: "⭐ Top", statusVariant: "top" },
-    { eventName: "Live DJ Experience", date: "Jun 21", attendance: 512, engagement: 87, sentiment: "84%", status: "🔥 Sold Out", statusVariant: "soldOut" },
-    { eventName: "Cocktail Tasting", date: "Jun 22", attendance: 96, engagement: 78, sentiment: "80%", status: "↗️ Growing", statusVariant: "growing" },
-    { eventName: "Karaoke Night", date: "Jun 26", attendance: 148, engagement: 83, sentiment: "82%", status: "📅 Upcoming", statusVariant: "upcoming" },
-];
-
-const BOOST_MOCK: BoostReportRow[] = [
-    { eventName: "Ladies Night", boostDate: "Jun 20", reach: "8.4K", views: "3.2K", engagement: 91, status: "Active", statusVariant: "active" },
-    { eventName: "Live DJ Exp.", boostDate: "Jun 21", reach: "14.2K", views: "6.8K", engagement: 87, status: "Active", statusVariant: "active" },
-    { eventName: "Cocktail Tasting", boostDate: "Jun 22", reach: "2.1K", views: "890", engagement: 78, status: "Ended", statusVariant: "ended" },
-    { eventName: "Karaoke Night", boostDate: "Jun 26", reach: "5.6K", views: "2.1K", engagement: 83, status: "Scheduled", statusVariant: "scheduled" },
-];
-
 export interface BoostHistoryTableCardProps {
     className?: string;
     showFilterPills?: boolean;
@@ -71,6 +50,53 @@ export function BoostHistoryTableCard({
     title = "Boost History",
 }: BoostHistoryTableCardProps) {
     const [selectedFilter, setSelectedFilter] = useState<ReportFilterOption>(initialFilter);
+
+    const { data: visitorAnalytics } = useGetVisitorAnalyticsQuery();
+    const { data: eventsAnalytics } = useGetEventsAnalyticsQuery();
+    const { data: boostsResponse } = useGetBoostsQuery();
+
+    const visitorsData: VisitorReportRow[] = React.useMemo(() => {
+        const byDay = visitorAnalytics?.data?.byDay;
+        if (!byDay || !Array.isArray(byDay) || byDay.length === 0) return [];
+        return byDay.map((item: any) => ({
+            date: item.date ? new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "Day",
+            checkIns: item.count || item.checkIns || 0,
+            visitors: item.visitors || item.count || 0,
+            avgStay: item.avgStay || "2h 00m",
+            newCustomers: item.newCustomers || Math.round((item.count || 0) * 0.3),
+        }));
+    }, [visitorAnalytics]);
+
+    const eventsData: EventReportRow[] = React.useMemo(() => {
+        const perf = eventsAnalytics?.data?.eventPerformance;
+        if (!perf || !Array.isArray(perf) || perf.length === 0) return [];
+        return perf.map((item: any) => ({
+            eventName: item.title || item.name || "Event",
+            date: item.date ? new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "TBD",
+            attendance: item.attendees || item.views || 0,
+            engagement: item.engagement || 0,
+            sentiment: `${item.sentiment || item.engagement || 0}%`,
+            status: item.status || "Top",
+            statusVariant: "top" as const,
+        }));
+    }, [eventsAnalytics]);
+
+    const boostsData: BoostReportRow[] = React.useMemo(() => {
+        const list = boostsResponse?.data || eventsAnalytics?.data?.eventPerformance;
+        if (!list || !Array.isArray(list) || list.length === 0) return [];
+        return list.map((item: any) => {
+            const evt = item.event || item;
+            return {
+                eventName: evt.title || evt.name || "Boosted Event",
+                boostDate: item.createdAt || evt.date ? new Date(item.createdAt || evt.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "TBD",
+                reach: item.reach ? `${(item.reach / 1000).toFixed(1)}K` : "0",
+                views: item.views ? (item.views >= 1000 ? `${(item.views / 1000).toFixed(1)}K` : item.views.toString()) : "0",
+                engagement: item.engagement || evt.engagement || 0,
+                status: item.status || (evt.isBoosted ? "Active" : "Ended"),
+                statusVariant: item.status === "active" || evt.isBoosted ? ("active" as const) : ("ended" as const),
+            };
+        });
+    }, [boostsResponse, eventsAnalytics]);
 
     const handleExport = () => {
         alert(`Exporting ${selectedFilter} report as CSV...`);
@@ -178,69 +204,96 @@ export function BoostHistoryTableCard({
 
                     {/* Table Body Rows */}
                     <tbody className="divide-y divide-[rgba(124,58,237,0.08)]">
-                        {selectedFilter === "Visitors" &&
-                            VISITORS_MOCK.map((row, index) => (
-                                <tr key={index} className="h-[49px] hover:bg-[rgba(124,58,237,0.05)] transition-colors">
-                                    <td className="font-bold text-[12px] text-white pl-3">{row.date}</td>
-                                    <td className="font-semibold text-[12px] text-[#22D3EE]">{row.checkIns}</td>
-                                    <td className="font-semibold text-[12px] text-[#7C3AED]">{row.visitors}</td>
-                                    <td className="font-normal text-[12px] text-[#C4B5FD]">{row.avgStay}</td>
-                                    <td className="font-semibold text-[12px] text-[#4ADE80] pr-3">{row.newCustomers}</td>
+                        {selectedFilter === "Visitors" && (
+                            visitorsData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="py-8 text-center text-sm font-medium text-white/50">
+                                        No visitor report records found
+                                    </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                visitorsData.map((row, index) => (
+                                    <tr key={index} className="h-[49px] hover:bg-[rgba(124,58,237,0.05)] transition-colors">
+                                        <td className="font-bold text-[12px] text-white pl-3">{row.date}</td>
+                                        <td className="font-semibold text-[12px] text-[#22D3EE]">{row.checkIns}</td>
+                                        <td className="font-semibold text-[12px] text-[#7C3AED]">{row.visitors}</td>
+                                        <td className="font-normal text-[12px] text-[#C4B5FD]">{row.avgStay}</td>
+                                        <td className="font-semibold text-[12px] text-[#4ADE80] pr-3">{row.newCustomers}</td>
+                                    </tr>
+                                ))
+                            )
+                        )}
 
-                        {selectedFilter === "Events" &&
-                            EVENTS_MOCK.map((row, index) => (
-                                <tr key={index} className="h-[49px] hover:bg-[rgba(124,58,237,0.05)] transition-colors">
-                                    <td className="font-bold text-[12px] text-white pl-3">{row.eventName}</td>
-                                    <td className="font-normal text-[12px] text-[#C4B5FD]">{row.date}</td>
-                                    <td className="font-semibold text-[12px] text-[#7C3AED]">{row.attendance}</td>
-                                    <td className="py-2">
-                                        <div className="flex items-center gap-2 max-w-[120px]">
-                                            <div className="w-[44px] h-[6px] bg-[rgba(124,58,237,0.15)] rounded-full overflow-hidden shrink-0">
-                                                <div
-                                                    className="h-full rounded-full"
-                                                    style={{
-                                                        width: `${row.engagement}%`,
-                                                        background: "linear-gradient(90deg, #7C3AED 0%, #E8FF57 100%)",
-                                                    }}
-                                                />
+                        {selectedFilter === "Events" && (
+                            eventsData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="py-8 text-center text-sm font-medium text-white/50">
+                                        No event report records found
+                                    </td>
+                                </tr>
+                            ) : (
+                                eventsData.map((row, index) => (
+                                    <tr key={index} className="h-[49px] hover:bg-[rgba(124,58,237,0.05)] transition-colors">
+                                        <td className="font-bold text-[12px] text-white pl-3">{row.eventName}</td>
+                                        <td className="font-normal text-[12px] text-[#C4B5FD]">{row.date}</td>
+                                        <td className="font-semibold text-[12px] text-[#7C3AED]">{row.attendance}</td>
+                                        <td className="py-2">
+                                            <div className="flex items-center gap-2 max-w-[120px]">
+                                                <div className="w-[44px] h-[6px] bg-[rgba(124,58,237,0.15)] rounded-full overflow-hidden shrink-0">
+                                                    <div
+                                                        className="h-full rounded-full"
+                                                        style={{
+                                                            width: `${row.engagement}%`,
+                                                            background: "linear-gradient(90deg, #7C3AED 0%, #E8FF57 100%)",
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span className="font-bold text-[12px] text-[#E8FF57]">{row.engagement}%</span>
                                             </div>
-                                            <span className="font-bold text-[12px] text-[#E8FF57]">{row.engagement}%</span>
-                                        </div>
-                                    </td>
-                                    <td className="font-semibold text-[12px] text-[#4ADE80]">{row.sentiment}</td>
-                                    <td className="pr-3">
-                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[rgba(232,255,87,0.07)] border border-[rgba(232,255,87,0.145)] text-[#E8FF57]">
-                                            {row.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td className="font-semibold text-[12px] text-[#4ADE80]">{row.sentiment}</td>
+                                        <td className="pr-3">
+                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[rgba(232,255,87,0.07)] border border-[rgba(232,255,87,0.145)] text-[#E8FF57]">
+                                                {row.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )
+                        )}
 
-                        {selectedFilter === "Boost" &&
-                            BOOST_MOCK.map((row, index) => (
-                                <tr key={index} className="h-[49px] hover:bg-[rgba(124,58,237,0.05)] transition-colors">
-                                    <td className="font-bold text-[12px] text-white pl-3">{row.eventName}</td>
-                                    <td className="font-normal text-[12px] text-[#C4B5FD]">{row.boostDate}</td>
-                                    <td className="font-semibold text-[12px] text-[#22D3EE]">{row.reach}</td>
-                                    <td className="font-semibold text-[12px] text-[#C4B5FD]">{row.views}</td>
-                                    <td className="font-bold text-[12px] text-[#E8FF57]">{row.engagement}%</td>
-                                    <td className="pr-3">
-                                        <span
-                                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                                row.status === "Active"
-                                                    ? "bg-[rgba(34,211,238,0.07)] border border-[rgba(34,211,238,0.145)] text-[#22D3EE]"
-                                                    : row.status === "Scheduled"
-                                                    ? "bg-[rgba(232,255,87,0.07)] border border-[rgba(232,255,87,0.145)] text-[#E8FF57]"
-                                                    : "bg-[rgba(196,181,253,0.07)] border border-[rgba(196,181,253,0.145)] text-[#C4B5FD]"
-                                            }`}
-                                        >
-                                            {row.status}
-                                        </span>
+                        {selectedFilter === "Boost" && (
+                            boostsData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="py-8 text-center text-sm font-medium text-white/50">
+                                        No boost report records found
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                boostsData.map((row, index) => (
+                                    <tr key={index} className="h-[49px] hover:bg-[rgba(124,58,237,0.05)] transition-colors">
+                                        <td className="font-bold text-[12px] text-white pl-3">{row.eventName}</td>
+                                        <td className="font-normal text-[12px] text-[#C4B5FD]">{row.boostDate}</td>
+                                        <td className="font-semibold text-[12px] text-[#22D3EE]">{row.reach}</td>
+                                        <td className="font-semibold text-[12px] text-[#C4B5FD]">{row.views}</td>
+                                        <td className="font-bold text-[12px] text-[#E8FF57]">{row.engagement}%</td>
+                                        <td className="pr-3">
+                                            <span
+                                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                                    row.status === "Active" || row.status === "active"
+                                                        ? "bg-[rgba(34,211,238,0.07)] border border-[rgba(34,211,238,0.145)] text-[#22D3EE]"
+                                                        : row.status === "Scheduled"
+                                                        ? "bg-[rgba(232,255,87,0.07)] border border-[rgba(232,255,87,0.145)] text-[#E8FF57]"
+                                                        : "bg-[rgba(196,181,253,0.07)] border border-[rgba(196,181,253,0.145)] text-[#C4B5FD]"
+                                                }`}
+                                            >
+                                                {row.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )
+                        )}
                     </tbody>
                 </table>
             </div>

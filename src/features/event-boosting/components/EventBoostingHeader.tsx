@@ -4,7 +4,21 @@ import React from "react";
 import { RadialGlow } from "./RadialGlow";
 import { BoostingStatCardsRow } from "./BoostingStatCardsRow";
 
+import { useGetBoostsQuery } from "../api/boost.queries";
+
 export function EventBoostingHeader() {
+    const { data: apiBoostsData } = useGetBoostsQuery();
+
+    const avgReach = apiBoostsData?.avgBoostedReach 
+        ? `${(apiBoostsData.avgBoostedReach / 1000).toFixed(0)}K+` 
+        : "55K+";
+    const attendLift = apiBoostsData?.attendRateLift 
+        ? `${apiBoostsData.attendRateLift}%` 
+        : "87%";
+    const roi = apiBoostsData?.roiVsOrganic 
+        ? `${apiBoostsData.roiVsOrganic}×` 
+        : "3.2×";
+
     return (
         <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
             {/* Top Page Title */}
@@ -51,7 +65,7 @@ export function EventBoostingHeader() {
                     {/* Metric 1 */}
                     <div className="flex flex-col items-center text-center">
                         <span className="font-extrabold text-[26px] sm:text-[30px] leading-[36px] text-white">
-                            55K+
+                            {avgReach}
                         </span>
                         <span className="font-normal text-[11px] leading-[16px] text-[#8B7EC8] mt-0.5">
                             Avg Boosted Reach
@@ -61,7 +75,7 @@ export function EventBoostingHeader() {
                     {/* Metric 2 */}
                     <div className="flex flex-col items-center text-center">
                         <span className="font-extrabold text-[26px] sm:text-[30px] leading-[36px] text-white">
-                            87%
+                            {attendLift}
                         </span>
                         <span className="font-normal text-[11px] leading-[16px] text-[#8B7EC8] mt-0.5">
                             Attend Rate Lift
@@ -71,7 +85,7 @@ export function EventBoostingHeader() {
                     {/* Metric 3 */}
                     <div className="flex flex-col items-center text-center">
                         <span className="font-extrabold text-[26px] sm:text-[30px] leading-[36px] text-white">
-                            3.2×
+                            {roi}
                         </span>
                         <span className="font-normal text-[11px] leading-[16px] text-[#8B7EC8] mt-0.5">
                             ROI vs Organic

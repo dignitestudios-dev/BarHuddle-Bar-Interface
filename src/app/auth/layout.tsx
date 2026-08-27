@@ -1,8 +1,10 @@
 import Image from "next/image";
+import { SyncUser } from "@/components/SyncUser";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="relative min-h-screen w-full flex justify-end items-center overflow-x-hidden">
+            <SyncUser />
             <Image
                 src="/images/auth-bg.png"
                 alt="Auth background"

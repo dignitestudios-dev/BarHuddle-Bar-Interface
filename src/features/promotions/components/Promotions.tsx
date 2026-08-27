@@ -4,141 +4,186 @@ import React, { useState } from "react";
 import { PromotionsPageHeader } from "./PromotionsPageHeader";
 import { StatsCard } from "@/components/ui/stats-card";
 import { PromotionCard, PromotionData, CreatePromotionModal } from "./";
+import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import { SuccessModal } from "@/components/ui/success-modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetPromotionsQuery } from "../api/promotions.queries";
+import { useCreatePromotionMutation, useUpdatePromotionMutation, useDeletePromotionMutation } from "../api/promotions.mutations";
+import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
+import { toast } from "sonner";
 
-const SAMPLE_PROMOTIONS: PromotionData[] = [
-    {
-        id: 1,
-        title: "Summer Rooftop Special",
-        description: "Exclusive summer cocktail bundles on the rooftop — limited seats.",
-        tagText: "Special",
-        tagVariant: "green",
-        status: "Expired",
-        category: "Special Offers",
-        dateRange: "May 1 – May 31",
-        activeDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        views: "4.3K",
-        redemptions: "788",
-        rate: "18.2%",
-        performancePercent: 38,
-        imageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-        id: 2,
-        title: "Weekend Brunch Discount",
-        description: "Enjoy 25% off our exclusive brunch menu every weekend morning.",
-        tagText: "25% OFF",
-        tagVariant: "yellow",
-        status: "Active",
-        category: "Discounts",
-        dateRange: "May 1 – May 31",
-        activeDays: ["Sat", "Sun"],
-        views: "1.8K",
-        redemptions: "241",
-        rate: "13.5%",
-        performancePercent: 45,
-        imageUrl: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-        id: 3,
-        title: "Buy One Get One Shots",
-        description: "Order any shot and get one free — all night long on selected spirits.",
-        tagText: "BOGO",
-        tagVariant: "purple",
-        status: "Active",
-        category: "Buy One Get One",
-        dateRange: "May 1 – May 31",
-        activeDays: ["Thu", "Fri", "Sat"],
-        views: "5.1K",
-        redemptions: "894",
-        rate: "17.5%",
-        performancePercent: 65,
-        imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-        id: 4,
-        title: "Weekend Brunch Discount",
-        description: "Enjoy 25% off our exclusive brunch menu every weekend morning.",
-        tagText: "25% OFF",
-        tagVariant: "yellow",
-        status: "Active",
-        category: "Discounts",
-        dateRange: "May 1 – May 31",
-        activeDays: ["Sat", "Sun"],
-        views: "1.8K",
-        redemptions: "241",
-        rate: "13.5%",
-        performancePercent: 45,
-        imageUrl: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-        id: 5,
-        title: "Buy One Get One Shots",
-        description: "Order any shot and get one free — all night long on selected spirits.",
-        tagText: "BOGO",
-        tagVariant: "purple",
-        status: "Active",
-        category: "Buy One Get One",
-        dateRange: "May 1 – May 31",
-        activeDays: ["Thu", "Fri", "Sat"],
-        views: "5.1K",
-        redemptions: "894",
-        rate: "17.5%",
-        performancePercent: 65,
-        imageUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=600&q=80",
-    },
-    {
-        id: 6,
-        title: "Summer Rooftop Special",
-        description: "Exclusive summer cocktail bundles on the rooftop — limited seats.",
-        tagText: "Special",
-        tagVariant: "green",
-        status: "Expired",
-        category: "Special Offers",
-        dateRange: "May 1 – May 31",
-        activeDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        views: "4.3K",
-        redemptions: "788",
-        rate: "18.2%",
-        performancePercent: 38,
-        imageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
-    },
-];
+const DEFAULT_PROMOTION_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
 
 export function Promotions() {
-    const [promotionsList, setPromotionsList] = useState<PromotionData[]>(SAMPLE_PROMOTIONS);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
+    const [deletingPromotion, setDeletingPromotion] = useState<{ id: string; title: string } | null>(null);
 
-    const handleCreatePromotion = (newPromoData: Partial<PromotionData>) => {
-        const newPromo: PromotionData = {
-            id: Date.now(),
-            title: newPromoData.title || "New Promotion",
-            description: newPromoData.description || "",
-            tagText: newPromoData.tagText || "Special",
-            tagVariant: newPromoData.tagVariant || "purple",
-            status: "Active",
-            category: newPromoData.category || "Special Offers",
-            dateRange: newPromoData.dateRange || "Active",
-            activeDays: newPromoData.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
-            views: "0",
-            redemptions: "0",
-            rate: "0%",
-            performancePercent: 0,
-            imageUrl: newPromoData.imageUrl || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80",
-        };
-        setPromotionsList((prev) => [newPromo, ...prev]);
-        setIsSuccessModalOpen(true);
+    const { data: apiPromotionsData, isLoading } = useGetPromotionsQuery(1, 20);
+    const { data: ownerVenuesData } = useGetOwnerVenuesQuery();
+
+    const primaryVenueId = React.useMemo(() => {
+        const rawVenues = Array.isArray((ownerVenuesData as any)?.data)
+            ? (ownerVenuesData as any).data
+            : Array.isArray(ownerVenuesData)
+                ? ownerVenuesData
+                : [];
+        const first = rawVenues[0];
+        return first?.venue?._id || first?.venue?.id || first?._id || first?.id || "";
+    }, [ownerVenuesData]);
+
+    const createPromotionMutation = useCreatePromotionMutation();
+    const updatePromotionMutation = useUpdatePromotionMutation();
+    const deletePromotionMutation = useDeletePromotionMutation();
+
+    const { promotionsList, rawPromosMap } = React.useMemo(() => {
+        const rawPromotions = Array.isArray(apiPromotionsData?.data)
+            ? apiPromotionsData.data
+            : Array.isArray(apiPromotionsData?.data?.promotions)
+                ? apiPromotionsData.data.promotions
+                : Array.isArray(apiPromotionsData?.promotions)
+                    ? apiPromotionsData.promotions
+                    : Array.isArray(apiPromotionsData)
+                        ? apiPromotionsData
+                        : [];
+
+        if (!rawPromotions || rawPromotions.length === 0) return { promotionsList: [], rawPromosMap: new Map() };
+
+        const map = new Map<string, any>();
+        const list: PromotionData[] = rawPromotions.map((promo: any) => {
+            const id = String(promo._id || promo.id);
+            map.set(id, promo);
+            return {
+                id,
+                title: promo.title || promo.name || "Promotion",
+                description: promo.description || "",
+                tagText: promo.tagText || promo.discountText || "Special",
+                tagVariant: promo.tagVariant || "purple",
+                status: promo.status || "Active",
+                category: promo.category || "Special Offers",
+                dateRange: promo.startDate && promo.endDate 
+                    ? `${new Date(promo.startDate).toLocaleDateString()} – ${new Date(promo.endDate).toLocaleDateString()}` 
+                    : (promo.dateRange || "Active"),
+                activeDays: promo.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                views: String(promo.metrics?.views || promo.views || "0"),
+                redemptions: String(promo.metrics?.redemptions || promo.redemptions || "0"),
+                rate: String(promo.metrics?.rate || promo.rate || "0%"),
+                performancePercent: Number(promo.metrics?.performancePercent || promo.performancePercent || 0),
+                imageUrl: promo.banner || promo.imageUrl || promo.images?.[0] || DEFAULT_PROMOTION_IMAGE,
+            };
+        });
+
+        return { promotionsList: list, rawPromosMap: map };
+    }, [apiPromotionsData]);
+
+    const handleCreatePromotion = async (newPromoData: any) => {
+        try {
+            const hasFiles = newPromoData.images && Array.isArray(newPromoData.images) && newPromoData.images.some((img: any) => img instanceof File);
+
+            if (hasFiles) {
+                const formData = new FormData();
+                formData.append("title", newPromoData.title);
+                formData.append("description", newPromoData.description);
+                formData.append("startAt", newPromoData.startAt);
+                formData.append("endAt", newPromoData.endAt);
+                formData.append("status", newPromoData.status || "active");
+                newPromoData.images.forEach((file: any) => {
+                    if (file instanceof File) {
+                        formData.append("banner", file);
+                    }
+                });
+                await createPromotionMutation.mutateAsync(formData);
+            } else {
+                const payload = {
+                    title: newPromoData.title,
+                    description: newPromoData.description,
+                    startAt: newPromoData.startAt,
+                    endAt: newPromoData.endAt,
+                    status: newPromoData.status || "active",
+                };
+                await createPromotionMutation.mutateAsync(payload);
+            }
+
+            setIsCreateModalOpen(false);
+            setIsSuccessModalOpen(true);
+            toast.success("Promotion created successfully!");
+        } catch (error: any) {
+            console.error("Failed to create promo", error);
+            toast.error(error?.response?.data?.message || "Failed to create promotion");
+        }
     };
 
-    const activePromotionsCount = promotionsList.filter((p) => p.status === "Active").length;
+    const handleUpdatePromotion = async (id: string, updatedPromoData: any) => {
+        try {
+            const hasFiles = updatedPromoData.images && Array.isArray(updatedPromoData.images) && updatedPromoData.images.some((img: any) => img instanceof File);
+
+            if (hasFiles) {
+                const formData = new FormData();
+                formData.append("title", updatedPromoData.title);
+                formData.append("description", updatedPromoData.description);
+                formData.append("startAt", updatedPromoData.startAt);
+                formData.append("endAt", updatedPromoData.endAt);
+                formData.append("status", updatedPromoData.status || "active");
+                updatedPromoData.images.forEach((file: any) => {
+                    if (file instanceof File) {
+                        formData.append("banner", file);
+                    }
+                });
+                await updatePromotionMutation.mutateAsync({ id, data: formData });
+            } else {
+                const payload = {
+                    title: updatedPromoData.title,
+                    description: updatedPromoData.description,
+                    startAt: updatedPromoData.startAt,
+                    endAt: updatedPromoData.endAt,
+                    status: updatedPromoData.status || "active",
+                };
+                await updatePromotionMutation.mutateAsync({ id, data: payload });
+            }
+
+            setEditingPromotion(null);
+            toast.success("Promotion updated successfully!");
+        } catch (error: any) {
+            console.error("Failed to update promo", error);
+            toast.error(error?.response?.data?.message || "Failed to update promotion");
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletingPromotion) return;
+        try {
+            await deletePromotionMutation.mutateAsync({ id: deletingPromotion.id });
+            toast.success("Promotion deleted successfully!");
+            setDeletingPromotion(null);
+        } catch (error: any) {
+            console.error("Failed to delete promo", error);
+            toast.error(error?.response?.data?.message || "Failed to delete promotion");
+        }
+    };
+
+    const handleEditClick = (promo: PromotionData) => {
+        const raw = rawPromosMap.get(String(promo.id)) || promo;
+        setEditingPromotion(raw);
+    };
+
+    const handleDeleteClick = (promo: PromotionData) => {
+        setDeletingPromotion({ id: String(promo.id), title: promo.title });
+    };
+
+    const activePromotionsCount = promotionsList.filter((p) => p.status?.toLowerCase() === "active").length;
+    const totalViewsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.views) || 0), 0);
+    const totalRedemptionsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.redemptions) || 0), 0);
+    const avgRate = promotionsList.length > 0 
+        ? `${(promotionsList.reduce((acc, p) => acc + (parseFloat(p.rate) || 0), 0) / promotionsList.length).toFixed(1)}%`
+        : "0%";
 
     const statsData = [
         {
             id: "active-promotions",
             title: "Active Promotions",
             value: activePromotionsCount.toString(),
-            trend: "+1 this week",
+            trend: "+0 this week",
             isPositive: true,
             variant: "purple" as const,
             icon: (
@@ -150,8 +195,8 @@ export function Promotions() {
         {
             id: "total-views",
             title: "Total Views",
-            value: "12,840",
-            trend: "+22.4% this month",
+            value: totalViewsCount.toLocaleString(),
+            trend: "+0% this month",
             isPositive: true,
             variant: "purple" as const,
             icon: (
@@ -164,8 +209,8 @@ export function Promotions() {
         {
             id: "total-redemptions",
             title: "Total Redemptions",
-            value: "2,718",
-            trend: "+14.8% this month",
+            value: totalRedemptionsCount.toLocaleString(),
+            trend: "+0% this month",
             isPositive: true,
             variant: "yellow" as const,
             icon: (
@@ -177,8 +222,8 @@ export function Promotions() {
         {
             id: "avg-redemption-rate",
             title: "Avg Redemption Rate",
-            value: "12.2%",
-            trend: "+3.2% vs last mo.",
+            value: avgRate,
+            trend: "+0% vs last mo.",
             isPositive: true,
             variant: "green" as const,
             icon: (
@@ -201,6 +246,26 @@ export function Promotions() {
                 onCreate={handleCreatePromotion}
             />
 
+            {/* Edit Promotion Modal */}
+            <CreatePromotionModal
+                isOpen={Boolean(editingPromotion)}
+                promotionToEdit={editingPromotion}
+                onClose={() => setEditingPromotion(null)}
+                onUpdate={handleUpdatePromotion}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <DeleteConfirmationModal
+                isOpen={Boolean(deletingPromotion)}
+                onClose={() => setDeletingPromotion(null)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Promotion?"
+                description="Are you sure you want to delete this promotion? This action cannot be undone."
+                itemName={deletingPromotion?.title}
+                isPending={deletePromotionMutation.isPending}
+                confirmText="Delete Promotion"
+            />
+
             {/* Success Modal on Publish */}
             <SuccessModal
                 isOpen={isSuccessModalOpen}
@@ -210,7 +275,7 @@ export function Promotions() {
                 actionButton={
                     <button
                         onClick={() => setIsSuccessModalOpen(false)}
-                        className="w-full h-12 rounded-[14px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] font-extrabold text-[14px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                        className="w-full h-12 rounded-[24px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] font-extrabold text-[14px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
                     >
                         Done
                     </button>
@@ -234,14 +299,38 @@ export function Promotions() {
             </div>
 
             {/* Promotions Cards Grid (3 Columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full items-stretch">
-                {promotionsList.map((promo) => (
-                    <PromotionCard
-                        key={promo.id}
-                        promotion={promo}
-                    />
-                ))}
-            </div>
+            {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <Skeleton key={i} className="h-[320px] w-full rounded-[24px]" />
+                    ))}
+                </div>
+            ) : promotionsList.length === 0 ? (
+                <div className="w-full py-16 px-4 flex flex-col items-center justify-center gap-3 border border-[rgba(124,58,237,0.2)] rounded-[24px] bg-[#0E093C]/50 text-center">
+                    <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-400">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                        </svg>
+                    </div>
+                    <h3 className="font-bold text-lg text-white">
+                        No Promotions Found
+                    </h3>
+                    <p className="text-sm text-purple-200/60 max-w-sm">
+                        Create your first promotion to start attracting more customers to your venue.
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full items-stretch">
+                    {promotionsList.map((promo) => (
+                        <PromotionCard
+                            key={promo.id}
+                            promotion={promo}
+                            onEdit={handleEditClick}
+                            onDelete={handleDeleteClick}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/store";
+import { updateUser } from "@/store/slices/auth.slice";
+import { useSubscriptionPlans } from "@/features/subscription/api/subscription.queries";
 
 export interface SubscriptionPlansScreenProps {
     onBack?: () => void;
@@ -14,36 +18,59 @@ export function SubscriptionPlansScreen({
     className = "",
 }: SubscriptionPlansScreenProps) {
     const [selectedPlan, setSelectedPlan] = useState<string>("growth");
+    const dispatch = useAppDispatch();
+    const router = useRouter();
 
-    const handleContinue = () => {
+    const { data: plansData, isLoading, isFetching } = useSubscriptionPlans();
+
+    React.useEffect(() => {
+        if (plansData?.data?.isSubscribed) {
+            dispatch(updateUser({ isSubscribed: true }));
+            router.push("/app/dashboard");
+        }
+    }, [plansData, dispatch, router]);
+
+    const handleContinue = async () => {
         onSelectPlan?.(selectedPlan);
-        onBack?.();
+
+        // Update user auth state and navigate to dashboard
+        dispatch(updateUser({ isSubscribed: true, isClaimed: "approved" }));
+        router.push("/app/dashboard");
     };
 
-    return (
-        <div className={`w-full max-w-[1136px] flex flex-col gap-8 py-4 font-['Manrope',sans-serif] animate-in fade-in duration-300 ${className}`}>
-            {/* Top Navigation Header with Back Button */}
-            <div className="w-full flex items-center justify-between min-h-[57px]">
-                <button
-                    type="button"
-                    onClick={onBack}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[rgba(124,58,237,0.2)] hover:bg-[rgba(124,58,237,0.4)] border border-[rgba(255,255,255,0.2)] text-white font-semibold text-[14px] transition-all cursor-pointer"
-                >
-                    <svg className="w-5 h-5 text-[#C4B5FD]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <span>Back to Venue Details</span>
-                </button>
-                {/* Bottom Action Button ("Next" CTA) */}
+    if (isLoading || isFetching) {
+        return <SubscriptionSkeleton className={className} onBack={onBack} />;
+    }
 
+    return (
+        <div className={`w-full flex flex-col gap-8 py-4 font-['Manrope',sans-serif] animate-in fade-in duration-300 ${className}`}>
+            {/* Top Navigation Header with Back / Skip Button */}
+            <div className="w-full flex items-center justify-between min-h-[57px] relative z-30 pointer-events-auto">
+                {onBack ? (
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer z-30"
+                        aria-label="Go back"
+                    >
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                ) : (
+                    <div />
+                )}
+
+                {/* Skip CTA Button */}
                 <button
                     type="button"
                     onClick={handleContinue}
-                    className="w-[98px] h-[57px] px-[30px] py-3 rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-extrabold text-[16px] leading-[45px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    className="relative z-30 h-[48px] px-8 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-125 hover:from-[#8B5CF6] hover:to-[#B45FF2] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] hover:shadow-[0px_0px_36px_rgba(124,58,237,0.85)] flex items-center justify-center font-extrabold text-[15px] text-white hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer select-none mr-12 sm:mr-16"
                 >
-                    Next
+                    <span className="pointer-events-none font-extrabold tracking-wide text-white">
+                        Skip
+                    </span>
                 </button>
-
             </div>
 
             {/* Main Header Title & Subtitle Area */}
@@ -271,8 +298,73 @@ export function SubscriptionPlansScreen({
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
 
+function SubscriptionSkeleton({ className = "", onBack }: { className?: string; onBack?: () => void }) {
+    return (
+        <div className={`w-full flex flex-col gap-8 py-4 font-['Manrope',sans-serif] animate-pulse ${className}`}>
+            {/* Top Navigation Header Skeleton */}
+            <div className="w-full flex items-center justify-between min-h-[57px]">
+                {onBack ? (
+                    <div className="w-12 h-12 rounded-full bg-white/10" />
+                ) : (
+                    <div />
+                )}
+                <div className="w-[100px] h-[48px] rounded-full bg-white/10 mr-12 sm:mr-16" />
+            </div>
 
+            {/* Main Header Title & Subtitle Skeleton */}
+            <div className="flex flex-col items-center gap-3 text-center max-w-[650px] mx-auto w-full">
+                <div className="h-10 w-72 sm:w-96 rounded-full bg-white/10" />
+                <div className="h-5 w-60 sm:w-80 rounded-full bg-white/5" />
+            </div>
+
+            {/* 3 Pricing Cards Grid Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch my-2">
+                {[1, 2, 3].map((cardIdx) => (
+                    <div
+                        key={cardIdx}
+                        className={`rounded-[24px] p-6 sm:p-7 flex flex-col gap-5 bg-[rgba(20,14,80,0.6)] border ${
+                            cardIdx === 2
+                                ? "border-[rgba(124,58,237,0.4)] bg-[rgba(124,58,237,0.15)] shadow-[0px_0px_30px_rgba(124,58,237,0.2)]"
+                                : "border-[rgba(124,58,237,0.18)]"
+                        }`}
+                    >
+                        {/* Top Pill & Icon */}
+                        <div className="flex items-center justify-between">
+                            <div className="w-20 h-6 rounded-full bg-white/10" />
+                            <div className="w-9 h-9 rounded-full bg-white/10" />
+                        </div>
+
+                        {/* Title & Tagline */}
+                        <div className="flex flex-col gap-2">
+                            <div className="h-7 w-28 rounded-lg bg-white/10" />
+                            <div className="h-4 w-44 rounded-lg bg-white/5" />
+                        </div>
+
+                        {/* Price */}
+                        <div className="h-10 w-32 rounded-lg bg-white/10 mt-1" />
+
+                        {/* Divider */}
+                        <div className="w-full h-[1px] bg-white/10 my-1" />
+
+                        {/* Features List Skeleton */}
+                        <div className="flex flex-col gap-3">
+                            {[1, 2, 3, 4, 5, 6].map((featIdx) => (
+                                <div key={featIdx} className="flex items-center gap-2.5">
+                                    <div className="w-4 h-4 rounded-full bg-white/10 shrink-0" />
+                                    <div
+                                        className="h-3.5 rounded-md bg-white/5"
+                                        style={{ width: `${60 + (featIdx * 5) % 35}%` }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
