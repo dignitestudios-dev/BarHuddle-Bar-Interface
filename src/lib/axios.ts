@@ -2,7 +2,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://0hw8tf6g-3001.inc1.devtunnels.ms/",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.dev.barhuddle.com/",
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
 });
