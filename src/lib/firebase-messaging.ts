@@ -37,16 +37,23 @@ export const requestFcmToken = async (vapidKey?: string): Promise<string | null>
       return null;
     }
 
-    console.log(`[FCM] Current notification permission: ${Notification.permission}`);
-
     let permission = Notification.permission;
+    console.log(`[FCM] Current notification permission state: ${permission}`);
+
+    if (permission === "denied") {
+      console.warn(
+        "[FCM] Notification permission is currently 'denied' in your browser settings. To enable notifications, click the site settings / lock icon in your browser address bar and set Notifications to 'Allow'."
+      );
+      return null;
+    }
+
     if (permission !== "granted") {
-      console.log("[FCM] Requesting notification permission from user...");
+      console.log("[FCM] Requesting notification permission prompt...");
       permission = await Notification.requestPermission();
     }
 
     if (permission !== "granted") {
-      console.warn(`[FCM] Notification permission was ${permission}. Cannot generate token.`);
+      console.warn(`[FCM] Notification permission was not granted (status: ${permission}). Cannot generate FCM token.`);
       return null;
     }
 
@@ -61,8 +68,9 @@ export const requestFcmToken = async (vapidKey?: string): Promise<string | null>
     let swRegistration: ServiceWorkerRegistration | undefined;
     if ("serviceWorker" in navigator) {
       try {
-        swRegistration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-        console.log("[FCM] Service Worker registered:", swRegistration.scope);
+        await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+        swRegistration = await navigator.serviceWorker.ready;
+        console.log("[FCM] Service Worker registered and ready:", swRegistration.scope);
       } catch (swErr) {
         console.warn("[FCM] Warning: Could not register /firebase-messaging-sw.js:", swErr);
       }
@@ -91,7 +99,7 @@ export const requestFcmToken = async (vapidKey?: string): Promise<string | null>
       }
       return token;
     } else {
-      console.warn("[FCM] No registration token returned. Permission might be required or vapid key mismatched.");
+      console.warn("[FCM] No registration token returned. Permission might be required or VAPID key mismatched.");
       return null;
     }
   } catch (error) {
