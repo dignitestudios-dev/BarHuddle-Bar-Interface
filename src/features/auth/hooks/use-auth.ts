@@ -1,4 +1,5 @@
 import { useLoginMutation, useVerifyOtpMutation } from "../api/auth.mutations";
+import { logoutUser } from "../api/auth.service";
 import { setAuth, logout } from "@/store/slices/auth.slice";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useRouter } from "next/navigation";
@@ -78,7 +79,12 @@ export function useAuth() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error("Logout API call error:", err);
+    }
     dispatch(logout());
     router.push("/auth/login");
   };

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { useUpdatePasswordMutation } from "@/features/auth/api/auth.mutations";
+import { Eye, EyeOff } from "lucide-react";
 
 export function ChangePasswordTab() {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -166,36 +167,14 @@ export function ChangePasswordTab() {
                             <button
                                 type="button"
                                 onClick={() => setShowCurrentPass(!showCurrentPass)}
-                                className="absolute right-[14px] top-1/2 -translate-y-1/2 w-[14px] h-[14px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                className="absolute right-[12px] top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center text-[#8B7EC8] hover:text-[#E8FF57] transition-colors cursor-pointer focus:outline-none"
+                                aria-label={showCurrentPass ? "Hide password" : "Show password"}
                             >
-                                <svg className="w-[14px] h-[14px]" viewBox="0 0 14 14" fill="none">
-                                    {showCurrentPass ? (
-                                        <path
-                                            d="M1.75 1.75L12.25 12.25M6.02 6.02C5.7 6.34 5.5 6.78 5.5 7.27C5.5 8.24 6.28 9.02 7.25 9.02C7.74 9.02 8.18 8.82 8.5 8.5M10.21 10.21C9.33 10.74 8.33 11.02 7.25 11.02C4.17 11.02 1.75 7.27 1.75 7.27C2.46 6.06 3.42 5.06 4.54 4.38"
-                                            stroke="#8B7EC8"
-                                            strokeWidth="1.16667"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    ) : (
-                                        <>
-                                            <path
-                                                d="M1.75 7C1.75 7 4.08333 2.91667 7 2.91667C9.91667 2.91667 12.25 7 12.25 7C12.25 7 9.91667 11.0833 7 11.0833C4.08333 11.0833 1.75 7 1.75 7Z"
-                                                stroke="#8B7EC8"
-                                                strokeWidth="1.16667"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                            <circle
-                                                cx="7"
-                                                cy="7"
-                                                r="1.75"
-                                                stroke="#8B7EC8"
-                                                strokeWidth="1.16667"
-                                            />
-                                        </>
-                                    )}
-                                </svg>
+                                {showCurrentPass ? (
+                                    <EyeOff className="w-4 h-4" />
+                                ) : (
+                                    <Eye className="w-4 h-4" />
+                                )}
                             </button>
                         </div>
                     </div>
@@ -254,36 +233,14 @@ export function ChangePasswordTab() {
                             <button
                                 type="button"
                                 onClick={() => setShowNewPass(!showNewPass)}
-                                className="absolute right-[14px] top-1/2 -translate-y-1/2 w-[14px] h-[14px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                className="absolute right-[12px] top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center text-[#8B7EC8] hover:text-[#E8FF57] transition-colors cursor-pointer focus:outline-none"
+                                aria-label={showNewPass ? "Hide password" : "Show password"}
                             >
-                                <svg className="w-[14px] h-[14px]" viewBox="0 0 14 14" fill="none">
-                                    {showNewPass ? (
-                                        <path
-                                            d="M1.75 1.75L12.25 12.25M6.02 6.02C5.7 6.34 5.5 6.78 5.5 7.27C5.5 8.24 6.28 9.02 7.25 9.02C7.74 9.02 8.18 8.82 8.5 8.5M10.21 10.21C9.33 10.74 8.33 11.02 7.25 11.02C4.17 11.02 1.75 7.27 1.75 7.27C2.46 6.06 3.42 5.06 4.54 4.38"
-                                            stroke="#8B7EC8"
-                                            strokeWidth="1.16667"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    ) : (
-                                        <>
-                                            <path
-                                                d="M1.75 7C1.75 7 4.08333 2.91667 7 2.91667C9.91667 2.91667 12.25 7 12.25 7C12.25 7 9.91667 11.0833 7 11.0833C4.08333 11.0833 1.75 7 1.75 7Z"
-                                                stroke="#8B7EC8"
-                                                strokeWidth="1.16667"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                            <circle
-                                                cx="7"
-                                                cy="7"
-                                                r="1.75"
-                                                stroke="#8B7EC8"
-                                                strokeWidth="1.16667"
-                                            />
-                                        </>
-                                    )}
-                                </svg>
+                                {showNewPass ? (
+                                    <EyeOff className="w-4 h-4" />
+                                ) : (
+                                    <Eye className="w-4 h-4" />
+                                )}
                             </button>
                         </div>
                     </div>
@@ -342,36 +299,14 @@ export function ChangePasswordTab() {
                             <button
                                 type="button"
                                 onClick={() => setShowConfirmPass(!showConfirmPass)}
-                                className="absolute right-[14px] top-1/2 -translate-y-1/2 w-[14px] h-[14px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                className="absolute right-[12px] top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center text-[#8B7EC8] hover:text-[#E8FF57] transition-colors cursor-pointer focus:outline-none"
+                                aria-label={showConfirmPass ? "Hide password" : "Show password"}
                             >
-                                <svg className="w-[14px] h-[14px]" viewBox="0 0 14 14" fill="none">
-                                    {showConfirmPass ? (
-                                        <path
-                                            d="M1.75 1.75L12.25 12.25M6.02 6.02C5.7 6.34 5.5 6.78 5.5 7.27C5.5 8.24 6.28 9.02 7.25 9.02C7.74 9.02 8.18 8.82 8.5 8.5M10.21 10.21C9.33 10.74 8.33 11.02 7.25 11.02C4.17 11.02 1.75 7.27 1.75 7.27C2.46 6.06 3.42 5.06 4.54 4.38"
-                                            stroke="#8B7EC8"
-                                            strokeWidth="1.16667"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        />
-                                    ) : (
-                                        <>
-                                            <path
-                                                d="M1.75 7C1.75 7 4.08333 2.91667 7 2.91667C9.91667 2.91667 12.25 7 12.25 7C12.25 7 9.91667 11.0833 7 11.0833C4.08333 11.0833 1.75 7 1.75 7Z"
-                                                stroke="#8B7EC8"
-                                                strokeWidth="1.16667"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                            <circle
-                                                cx="7"
-                                                cy="7"
-                                                r="1.75"
-                                                stroke="#8B7EC8"
-                                                strokeWidth="1.16667"
-                                            />
-                                        </>
-                                    )}
-                                </svg>
+                                {showConfirmPass ? (
+                                    <EyeOff className="w-4 h-4" />
+                                ) : (
+                                    <Eye className="w-4 h-4" />
+                                )}
                             </button>
                         </div>
                     </div>
