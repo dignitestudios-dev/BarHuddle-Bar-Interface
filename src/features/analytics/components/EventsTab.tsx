@@ -1,12 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
+import { format } from "date-fns";
 import { EventAnalyticsCard, EventTagConfig } from "./EventAnalyticsCard";
-import { EventAttendanceTrendChart } from "@/components/charts/EventAttendanceTrendChart";
+import { EventAttendanceTrendChart, AttendanceDataPoint } from "@/components/charts/EventAttendanceTrendChart";
 import { TopPerformingEventsCard, RankedEventItem } from "@/components/charts/TopPerformingEventsCard";
-import TrafficByTimeChart from "@/components/charts/TrafficByTimeChart";
+import { TrafficByTimeChart, TimeSlotData } from "@/components/charts/TrafficByTimeChart";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetEventsAnalyticsQuery } from "../api/analytics.queries";
+import {
+    useGetEventsOverviewQuery,
+    useGetEventsAttendanceQuery,
+    useGetBestPerformingEventsQuery,
+    useGetTimeOfDayGraphQuery,
+} from "../api/analytics.queries";
+import { AnalyticsFilterParams } from "../api/analytics.service";
 
 const DEFAULT_EVENT_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
 
@@ -20,19 +27,39 @@ export interface EventItemData {
     engagement: number;
 }
 
-export function EventsTab() {
-    const { data: eventsAnalytics, isLoading } = useGetEventsAnalyticsQuery();
-    const data = eventsAnalytics?.data;
+export interface EventsTabProps {
+    filterParams?: AnalyticsFilterParams;
+}
 
-    // Map top performance cards
-    const eventsList: EventItemData[] = React.useMemo(() => {
-        if (!data?.eventPerformance || !Array.isArray(data.eventPerformance) || data.eventPerformance.length === 0) {
+export function EventsTab({ filterParams }: EventsTabProps) {
+    const { data: eventsOverviewResponse, isLoading: isLoadingOverview } =
+        useGetEventsOverviewQuery(filterParams);
+    const { data: eventsAttendanceResponse, isLoading: isLoadingAttendance } =
+        useGetEventsAttendanceQuery(filterParams);
+    const { data: bestPerformingResponse, isLoading: isLoadingBestPerforming } =
+        useGetBestPerformingEventsQuery(filterParams);
+    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay } =
+        useGetTimeOfDayGraphQuery(filterParams);
+
+    const isLoading =
+        isLoadingOverview ||
+        isLoadingAttendance ||
+        isLoadingBestPerforming ||
+        isLoadingTimeOfDay;
+
+    const overviewData = eventsOverviewResponse?.data;
+    const bestEventsData = bestPerformingResponse?.data;
+
+    // Map top performance cards from best-performing events
+    const eventsList: EventItemData[] = useMemo(() => {
+        if (!bestEventsData || !Array.isArray(bestEventsData) || bestEventsData.length === 0) {
             return [];
         }
-        return data.eventPerformance.map((item: any, idx: number) => {
+
+        return bestEventsData.map((item: any, idx: number) => {
             const rawDate = item.date || item.startAt;
             const isUpcoming = rawDate ? new Date(rawDate) > new Date() : false;
-            
+
             let tagConfig: EventTagConfig = { label: "Top", icon: "⭐", variant: "top" };
             if (isUpcoming) {
                 tagConfig = { label: "Upcoming", variant: "upcoming" };
@@ -46,7 +73,7 @@ export function EventsTab() {
                 id: item._id || item.id || `evt-${idx}`,
                 title: item.title || "Event",
                 date: rawDate
-                    ? new Date(rawDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    ? format(new Date(rawDate), "MMM dd")
                     : "TBD",
                 image: item.banner || item.image || DEFAULT_EVENT_IMAGE,
                 tag: tagConfig,
@@ -54,49 +81,127 @@ export function EventsTab() {
                 engagement: item.engagement ?? 0,
             };
         });
-    }, [data]);
+    }, [bestEventsData]);
 
     // Map ranked events for the right sidebar card
-    const rankedList: RankedEventItem[] = React.useMemo(() => {
-        if (!data?.eventPerformance || !Array.isArray(data.eventPerformance) || data.eventPerformance.length === 0) {
+    const rankedList: RankedEventItem[] = useMemo(() => {
+        if (!bestEventsData || !Array.isArray(bestEventsData) || bestEventsData.length === 0) {
             return [];
         }
-        return data.eventPerformance.map((item: any, idx: number) => ({
+
+        return bestEventsData.map((item: any, idx: number) => ({
             id: item._id || item.id || `rank-${idx}`,
             title: item.title || "Event",
             attendees: `${item.attendees ?? 0} attendees`,
             engagement: item.engagement ?? 0,
             image: item.banner || item.image || DEFAULT_EVENT_IMAGE,
         }));
-    }, [data]);
+    }, [bestEventsData]);
+
+    // Attendance Trend mapping from GET /analytics/events/attendance
+    const attendanceTrendData: AttendanceDataPoint[] | undefined = useMemo(() => {
+        const raw = eventsAttendanceResponse?.data;
+        if (!raw || !Array.isArray(raw) || raw.length === 0) {
+            return undefined;
+        }
+
+        return raw.map((item) => {
+            let label = "Day";
+            try {
+                const d = new Date(item.date);
+                if (!isNaN(d.getTime())) {
+                    label = format(d, "MMM dd");
+                }
+            } catch {
+                label = item.date;
+            }
+
+            return {
+                name: label,
+                attendance: item.attendance ?? 0,
+            };
+        });
+    }, [eventsAttendanceResponse]);
+
+    // Time of Day mapping from GET /analytics/overview/time-of-day-graph
+    const timeSlotsData: TimeSlotData[] = useMemo(() => {
+        const t = timeOfDayResponse?.data;
+        const morningVal = t?.morning ?? 0;
+        const afternoonVal = t?.afternoon ?? 0;
+        const eveningVal = t?.evening ?? 0;
+        const lateNightVal = t?.latenight ?? t?.lateNight ?? 0;
+
+        const maxVal = Math.max(morningVal, afternoonVal, eveningVal, lateNightVal, 1);
+        const MAX_HEIGHT = 241;
+
+        const calcHeight = (val: number) => {
+            if (val === 0) return 4;
+            return Math.max(12, Math.round((val / maxVal) * MAX_HEIGHT));
+        };
+
+        return [
+            {
+                id: "morning",
+                label: "Morning",
+                value: morningVal,
+                heightPx: calcHeight(morningVal),
+                color: "#22D3EE",
+                glowColor: "rgba(34, 211, 238, 0.4)",
+            },
+            {
+                id: "afternoon",
+                label: "Afternoon",
+                value: afternoonVal,
+                heightPx: calcHeight(afternoonVal),
+                color: "#A855F7",
+                glowColor: "rgba(168, 85, 247, 0.4)",
+            },
+            {
+                id: "evening",
+                label: "Evening",
+                value: eveningVal,
+                heightPx: calcHeight(eveningVal),
+                color: "#7C3AED",
+                glowColor: "rgba(124, 58, 237, 0.4)",
+            },
+            {
+                id: "late-night",
+                label: "Late Night",
+                value: lateNightVal,
+                heightPx: calcHeight(lateNightVal),
+                color: "#E8FF57",
+                glowColor: "rgba(232, 255, 87, 0.4)",
+            },
+        ];
+    }, [timeOfDayResponse]);
 
     // Summary Stat Cards
     const summaryCards = [
         {
             id: "total_events",
             label: "Total Events",
-            value: String(data?.totalEvents ?? 0),
+            value: String(overviewData?.totalEvents ?? 0),
             iconColor: "text-[#9F4FFA]",
             iconBgShadow: "shadow-[0px_0px_12px_rgba(159,79,250,0.2)]",
         },
         {
             id: "upcoming_events",
             label: "Upcoming Events",
-            value: String(data?.upcomingEvents ?? 0),
+            value: String(overviewData?.upcomingEvents ?? 0),
             iconColor: "text-[#22D3EE]",
             iconBgShadow: "shadow-[0px_0px_12px_rgba(34,211,238,0.2)]",
         },
         {
             id: "past_events",
             label: "Past Events",
-            value: String(data?.pastEvents ?? 0),
+            value: String(overviewData?.pastEvents ?? 0),
             iconColor: "text-[#C4B5FD]",
             iconBgShadow: "shadow-[0px_0px_12px_rgba(196,181,253,0.2)]",
         },
         {
             id: "boosted_events",
             label: "Boosted Events",
-            value: String(data?.boostedEvents ?? data?.activeBoosts ?? 0),
+            value: String(overviewData?.boostedEvents ?? 0),
             iconColor: "text-[#E8FF57]",
             iconBgShadow: "shadow-[0px_0px_12px_rgba(232,255,87,0.2)]",
         },
@@ -183,7 +288,10 @@ export function EventsTab() {
 
             {/* Lower Charts Row: Attendance Trend & Top Performing Events */}
             <div className="max-w-[1200px] w-full flex flex-col lg:flex-row gap-6 items-stretch">
-                <EventAttendanceTrendChart className="flex-1 max-w-full" />
+                <EventAttendanceTrendChart
+                    data={attendanceTrendData}
+                    className="flex-1 max-w-full"
+                />
                 <TopPerformingEventsCard
                     items={rankedList.length > 0 ? rankedList : undefined}
                     className="w-full lg:w-[320px] xl:w-[340px] shrink-0"
@@ -192,7 +300,10 @@ export function EventsTab() {
 
             {/* Traffic By Time Chart */}
             <div className="max-w-[1200px] w-full flex flex-col xl:flex-row gap-6 items-stretch">
-                <TrafficByTimeChart className="flex-1 max-w-full" />
+                <TrafficByTimeChart
+                    slots={timeSlotsData}
+                    className="flex-1 max-w-full"
+                />
             </div>
         </div>
     );

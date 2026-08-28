@@ -39,6 +39,7 @@ export function VerifyEmail({
     const [otpCode, setOtpCode] = useState("");
     const [timer, setTimer] = useState(initialTimerSeconds);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const { handleVerifyOtp } = useAuth();
     const resendOtpMutation = useResendOtpMutation();
@@ -64,25 +65,34 @@ export function VerifyEmail({
             await resendOtpMutation.mutateAsync(email);
             setTimer(initialTimerSeconds);
             setOtpCode("");
+            setErrorMessage("");
             onResend?.();
             toast.success("Verification code resent to your email!");
         } catch (error: any) {
             console.error("Resend OTP error:", error);
-            toast.error(error?.response?.data?.message || error.message || "Failed to resend code");
+            const msg = error?.response?.data?.message || error?.response?.data?.error || error.message || "Failed to resend code";
+            toast.error(msg);
         }
     };
 
     const handleVerificationSubmit = async (codeToVerify: string = otpCode) => {
         if (codeToVerify.length < 4) return;
         setIsSubmitting(true);
+        setErrorMessage("");
         
         try {
             await handleVerifyOtp(codeToVerify, isResetPassword ? "reset-password" : "login", email);
             setIsSubmitting(false);
         } catch (error: any) {
             setIsSubmitting(false);
-            toast.error(error.message || "Failed to verify OTP");
-            setOtpCode(""); // clear OTP so user can try again
+            const msg = 
+                error?.response?.data?.message || 
+                error?.response?.data?.error || 
+                error?.message || 
+                "Invalid or Expired OTP";
+            setErrorMessage(msg);
+            toast.error(msg);
+            setOtpCode(""); // clear OTP so user can re-enter easily
         }
     };
 
@@ -106,16 +116,30 @@ export function VerifyEmail({
 
             {/* OTP Form */}
             <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-8">
-                {/* 4-Digit OTP Input */}
-                <OtpInput
-                    length={4}
-                    value={otpCode}
-                    onChange={setOtpCode}
-                    onComplete={(code) => {
-                        handleVerificationSubmit(code);
-                    }}
-                    className="gap-3"
-                />
+                {/* 4-Digit OTP Input & Error Display */}
+                <div className="flex flex-col items-center gap-3 w-full">
+                    <OtpInput
+                        length={4}
+                        value={otpCode}
+                        error={Boolean(errorMessage)}
+                        onChange={(val) => {
+                            setOtpCode(val);
+                            if (errorMessage) setErrorMessage("");
+                        }}
+                        onComplete={(code) => {
+                            handleVerificationSubmit(code);
+                        }}
+                        className="gap-3"
+                    />
+                    {errorMessage && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+                            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{errorMessage}</span>
+                        </div>
+                    )}
+                </div>
 
                 {/* Timer / Resend Link */}
                 <div className="text-center">

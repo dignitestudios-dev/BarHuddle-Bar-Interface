@@ -1,18 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { SyncUser } from "@/components/SyncUser";
+import { LogoutConfirmationModal } from "@/components/ui/LogoutConfirmationModal";
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
     const { handleLogout } = useAuth();
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
     return (
         <div className="flex flex-col h-screen w-full bg-[#05033AD9] text-white overflow-hidden">
             <SyncUser />
             <div className="w-full flex justify-end p-6 absolute top-0 right-0 z-40 pointer-events-none">
                 <button
-                    onClick={handleLogout}
+                    onClick={() => setIsLogoutModalOpen(true)}
                     className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center border border-white/20 transition-all text-white cursor-pointer pointer-events-auto shadow-md hover:scale-105"
                     title="Log Out"
                 >
@@ -24,6 +27,16 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center">
                 {children}
             </div>
+
+            {/* Logout Confirmation Modal */}
+            <LogoutConfirmationModal
+                isOpen={isLogoutModalOpen}
+                onClose={() => setIsLogoutModalOpen(false)}
+                onConfirm={() => {
+                    setIsLogoutModalOpen(false);
+                    handleLogout();
+                }}
+            />
         </div>
     );
 }

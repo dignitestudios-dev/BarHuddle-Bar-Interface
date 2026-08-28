@@ -1,17 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
+import { format } from "date-fns";
 import { StatsCard, StatsColorVariant } from "@/components/ui/stats-card";
-import { VisitorTrendsChart } from "@/components/charts/VisitorTrendsChart";
-import { TrafficByTimeChart } from "@/components/charts/TrafficByTimeChart";
-import { CustomerDonutChart } from "@/components/charts/CustomerDonutChart";
+import { VisitorTrendsChart, TrendDataPoint } from "@/components/charts/VisitorTrendsChart";
+import { TrafficByTimeChart, TimeSlotData } from "@/components/charts/TrafficByTimeChart";
+import { CustomerDonutChart, CustomerSegment } from "@/components/charts/CustomerDonutChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-    useGetVisitorAnalyticsQuery,
-    useGetRetentionAnalyticsQuery,
-    useGetSentimentAnalyticsQuery,
-    useGetEventsAnalyticsQuery,
+    useGetOverviewQuery,
+    useGetVisitorsGraphQuery,
+    useGetTimeOfDayGraphQuery,
+    useGetCustomerBreakdownGraphQuery,
 } from "../api/analytics.queries";
+import { AnalyticsFilterParams } from "../api/analytics.service";
 
 export interface AnalyticsCardItem {
     id: string;
@@ -22,92 +24,35 @@ export interface AnalyticsCardItem {
     variant: StatsColorVariant;
 }
 
-const DEFAULT_ANALYTICS_CARDS: AnalyticsCardItem[] = [
-    {
-        id: "total-check-ins",
-        title: "Total Check-Ins",
-        value: "12,840",
-        trend: "+18.4%",
-        isPositive: true,
-        variant: "purple",
-    },
-    {
-        id: "total-visitors",
-        title: "Total Visitors",
-        value: "9,300",
-        trend: "+12.1%",
-        isPositive: true,
-        variant: "purple",
-    },
-    {
-        id: "avg-stay-duration-1",
-        title: "Avg Stay Duration",
-        value: "145m",
-        trend: "+5.4%",
-        isPositive: true,
-        variant: "yellow",
-    },
-    {
-        id: "new-customers",
-        title: "New Customers",
-        value: "3,441",
-        trend: "+18.4%",
-        isPositive: true,
-        variant: "green",
-    },
-    {
-        id: "repeat-customers",
-        title: "Repeat Customers",
-        value: "4,557",
-        trend: "+49%",
-        isPositive: true,
-        variant: "purple",
-    },
-    {
-        id: "lost-customers",
-        title: "Lost Customers",
-        value: "1,302",
-        trend: "-2.1%",
-        isPositive: false,
-        variant: "coral",
-    },
-    {
-        id: "event-attendance",
-        title: "Event Attendance",
-        value: "12,840",
-        trend: "+15.2%",
-        isPositive: true,
-        variant: "pink",
-    },
-    {
-        id: "avg-rating",
-        title: "Avg Rating",
-        value: "4.5★",
-        trend: "+0.3",
-        isPositive: true,
-        variant: "orange",
-    },
-];
+export interface OverviewTabProps {
+    filterParams?: AnalyticsFilterParams;
+}
 
-export function OverviewTab() {
-    const { data: visitorData, isLoading: isLoadingVisitor } = useGetVisitorAnalyticsQuery();
-    const { data: retentionData, isLoading: isLoadingRetention } = useGetRetentionAnalyticsQuery();
-    const { data: sentimentData, isLoading: isLoadingSentiment } = useGetSentimentAnalyticsQuery();
-    const { data: eventsData, isLoading: isLoadingEvents } = useGetEventsAnalyticsQuery();
+export function OverviewTab({ filterParams }: OverviewTabProps) {
+    const { data: overviewResponse, isLoading: isLoadingOverview } =
+        useGetOverviewQuery(filterParams);
+    const { data: visitorsGraphResponse, isLoading: isLoadingVisitorsGraph } =
+        useGetVisitorsGraphQuery(filterParams);
+    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay } =
+        useGetTimeOfDayGraphQuery(filterParams);
+    const { data: customerBreakdownResponse, isLoading: isLoadingCustomerBreakdown } =
+        useGetCustomerBreakdownGraphQuery(filterParams);
 
-    const isLoading = isLoadingVisitor || isLoadingRetention || isLoadingSentiment || isLoadingEvents;
+    const isLoading =
+        isLoadingOverview ||
+        isLoadingVisitorsGraph ||
+        isLoadingTimeOfDay ||
+        isLoadingCustomerBreakdown;
 
-    const cards: AnalyticsCardItem[] = React.useMemo(() => {
-        const v = visitorData?.data;
-        const r = retentionData?.data;
-        const s = sentimentData?.data;
-        const e = eventsData?.data;
+    // 8 Stat Cards mapping from GET /analytics/overview
+    const cards: AnalyticsCardItem[] = useMemo(() => {
+        const o = overviewResponse?.data;
 
         return [
             {
                 id: "total-check-ins",
                 title: "Total Check-Ins",
-                value: v?.totalVisits !== undefined ? v.totalVisits.toLocaleString() : "0",
+                value: o?.totalCheckIns !== undefined ? o.totalCheckIns.toLocaleString() : "0",
                 trend: "+0%",
                 isPositive: true,
                 variant: "purple",
@@ -115,15 +60,15 @@ export function OverviewTab() {
             {
                 id: "total-visitors",
                 title: "Total Visitors",
-                value: v?.uniqueVisitors !== undefined ? v.uniqueVisitors.toLocaleString() : "0",
+                value: o?.totalVisitors !== undefined ? o.totalVisitors.toLocaleString() : "0",
                 trend: "+0%",
                 isPositive: true,
                 variant: "purple",
             },
             {
-                id: "avg-stay-duration-1",
+                id: "avg-stay-duration",
                 title: "Avg Stay Duration",
-                value: s?.avgDwellMinutes !== undefined ? `${s.avgDwellMinutes}m` : "0m",
+                value: o?.avgStay !== undefined ? `${o.avgStay}m` : "0m",
                 trend: "+0%",
                 isPositive: true,
                 variant: "yellow",
@@ -131,7 +76,7 @@ export function OverviewTab() {
             {
                 id: "new-customers",
                 title: "New Customers",
-                value: r?.oneTimeUsers !== undefined ? r.oneTimeUsers.toLocaleString() : "0",
+                value: o?.newCustomers !== undefined ? o.newCustomers.toLocaleString() : "0",
                 trend: "+0%",
                 isPositive: true,
                 variant: "green",
@@ -139,15 +84,15 @@ export function OverviewTab() {
             {
                 id: "repeat-customers",
                 title: "Repeat Customers",
-                value: r?.returningUsers !== undefined ? r.returningUsers.toLocaleString() : "0",
-                trend: r?.retentionRate !== undefined ? `+${r.retentionRate}%` : "0%",
+                value: o?.repeatCustomers !== undefined ? o.repeatCustomers.toLocaleString() : "0",
+                trend: "+0%",
                 isPositive: true,
                 variant: "purple",
             },
             {
                 id: "lost-customers",
                 title: "Lost Customers",
-                value: r?.lostCustomers !== undefined ? r.lostCustomers.toLocaleString() : "0",
+                value: o?.lostCustomers !== undefined ? o.lostCustomers.toLocaleString() : "0",
                 trend: "0%",
                 isPositive: false,
                 variant: "coral",
@@ -155,7 +100,7 @@ export function OverviewTab() {
             {
                 id: "event-attendance",
                 title: "Event Attendance",
-                value: e?.eventAttendance !== undefined ? e.eventAttendance.toLocaleString() : "0",
+                value: o?.eventAttendance !== undefined ? o.eventAttendance.toLocaleString() : "0",
                 trend: "+0%",
                 isPositive: true,
                 variant: "pink",
@@ -163,13 +108,130 @@ export function OverviewTab() {
             {
                 id: "avg-rating",
                 title: "Avg Rating",
-                value: s?.avgRating !== undefined ? `${s.avgRating}★` : "0★",
+                value: o?.avgRating !== undefined ? `${o.avgRating}★` : "0★",
                 trend: "+0.0",
                 isPositive: true,
                 variant: "orange",
             },
         ];
-    }, [visitorData, retentionData, sentimentData, eventsData]);
+    }, [overviewResponse]);
+
+    // Graph Data mapping from GET /analytics/overview/vistors-graph
+    const trendsChartData: TrendDataPoint[] | undefined = useMemo(() => {
+        const raw = visitorsGraphResponse?.data;
+        if (!raw || !Array.isArray(raw) || raw.length === 0) {
+            return undefined;
+        }
+
+        return raw.map((item) => {
+            let label = "Day";
+            try {
+                const d = new Date(item.date);
+                if (!isNaN(d.getTime())) {
+                    label = format(d, "MMM dd");
+                }
+            } catch {
+                label = item.date;
+            }
+
+            return {
+                name: label,
+                visitors: item.visitors ?? 0,
+                checkIns: item.checkIns ?? 0,
+                retention: item.retention ?? 0,
+            };
+        });
+    }, [visitorsGraphResponse]);
+
+    // Time of Day mapping from GET /analytics/overview/time-of-day-graph
+    const timeSlotsData: TimeSlotData[] = useMemo(() => {
+        const t = timeOfDayResponse?.data;
+        const morningVal = t?.morning ?? 0;
+        const afternoonVal = t?.afternoon ?? 0;
+        const eveningVal = t?.evening ?? 0;
+        const lateNightVal = t?.latenight ?? t?.lateNight ?? 0;
+
+        const maxVal = Math.max(morningVal, afternoonVal, eveningVal, lateNightVal, 1);
+        const MAX_HEIGHT = 241;
+
+        const calcHeight = (val: number) => {
+            if (val === 0) return 4;
+            return Math.max(12, Math.round((val / maxVal) * MAX_HEIGHT));
+        };
+
+        return [
+            {
+                id: "morning",
+                label: "Morning",
+                value: morningVal,
+                heightPx: calcHeight(morningVal),
+                color: "#22D3EE",
+                glowColor: "rgba(34, 211, 238, 0.4)",
+            },
+            {
+                id: "afternoon",
+                label: "Afternoon",
+                value: afternoonVal,
+                heightPx: calcHeight(afternoonVal),
+                color: "#A855F7",
+                glowColor: "rgba(168, 85, 247, 0.4)",
+            },
+            {
+                id: "evening",
+                label: "Evening",
+                value: eveningVal,
+                heightPx: calcHeight(eveningVal),
+                color: "#7C3AED",
+                glowColor: "rgba(124, 58, 237, 0.4)",
+            },
+            {
+                id: "late-night",
+                label: "Late Night",
+                value: lateNightVal,
+                heightPx: calcHeight(lateNightVal),
+                color: "#E8FF57",
+                glowColor: "rgba(232, 255, 87, 0.4)",
+            },
+        ];
+    }, [timeOfDayResponse]);
+
+    // Customer Breakdown mapping from GET /analytics/overview/customer-breakdown-graph
+    const customerSegmentsData: CustomerSegment[] | undefined = useMemo(() => {
+        const c = customerBreakdownResponse?.data;
+        if (!c) return undefined;
+
+        return [
+            {
+                name: "New",
+                value: c.newCustomers?.count ?? 0,
+                percentage: Math.round(c.newCustomers?.percentage ?? 0),
+                color: "#4ADE80",
+                glowColor: "rgba(74, 222, 128, 0.6)",
+            },
+            {
+                name: "Repeat",
+                value: c.repeatCustomers?.count ?? 0,
+                percentage: Math.round(c.repeatCustomers?.percentage ?? 0),
+                color: "#7C3AED",
+                glowColor: "rgba(124, 58, 237, 0.6)",
+            },
+            {
+                name: "Lost",
+                value: c.lostCustomers?.count ?? 0,
+                percentage: Math.round(c.lostCustomers?.percentage ?? 0),
+                color: "#F87171",
+                glowColor: "rgba(248, 113, 113, 0.6)",
+            },
+        ];
+    }, [customerBreakdownResponse]);
+
+    const totalCustomersCount = useMemo(() => {
+        const c = customerBreakdownResponse?.data;
+        if (c?.totalCustomers !== undefined) {
+            return c.totalCustomers.toString();
+        }
+        return undefined;
+    }, [customerBreakdownResponse]);
 
     if (isLoading) {
         return (
@@ -207,13 +269,24 @@ export function OverviewTab() {
 
             {/* Visitor Trends Live Analytics Chart */}
             <div className="max-w-[1200px] w-full">
-                <VisitorTrendsChart className="max-w-full" />
+                <VisitorTrendsChart
+                    data={trendsChartData}
+                    className="max-w-full"
+                />
             </div>
 
             {/* Traffic by Time & Visitor Breakdown Section */}
             <div className="max-w-[1200px] w-full flex flex-col xl:flex-row gap-6 items-stretch">
-                <TrafficByTimeChart className="flex-1 max-w-full" />
-                <CustomerDonutChart title="Visitor Breakdown" className="w-full xl:w-[288px] shrink-0" />
+                <TrafficByTimeChart
+                    slots={timeSlotsData}
+                    className="flex-1 max-w-full"
+                />
+                <CustomerDonutChart
+                    title="Visitor Breakdown"
+                    segments={customerSegmentsData}
+                    totalCustomers={totalCustomersCount}
+                    className="w-full xl:w-[288px] shrink-0"
+                />
             </div>
         </div>
     );

@@ -10,6 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+const MAX_IMAGES_COUNT = 5;
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ACCEPTED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+
+const TITLE_MAX_LENGTH = 100;
+const DESCRIPTION_MAX_LENGTH = 500;
 
 const getTodayStart = () => {
     const today = new Date();
@@ -18,9 +27,15 @@ const getTodayStart = () => {
 };
 
 const createPromotionSchema = z.object({
-    title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
+    title: z
+        .string()
+        .min(3, "Title must be at least 3 characters")
+        .max(TITLE_MAX_LENGTH, `Title cannot exceed ${TITLE_MAX_LENGTH} characters`),
     promoType: z.string().min(1, "Promo type is required"),
-    description: z.string().min(5, "Description must be at least 5 characters").max(500, "Description is too long"),
+    description: z
+        .string()
+        .min(5, "Description must be at least 5 characters")
+        .max(DESCRIPTION_MAX_LENGTH, `Description cannot exceed ${DESCRIPTION_MAX_LENGTH} characters`),
     validFrom: z.date({
         message: "Valid From date is required",
     }).refine((date) => {
@@ -35,7 +50,20 @@ const createPromotionSchema = z.object({
     }, {
         message: "End date must be in the future",
     }),
-    images: z.array(z.any()),
+    images: z
+        .array(z.any())
+        .max(MAX_IMAGES_COUNT, `You can upload a maximum of ${MAX_IMAGES_COUNT} images`)
+        .refine(
+            (files) =>
+                files.every((file) => {
+                    if (!(file instanceof File)) return true;
+                    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+                    return ACCEPTED_IMAGE_EXTENSIONS.includes(ext) || ACCEPTED_IMAGE_TYPES.includes(file.type);
+                }),
+            {
+                message: "Only PNG, JPG, and WEBP images are allowed",
+            }
+        ),
 }).refine(
     (data) => {
         if (data.validFrom && data.validTo) {
@@ -173,8 +201,54 @@ export function CreatePromotionModal({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
-            setValue("images", [...(watchImages || []), ...newFiles], { shouldValidate: true });
+            const rawFiles = Array.from(e.target.files);
+            const currentImages = watchImages || [];
+
+            // 1. Filter only accepted formats (PNG, JPG, WEBP)
+            const validFiles: File[] = [];
+            const invalidFormatNames: string[] = [];
+
+            rawFiles.forEach((file) => {
+                const ext = "." + file.name.split(".").pop()?.toLowerCase();
+                const isValidMime = ACCEPTED_IMAGE_TYPES.includes(file.type);
+                const isValidExt = ACCEPTED_IMAGE_EXTENSIONS.includes(ext);
+
+                if (!isValidMime && !isValidExt) {
+                    invalidFormatNames.push(file.name);
+                } else if (file.size > MAX_FILE_SIZE) {
+                    toast.error(`"${file.name}" exceeds the 20MB size limit.`);
+                } else {
+                    validFiles.push(file);
+                }
+            });
+
+            if (invalidFormatNames.length > 0) {
+                toast.error(
+                    `Only PNG, JPG, and WEBP images are allowed. Rejected: ${invalidFormatNames.join(", ")}`
+                );
+            }
+
+            if (validFiles.length === 0) {
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
+
+            // 2. Enforce maximum 5 images limit
+            const availableSlots = MAX_IMAGES_COUNT - currentImages.length;
+            if (availableSlots <= 0) {
+                toast.error(`Maximum of ${MAX_IMAGES_COUNT} images allowed.`);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
+
+            if (validFiles.length > availableSlots) {
+                toast.warning(`Only ${availableSlots} more image(s) could be added (max ${MAX_IMAGES_COUNT} allowed).`);
+            }
+
+            const filesToAdd = validFiles.slice(0, availableSlots);
+            setValue("images", [...currentImages, ...filesToAdd], { shouldValidate: true });
+
+            if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
 
@@ -231,6 +305,8 @@ export function CreatePromotionModal({
         : "Jun 1 – Jul 31";
 
     const isEditMode = Boolean(promotionToEdit);
+    const currentImagesCount = (watchImages || []).length;
+    const isMaxImagesReached = currentImagesCount >= MAX_IMAGES_COUNT;
 
     return (
         <div 
@@ -268,23 +344,45 @@ export function CreatePromotionModal({
                     <form onSubmit={handleSubmit(handleContinueToPreview)} className="flex flex-col gap-5 w-full">
                         {/* Upload Images Section */}
                         <div className="flex flex-col gap-2 w-full">
-                            <label className="font-semibold text-[14px] leading-[19px] text-white">
-                                Upload Images
-                            </label>
+                            <div className="flex items-center justify-between">
+                                <label className="font-semibold text-[14px] leading-[19px] text-white">
+                                    Upload Images
+                                </label>
+                                <span className={cn(
+                                    "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
+                                    isMaxImagesReached
+                                        ? "bg-purple-500/20 text-[#E8FF57] border-[#E8FF57]/40"
+                                        : "bg-[rgba(124,58,237,0.15)] text-[#C4B5FD] border-[rgba(124,58,237,0.3)]"
+                                )}>
+                                    {currentImagesCount}/{MAX_IMAGES_COUNT} images
+                                </span>
+                            </div>
 
                             <input
                                 ref={fileInputRef}
                                 type="file"
                                 multiple
-                                accept="image/*,.pdf"
+                                accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                                 onChange={handleFileChange}
                                 className="hidden"
+                                disabled={isMaxImagesReached}
                             />
 
                             {/* Dropzone Container */}
                             <div
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-full h-[151px] rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-[rgba(124,58,237,0.18)] transition-all group"
+                                onClick={() => {
+                                    if (isMaxImagesReached) {
+                                        toast.error(`Maximum of ${MAX_IMAGES_COUNT} images reached. Remove an image to upload a new one.`);
+                                    } else {
+                                        fileInputRef.current?.click();
+                                    }
+                                }}
+                                className={cn(
+                                    "w-full h-[151px] rounded-[24px] border flex flex-col items-center justify-center gap-1 cursor-pointer transition-all group",
+                                    isMaxImagesReached
+                                        ? "bg-[rgba(124,58,237,0.06)] border-[rgba(124,58,237,0.2)] opacity-70 cursor-not-allowed"
+                                        : "bg-[rgba(124,58,237,0.12)] border-[rgba(124,58,237,0.25)] hover:bg-[rgba(124,58,237,0.18)]"
+                                )}
                             >
                                 <div className="w-[30px] h-[30px] flex items-center justify-center text-[#B45FF2] mb-1">
                                     <svg className="w-[30px] h-[30px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -298,12 +396,16 @@ export function CreatePromotionModal({
                                 </div>
 
                                 <span className="font-medium text-[15px] leading-[20px] text-white/80 group-hover:text-white transition-colors">
-                                    Upload Image
+                                    {isMaxImagesReached ? "Maximum 5 images added" : "Upload Image"}
                                 </span>
-                                <span className="font-normal text-[15px] leading-[20px] text-white/80">
-                                    Upto 20 Mbs, PDF,JPG,PNG
+                                <span className="font-normal text-[13px] leading-[18px] text-white/60">
+                                    {isMaxImagesReached
+                                        ? "Remove an image below to upload a different one"
+                                        : "Supports PNG, JPG, WEBP up to 20MB (Max 5 images)"}
                                 </span>
                             </div>
+                            {errors.images && <span className="text-red-400 text-xs mt-1">{errors.images.message as string}</span>}
+
 
                             {/* Thumbnails Row */}
                             {imagePreviews.length > 0 && (
@@ -338,12 +440,18 @@ export function CreatePromotionModal({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                             {/* Promo Title */}
                             <div className="flex flex-col gap-1.5 w-full">
-                                <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
-                                    PROMO TITLE
-                                </label>
+                                <div className="flex items-center justify-between">
+                                    <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
+                                        PROMO TITLE
+                                    </label>
+                                    <span className="text-[11px] text-[#8B7EC8] font-medium">
+                                        {(watchTitle || "").length}/{TITLE_MAX_LENGTH}
+                                    </span>
+                                </div>
                                 <input
                                     type="text"
                                     {...register("title")}
+                                    maxLength={TITLE_MAX_LENGTH}
                                     placeholder="e.g. Happy Hour Special"
                                     className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
                                 />
@@ -379,11 +487,17 @@ export function CreatePromotionModal({
 
                         {/* Row 2: Description */}
                         <div className="flex flex-col gap-1.5 w-full">
-                            <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
-                                DESCRIPTION
-                            </label>
+                            <div className="flex items-center justify-between">
+                                <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
+                                    DESCRIPTION
+                                </label>
+                                <span className="text-[11px] text-[#8B7EC8] font-medium">
+                                    {(watchDescription || "").length}/{DESCRIPTION_MAX_LENGTH}
+                                </span>
+                            </div>
                             <textarea
                                 {...register("description")}
+                                maxLength={DESCRIPTION_MAX_LENGTH}
                                 placeholder="Describe your promotion in a few words…"
                                 className="w-full h-[90px] p-4 rounded-[20px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[20px] focus:outline-none focus:border-[#B45FF2] transition-colors resize-none"
                             />

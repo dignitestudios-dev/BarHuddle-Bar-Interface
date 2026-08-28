@@ -4,29 +4,27 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
-export interface DeleteConfirmationModalProps {
+export interface LogoutConfirmationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
     title?: string;
     description?: string;
-    itemName?: string;
     isPending?: boolean;
     confirmText?: string;
     className?: string;
 }
 
-export function DeleteConfirmationModal({
+export function LogoutConfirmationModal({
     isOpen,
     onClose,
     onConfirm,
-    title = "Delete Item",
-    description = "Are you sure you want to delete this? This action cannot be undone.",
-    itemName,
+    title = "Log Out?",
+    description = "Are you sure you want to log out of your Bar Huddle account?",
     isPending = false,
-    confirmText = "Delete",
+    confirmText = "Log Out",
     className,
-}: DeleteConfirmationModalProps) {
+}: LogoutConfirmationModalProps) {
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -69,16 +67,16 @@ export function DeleteConfirmationModal({
             {/* Modal Card */}
             <div
                 className={cn(
-                    "relative w-full max-w-[480px] p-6 sm:p-8",
-                    "bg-[#090530] border border-[rgba(239,68,68,0.3)]",
-                    "shadow-[0px_8px_32px_rgba(0,0,0,0.6),0px_0px_24px_rgba(239,68,68,0.2)] rounded-[20px]",
+                    "relative w-full max-w-[440px] p-6 sm:p-8",
+                    "bg-[#090530] border border-[rgba(124,58,237,0.3)]",
+                    "shadow-[0px_8px_32px_rgba(0,0,0,0.6),0px_0px_32px_rgba(124,58,237,0.2)] rounded-[24px]",
                     "flex flex-col items-center justify-center text-center",
                     "animate-in zoom-in-95 duration-200",
                     className
                 )}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Close Button (top-right X icon) */}
+                {/* Close Button */}
                 <button
                     type="button"
                     onClick={onClose}
@@ -91,10 +89,10 @@ export function DeleteConfirmationModal({
                     </svg>
                 </button>
 
-                {/* Trash Warning Icon */}
-                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mb-5 shadow-[0px_0px_20px_rgba(239,68,68,0.25)]">
+                {/* Logout Icon */}
+                <div className="w-16 h-16 rounded-full bg-[rgba(244,63,94,0.12)] border border-[rgba(244,63,94,0.3)] flex items-center justify-center text-[#F43F5E] mb-5 shadow-[0px_0px_24px_rgba(244,63,94,0.25)]">
                     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
                 </div>
 
@@ -103,15 +101,8 @@ export function DeleteConfirmationModal({
                     {title}
                 </h3>
 
-                {/* Item Name Highlight */}
-                {itemName && (
-                    <div className="inline-block max-w-full px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-purple-300 truncate mb-3">
-                        {itemName}
-                    </div>
-                )}
-
                 {/* Description */}
-                <p className="text-[14px] leading-[20px] text-white/70 max-w-[380px] mb-7">
+                <p className="text-[14px] leading-[22px] text-white/70 max-w-[340px] mb-7">
                     {description}
                 </p>
 
@@ -127,19 +118,19 @@ export function DeleteConfirmationModal({
                         Cancel
                     </button>
 
-                    {/* Confirm Delete Button */}
+                    {/* Confirm Logout Button */}
                     <button
                         type="button"
                         onClick={onConfirm}
                         disabled={isPending}
-                        className="flex-1 h-[46px] rounded-[14px] bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-[0px_0px_20px_rgba(239,68,68,0.4)] text-white font-extrabold text-[14px] transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="flex-1 h-[46px] rounded-[14px] bg-gradient-to-r from-[#DC2626] to-[#E11D48] hover:from-[#EF4444] hover:to-[#F43F5E] shadow-[0px_0px_20px_rgba(225,29,72,0.4)] text-white font-extrabold text-[14px] transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isPending ? (
-                            <span>Deleting...</span>
+                            <span>Logging out...</span>
                         ) : (
                             <>
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                 </svg>
                                 <span>{confirmText}</span>
                             </>
@@ -153,4 +144,4 @@ export function DeleteConfirmationModal({
     return typeof document !== "undefined" ? createPortal(modalContent, document.body) : null;
 }
 
-export default DeleteConfirmationModal;
+export default LogoutConfirmationModal;

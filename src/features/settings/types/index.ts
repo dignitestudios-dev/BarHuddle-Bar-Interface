@@ -20,3 +20,5 @@ export interface NotificationSetting {
     category: string;
     icon: React.ReactNode;
 }
+
+export * from "../api/settings.service";

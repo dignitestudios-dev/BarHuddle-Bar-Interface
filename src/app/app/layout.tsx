@@ -1,10 +1,12 @@
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import { ProfileProvider } from "@/context/ProfileContext";
+import { PushNotificationManager } from "@/features/notifications/components/PushNotificationManager";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
         <ProfileProvider>
+            <PushNotificationManager />
             <div className="flex h-screen w-full bg-[#05033AD9] text-white overflow-hidden">
                 {/* Left Sidebar */}
                 <Sidebar />

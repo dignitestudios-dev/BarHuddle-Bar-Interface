@@ -21,4 +21,9 @@ export const notificationService = {
     });
     return response.data;
   },
+
+  markAllAsRead: async () => {
+    const response = await axiosInstance.post("/venue-owner/notifications/read-all");
+    return response.data;
+  },
 };

@@ -1,6 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import {
+
   login,
+  loginWithGoogle,
   verifyOtp,
   resendOtp,
   checkEmail,
@@ -10,7 +12,9 @@ import {
   getMe,
   updatePassword,
   deleteVenueOwnerAccount,
+  updateFcmToken,
   LoginPayload,
+  GoogleLoginPayload,
   VerifyOtpPayload,
   ResetPasswordPayload,
   UpdatePasswordPayload,
@@ -21,6 +25,14 @@ export function useLoginMutation() {
     mutationFn: (payload: LoginPayload) => login(payload),
   });
 }
+
+export function useGoogleLoginMutation() {
+  return useMutation({
+    mutationFn: (payload: string | GoogleLoginPayload) => loginWithGoogle(payload),
+  });
+}
+
+
 
 export function useVerifyOtpMutation() {
   return useMutation({
@@ -75,3 +87,10 @@ export function useDeleteAccountMutation() {
     mutationFn: () => deleteVenueOwnerAccount(),
   });
 }
+
+export function useUpdateFcmTokenMutation() {
+  return useMutation({
+    mutationFn: (fcmToken: string) => updateFcmToken(fcmToken),
+  });
+}
+

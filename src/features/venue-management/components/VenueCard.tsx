@@ -94,20 +94,20 @@ export function VenueCard({
 
                 {/* Yellow Category Badge (Top Left) */}
                 <div className="absolute top-3 left-3.5 z-20 px-2.5 py-1 bg-[#F2CA54] shadow-[0px_0px_9.8px_2px_#F2CA54] rounded-full flex items-center justify-center">
-                    <span className="font-semibold text-[11px] leading-[16px] text-black">
+                    <span className="font-semibold text-[11px] capitalize leading-[16px] text-black">
                         {venue.category}
                     </span>
                 </div>
 
                 {/* Glass Bookmark / Option Icon (Top Right) */}
-                <button
+                {/* <button
                     type="button"
                     className="absolute top-3 right-3.5 z-20 w-8 h-8 rounded-full bg-[rgba(5,3,58,0.6)] border border-[rgba(124,58,237,0.3)] flex items-center justify-center text-white/70 hover:text-white transition-all cursor-pointer"
                 >
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                     </svg>
-                </button>
+                </button> */}
             </div>
 
             {/* Bottom Content Info Section */}

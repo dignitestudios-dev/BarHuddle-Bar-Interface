@@ -9,6 +9,7 @@ export interface OtpInputProps {
     onChange: (value: string) => void;
     onComplete?: (value: string) => void;
     disabled?: boolean;
+    error?: boolean | string;
     className?: string;
     boxClassName?: string;
 }
@@ -21,6 +22,7 @@ export const OtpInput = React.forwardRef<HTMLDivElement, OtpInputProps>(
             onChange,
             onComplete,
             disabled = false,
+            error = false,
             className,
             boxClassName,
         },
@@ -134,6 +136,7 @@ export const OtpInput = React.forwardRef<HTMLDivElement, OtpInputProps>(
                             "focus:border-[#9F4FFA] focus:bg-[rgba(124,58,237,0.22)] focus:shadow-[0_0_20px_rgba(124,58,237,0.4)]",
                             "hover:border-[rgba(124,58,237,0.4)]",
                             "disabled:opacity-50 disabled:cursor-not-allowed",
+                            Boolean(error) && "border-red-500/80 bg-red-500/10 focus:border-red-500 focus:shadow-[0_0_20px_rgba(239,68,68,0.35)]",
                             boxClassName
                         )}
                     />

@@ -15,13 +15,6 @@ export function EventsPageHeader({
     onCreateEvent,
     className = "",
 }: EventsPageHeaderProps) {
-    const [tabState, setTabState] = useState<"events" | "boosted">(activeTab);
-
-    const handleTabClick = (tab: "events" | "boosted") => {
-        setTabState(tab);
-        onTabChange?.(tab);
-    };
-
     return (
         <div className={`w-full max-w-[1200px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>
             {/* Top Row: Title + Create Button */}
@@ -46,8 +39,8 @@ export function EventsPageHeader({
                 {/* Events Tab */}
                 <button
                     type="button"
-                    onClick={() => handleTabClick("events")}
-                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${tabState === "events"
+                    onClick={() => onTabChange?.("events")}
+                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${activeTab === "events"
                             ? "bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] font-semibold text-white"
                             : "font-normal text-white/70 hover:text-white"
                         }`}
@@ -58,8 +51,8 @@ export function EventsPageHeader({
                 {/* Boosted Events Tab */}
                 <button
                     type="button"
-                    onClick={() => handleTabClick("boosted")}
-                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${tabState === "boosted"
+                    onClick={() => onTabChange?.("boosted")}
+                    className={`w-[182px] h-[46px] rounded-[100px] flex items-center justify-center font-['Plus_Jakarta_Sans',sans-serif] text-[16px] leading-[20px] transition-all cursor-pointer ${activeTab === "boosted"
                             ? "bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] font-semibold text-white"
                             : "font-normal text-white/70 hover:text-white"
                         }`}

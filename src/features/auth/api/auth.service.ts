@@ -67,6 +67,26 @@ export async function login(payload: LoginPayload): Promise<AuthLoginResponse> {
   return data;
 }
 
+export interface GoogleLoginPayload {
+  idToken: string;
+  role?: string;
+}
+
+export async function loginWithGoogle(
+  idTokenOrPayload: string | GoogleLoginPayload,
+  role: string = "bar_owner"
+): Promise<any> {
+  const payload =
+    typeof idTokenOrPayload === "string"
+      ? { method: "google", idToken: idTokenOrPayload, role }
+      : { method: "google", role: idTokenOrPayload.role || "bar_owner", ...idTokenOrPayload };
+
+  const { data } = await axiosInstance.post("/auth", payload);
+  return data;
+}
+
+
+
 export async function verifyOtp(payload: VerifyOtpPayload): Promise<AuthResponse> {
   const { data } = await axiosInstance.post<AuthResponse>("/auth/verify-otp", {
     email: payload.email,
@@ -127,6 +147,16 @@ export async function deleteVenueOwnerAccount(): Promise<any> {
   return data;
 }
 
+export async function updateFcmToken(fcmToken: string): Promise<any> {
+  try {
+    const { data } = await axiosInstance.post("/auth/update-fcm", { fcmToken });
+    return data;
+  } catch (error) {
+    console.error("[FCM] Failed to update FCM token on backend:", error);
+    return null;
+  }
+}
+
 export async function logoutUser(): Promise<any> {
   try {
     const { data } = await axiosInstance.post("/auth/logout");
@@ -136,3 +166,4 @@ export async function logoutUser(): Promise<any> {
     return null;
   }
 }
+
