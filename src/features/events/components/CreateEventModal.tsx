@@ -17,7 +17,6 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const ACCEPTED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
 
 const TITLE_MAX_LENGTH = 100;
-const ARTIST_MAX_LENGTH = 100;
 const DESCRIPTION_MAX_LENGTH = 500;
 
 const getTodayStart = () => {
@@ -40,10 +39,6 @@ const createEventSchema = z.object({
     }),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
-    artist: z
-        .string()
-        .max(ARTIST_MAX_LENGTH, `Artist name cannot exceed ${ARTIST_MAX_LENGTH} characters`)
-        .optional(),
     description: z
         .string()
         .min(10, "Description must be at least 10 characters")
@@ -115,7 +110,6 @@ export function CreateEventModal({
             date: undefined,
             startTime: "",
             endTime: "",
-            artist: "",
             description: "",
             images: [],
         },
@@ -123,7 +117,6 @@ export function CreateEventModal({
 
     const watchImages = watch("images");
     const watchTitle = watch("title") || "";
-    const watchArtist = watch("artist") || "";
     const watchDescription = watch("description") || "";
 
     // Pre-populate fields if editing or reset if creating
@@ -138,7 +131,6 @@ export function CreateEventModal({
                     date: startDate,
                     startTime: startDate ? format(startDate, "HH:mm") : "20:00",
                     endTime: endDate ? format(endDate, "HH:mm") : "02:00",
-                    artist: eventToEdit.artist || "",
                     description: eventToEdit.description || "",
                     images: [],
                 });
@@ -155,7 +147,6 @@ export function CreateEventModal({
                     date: undefined,
                     startTime: "",
                     endTime: "",
-                    artist: "",
                     description: "",
                     images: [],
                 });
@@ -164,39 +155,11 @@ export function CreateEventModal({
         }
     }, [isOpen, eventToEdit, reset]);
 
-    // Update previews when images change
-    useEffect(() => {
-        if (!watchImages || watchImages.length === 0) {
-            if (!eventToEdit) {
-                setImagePreviews([]);
-            }
-            return;
-        }
-
-        const newPreviews = watchImages.map(file => {
-            if (file instanceof File) {
-                return URL.createObjectURL(file);
-            }
-            return file;
-        });
-
-        setImagePreviews(newPreviews);
-
-        // Cleanup URLs to avoid memory leaks
-        return () => {
-            newPreviews.forEach(url => {
-                if (url && typeof url === "string" && url.startsWith('blob:')) {
-                    URL.revokeObjectURL(url);
-                }
-            });
-        };
-    }, [watchImages, eventToEdit]);
-
     if (!isOpen) return null;
 
     const handleRemoveImage = (index: number) => {
-        const newImages = [...(watchImages || [])];
-        newImages.splice(index, 1);
+        const currentImages = watchImages || [];
+        const newImages = currentImages.filter((_, i) => i !== index);
         setValue("images", newImages, { shouldValidate: true });
         setImagePreviews((prev) => prev.filter((_, i) => i !== index));
     };
@@ -481,28 +444,6 @@ export function CreateEventModal({
                             />
                             {errors.endTime && <span className="text-red-400 text-xs">{errors.endTime.message}</span>}
                         </div>
-                    </div>
-
-                    {/* Artist Field */}
-                    <div className="flex flex-col gap-2 w-full">
-                        <div className="flex items-center justify-between">
-                            <label className="font-semibold text-[14px] leading-[19px] text-white">
-                                Artist
-                            </label>
-                            <span className="text-xs text-[#9D8FD0] font-medium">
-                                {watchArtist.length}/{ARTIST_MAX_LENGTH}
-                            </span>
-                        </div>
-                        <input
-                            type="text"
-                            {...register("artist")}
-                            maxLength={ARTIST_MAX_LENGTH}
-                            placeholder="Select Artist"
-                            className="w-full h-12 px-4 rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-white/70 text-[14px] leading-[19px] focus:outline-none focus:border-[#B45FF2] transition-colors"
-                        />
-                        {errors.artist && (
-                            <span className="text-red-400 text-xs px-2">{errors.artist.message}</span>
-                        )}
                     </div>
 
                     {/* Description Field */}

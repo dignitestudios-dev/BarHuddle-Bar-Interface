@@ -118,7 +118,7 @@ export function StatsCard({
                 className
             )}
         >
-            {/* Top Row: Icon Container & Trend Badge */}
+            {/* Top Row: Icon Container */}
             <div className="flex items-center justify-between w-full relative z-10">
                 {/* Icon Container with Variant Styling */}
                 <div
@@ -144,30 +144,6 @@ export function StatsCard({
                         </svg>
                     )}
                 </div>
-
-                {/* Trend Badge */}
-                {trend && (
-                    <div
-                        className={cn(
-                            "flex items-center gap-[2px] px-[8px] py-[2px] rounded-full border text-[10px] font-bold leading-[15px] h-[20.6px]",
-                            isPositive
-                                ? "bg-[rgba(74,222,128,0.12)] border-[rgba(74,222,128,0.25)] text-[#4ADE80]"
-                                : "bg-[rgba(248,113,113,0.12)] border-[rgba(248,113,113,0.25)] text-[#F87171]"
-                        )}
-                    >
-                        {/* Trend Arrow Icon */}
-                        <svg
-                            className={cn("w-2.5 h-2.5", !isPositive && "rotate-180")}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={3}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                        <span>{trend}</span>
-                    </div>
-                )}
             </div>
 
             {/* Bottom Row: Value & Subtitle */}

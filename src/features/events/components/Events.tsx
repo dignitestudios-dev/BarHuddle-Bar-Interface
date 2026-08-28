@@ -310,7 +310,6 @@ export function Events() {
             description: rawEvent.description || "",
             startAt: rawEvent.startAt || rawEvent.date,
             endAt: rawEvent.endAt,
-            artist: rawEvent.artist || "",
             banner: rawEvent.banner || rawEvent.coverImage || rawEvent.imageUrl || event.imageUrl,
         };
         setEditingEvent(normalized);

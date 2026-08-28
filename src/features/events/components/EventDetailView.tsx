@@ -91,13 +91,10 @@ export function EventDetailSkeleton({ onBack, className = "" }: { onBack?: () =>
                         <Skeleton className="h-4 w-36 rounded-md" />
                     </div>
 
-                    {/* Inner Glass Container with 2x2 Grid Skeleton */}
+                    {/* Inner Glass Container with Information Skeleton */}
                     <div className="relative w-full p-6 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)] flex flex-col gap-6 overflow-hidden">
                         {/* Horizontal Divider Line */}
                         <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-[rgba(124,58,237,0.4)] to-transparent pointer-events-none" />
-
-                        {/* Vertical Divider Line */}
-                        <div className="absolute inset-y-6 left-1/2 -translate-x-1/2 w-[1px] bg-gradient-to-b from-transparent via-[rgba(124,58,237,0.4)] to-transparent pointer-events-none" />
 
                         {/* Top Row: Date (Left) & Time (Right) */}
                         <div className="grid grid-cols-2 gap-4 relative z-10">
@@ -114,18 +111,12 @@ export function EventDetailSkeleton({ onBack, className = "" }: { onBack?: () =>
                             </div>
                         </div>
 
-                        {/* Bottom Row: Artist (Left) & Status (Right) */}
-                        <div className="grid grid-cols-2 gap-4 relative z-10">
-                            {/* Artist */}
+                        {/* Bottom Row: Status */}
+                        <div className="grid grid-cols-1 gap-4 relative z-10">
+                            {/* Status */}
                             <div className="flex flex-col gap-2">
                                 <Skeleton className="h-3.5 w-12 rounded" />
                                 <Skeleton className="h-4 w-20 rounded" />
-                            </div>
-
-                            {/* Status */}
-                            <div className="flex flex-col gap-2 items-end">
-                                <Skeleton className="h-3.5 w-12 rounded" />
-                                <Skeleton className="h-4 w-16 rounded" />
                             </div>
                         </div>
                     </div>
@@ -170,7 +161,6 @@ export function EventDetailView({
     const startTimeFormatted = event?.startAt && event?.endAt
         ? `${new Date(event.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
         : "N/A";
-    const artist = event?.artist || "N/A";
     const venueName = event?.venue?.name || "Venue";
     const venueAddress = event?.venue?.address || "";
     const city = venueAddress ? venueAddress.split(",").slice(-2, -1)[0]?.trim() || "Location" : "";
@@ -217,17 +207,6 @@ export function EventDetailView({
                         {title}
                     </h1>
                 </div>
-
-                {/* Top Right Options Menu Button (3 Dots) */}
-                {/* <button
-                    type="button"
-                    className="w-9 h-9 rounded-full bg-[rgba(124,58,237,0.7)] backdrop-blur-md border border-[rgba(124,58,237,0.4)] flex items-center justify-center text-white hover:bg-[#7C3AED] transition-colors shadow-md cursor-pointer shrink-0"
-                    aria-label="Options"
-                >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                    </svg>
-                </button> */}
             </div>
 
             {/* Venue Hero & Image Carousel Section */}
@@ -268,13 +247,10 @@ export function EventDetailView({
                         </span>
                     </div>
 
-                    {/* Inner Glass Container with 2x2 Grid */}
+                    {/* Inner Glass Container with Information */}
                     <div className="relative w-full p-6 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)] flex flex-col gap-6 overflow-hidden">
                         {/* Horizontal Divider Line */}
                         <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-[rgba(124,58,237,0.4)] to-transparent pointer-events-none" />
-
-                        {/* Vertical Divider Line */}
-                        <div className="absolute inset-y-6 left-1/2 -translate-x-1/2 w-[1px] bg-gradient-to-b from-transparent via-[rgba(124,58,237,0.4)] to-transparent pointer-events-none" />
 
                         {/* Top Row: Date (Left) & Time (Right) */}
                         <div className="grid grid-cols-2 gap-4 relative z-10">
@@ -299,20 +275,10 @@ export function EventDetailView({
                             </div>
                         </div>
 
-                        {/* Bottom Row: Artist (Left) & Status (Right) */}
-                        <div className="grid grid-cols-2 gap-4 relative z-10">
-                            {/* Artist */}
-                            <div className="flex flex-col gap-1">
-                                <span className="font-bold text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-[#FDF88F]">
-                                    Artist
-                                </span>
-                                <span className="font-normal text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-white">
-                                    {artist}
-                                </span>
-                            </div>
-
+                        {/* Bottom Row: Status */}
+                        <div className="grid grid-cols-1 gap-4 relative z-10">
                             {/* Status */}
-                            <div className="flex flex-col gap-1 items-end text-right">
+                            <div className="flex flex-col gap-1">
                                 <span className="font-bold text-[13px] leading-[18px] tracking-[-0.408px] capitalize text-[#FDF88F]">
                                     Status
                                 </span>

@@ -12,6 +12,14 @@ const firebaseConfig = {
   measurementId: "G-X1FJ83S64R",
 };
 
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
@@ -30,6 +38,8 @@ messaging.onBackgroundMessage((payload) => {
     icon: payload.notification?.icon || "/images/bar-huddle-logo.png",
     badge: "/images/bar-huddle-logo.png",
     data: payload.data || {},
+    vibrate: [200, 100, 200],
+    requireInteraction: true,
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
