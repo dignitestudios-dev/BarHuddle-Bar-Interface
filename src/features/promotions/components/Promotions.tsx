@@ -60,14 +60,64 @@ export function Promotions() {
             const id = String(promo._id || promo.id);
             map.set(id, promo);
 
-            // Date formatting
+            // Date formatting & extraction
+            const startRaw = promo.startAt || promo.startDate || promo.validFrom;
+            const endRaw = promo.endAt || promo.endDate || promo.validTo;
+
             let dateRangeStr = "Active";
-            if (promo.startAt && promo.endAt) {
-                dateRangeStr = `${new Date(promo.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(promo.endAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-            } else if (promo.startDate && promo.endDate) {
-                dateRangeStr = `${new Date(promo.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(promo.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            if (startRaw && endRaw) {
+                dateRangeStr = `${new Date(startRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(endRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            } else if (startRaw) {
+                dateRangeStr = new Date(startRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             } else if (promo.dateRange) {
                 dateRangeStr = promo.dateRange;
+            }
+
+            // Calculate active days from actual date range or explicit days
+            const standardOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+            let computedActiveDays: string[] = standardOrder;
+
+            const explicitDays = promo.activeDays || promo.days || promo.daysOfWeek || promo.validDays;
+            if (Array.isArray(explicitDays) && explicitDays.length > 0) {
+                const dayMap: Record<string, string> = {
+                    sun: "Sun", sunday: "Sun", "0": "Sun",
+                    mon: "Mon", monday: "Mon", "1": "Mon",
+                    tue: "Tue", tuesday: "Tue", "2": "Tue",
+                    wed: "Wed", wednesday: "Wed", "3": "Wed",
+                    thu: "Thu", thursday: "Thu", "4": "Thu",
+                    fri: "Fri", friday: "Fri", "5": "Fri",
+                    sat: "Sat", saturday: "Sat", "6": "Sat",
+                };
+                const parsed = explicitDays
+                    .map((d: any) => dayMap[String(d).toLowerCase()] || String(d))
+                    .filter(Boolean);
+                if (parsed.length > 0) {
+                    computedActiveDays = standardOrder.filter((day) => parsed.includes(day));
+                }
+            } else if (startRaw) {
+                const start = new Date(startRaw);
+                const end = endRaw ? new Date(endRaw) : new Date(startRaw);
+
+                if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                    const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                    const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+                    const diffTime = endDate.getTime() - startDate.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays >= 6) {
+                        computedActiveDays = standardOrder;
+                    } else {
+                        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                        const activeSet = new Set<string>();
+                        const curr = new Date(startDate);
+                        while (curr <= endDate) {
+                            activeSet.add(dayNames[curr.getDay()]);
+                            curr.setDate(curr.getDate() + 1);
+                        }
+                        computedActiveDays = standardOrder.filter((day) => activeSet.has(day));
+                    }
+                }
             }
 
             // Tag & Category
@@ -100,7 +150,7 @@ export function Promotions() {
                 status: promo.status || "active",
                 category: categoryName,
                 dateRange: dateRangeStr,
-                activeDays: promo.activeDays || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                activeDays: computedActiveDays,
                 views: viewsCount,
                 redemptions: redeemedCount,
                 rate: redemptionRateStr,
@@ -111,6 +161,7 @@ export function Promotions() {
 
         return { promotionsList: list, rawPromosMap: map };
     }, [apiPromotionsData]);
+
 
     const handleCreatePromotion = async (newPromoData: any) => {
         try {

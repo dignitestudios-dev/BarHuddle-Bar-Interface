@@ -1,11 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
+import { format } from "date-fns";
 import { StatsCard, StatsColorVariant } from "@/components/ui/stats-card";
-import { TrafficByTimeChart } from "@/components/charts/TrafficByTimeChart";
+import { TrafficByTimeChart, OrganicBoostedGroup } from "@/components/charts/TrafficByTimeChart";
 import { BoostHistoryTableCard } from "./BoostHistoryTableCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetEventsAnalyticsQuery } from "../api/analytics.queries";
+import {
+    useGetBoostedOverviewQuery,
+    useGetOrganicVsBoostedQuery,
+} from "../api/analytics.queries";
+import { AnalyticsFilterParams } from "../api/analytics.service";
 
 export interface BoostCardItem {
     id: string;
@@ -16,16 +21,41 @@ export interface BoostCardItem {
     variant: StatsColorVariant;
 }
 
-export function BoostTab() {
-    const { data: eventsResponse, isLoading } = useGetEventsAnalyticsQuery();
-    const data = eventsResponse?.data;
+export interface BoostTabProps {
+    filterParams?: AnalyticsFilterParams;
+}
 
-    const cards: BoostCardItem[] = React.useMemo(() => {
+export function BoostTab({ filterParams }: BoostTabProps) {
+    const { data: boostedOverviewResponse, isLoading: isLoadingOverview } =
+        useGetBoostedOverviewQuery(filterParams);
+    const { data: organicVsBoostedResponse, isLoading: isLoadingChart } =
+        useGetOrganicVsBoostedQuery(filterParams);
+
+    const isLoading = isLoadingOverview || isLoadingChart;
+
+    const overview = boostedOverviewResponse?.data;
+
+    const cards: BoostCardItem[] = useMemo(() => {
+        const reachVal =
+            overview?.totalReach !== undefined && overview?.totalReach !== null
+                ? overview.totalReach.toLocaleString()
+                : "0";
+
+        const viewsVal =
+            overview?.totalViews !== undefined && overview?.totalViews !== null
+                ? overview.totalViews.toLocaleString()
+                : "0";
+
+        const engagementVal =
+            overview?.avgEngagement !== undefined && overview?.avgEngagement !== null
+                ? `${overview.avgEngagement}%`
+                : "0%";
+
         return [
             {
                 id: "total-reach",
                 title: "Total Reach",
-                value: data?.totalReach ? (data.totalReach >= 1000 ? `${(data.totalReach / 1000).toFixed(1)}k` : data.totalReach.toString()) : "0",
+                value: reachVal,
                 trend: "+0%",
                 isPositive: true,
                 variant: "cyan",
@@ -33,7 +63,7 @@ export function BoostTab() {
             {
                 id: "total-views",
                 title: "Total Views",
-                value: data?.eventAttendance ? (data.eventAttendance >= 1000 ? `${(data.eventAttendance / 1000).toFixed(1)}k` : data.eventAttendance.toString()) : "0",
+                value: viewsVal,
                 trend: "+0%",
                 isPositive: true,
                 variant: "purple",
@@ -41,13 +71,51 @@ export function BoostTab() {
             {
                 id: "avg-engagement",
                 title: "Avg Engagement",
-                value: data?.avgBoostedReach ? `${data.avgBoostedReach}%` : "0%",
+                value: engagementVal,
                 trend: "+0%",
                 isPositive: true,
                 variant: "yellow",
             },
         ];
-    }, [data]);
+    }, [overview]);
+
+    // Map Organic vs Boosted Groups from GET /analytics/boosted/organic-vs-boosted
+    const organicBoostedGroups: OrganicBoostedGroup[] = useMemo(() => {
+        const raw = organicVsBoostedResponse?.data;
+        if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
+
+        const maxVal = Math.max(
+            ...raw.map((item) => Math.max(item.organic ?? 0, item.boosted ?? 0)),
+            1
+        );
+        const MAX_HEIGHT = 241;
+
+        const calcHeight = (val: number) => {
+            if (val === 0) return 4;
+            return Math.max(12, Math.round((val / maxVal) * MAX_HEIGHT));
+        };
+
+        return raw.map((item, idx) => {
+            let label = "Day";
+            try {
+                const d = new Date(item.date);
+                if (!isNaN(d.getTime())) {
+                    label = format(d, "MMM dd");
+                }
+            } catch {
+                label = item.date;
+            }
+
+            return {
+                id: `grp-${idx}`,
+                label,
+                organicValue: item.organic ?? 0,
+                organicHeightPx: calcHeight(item.organic ?? 0),
+                boostedValue: item.boosted ?? 0,
+                boostedHeightPx: calcHeight(item.boosted ?? 0),
+            };
+        });
+    }, [organicVsBoostedResponse]);
 
     if (isLoading) {
         return (
@@ -80,10 +148,11 @@ export function BoostTab() {
                 ))}
             </div>
 
-            {/* Main Section: Organic vs Boosted Bar Chart using TrafficByTimeChart */}
+            {/* Main Section: Organic vs Boosted Bar Chart */}
             <div className="max-w-[1200px] w-full">
                 <TrafficByTimeChart
                     variant="organicVsBoosted"
+                    groups={organicBoostedGroups}
                     className="max-w-full"
                 />
             </div>

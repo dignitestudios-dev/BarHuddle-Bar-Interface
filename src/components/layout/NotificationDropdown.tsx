@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useGetNotificationsQuery } from "@/features/notifications/api/notifications.queries";
+import { useMarkAllNotificationsAsReadMutation } from "@/features/notifications/api/notifications.mutations";
 
 export interface NotificationItem {
     id: string | number;
@@ -15,6 +16,7 @@ export function NotificationDropdown() {
     const [showNotifications, setShowNotifications] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
     const { data: apiNotificationsData, isLoading } = useGetNotificationsQuery();
+    const markAllAsReadMutation = useMarkAllNotificationsAsReadMutation();
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -58,12 +60,22 @@ export function NotificationDropdown() {
         return notifications.filter((n) => !n.isRead).length;
     }, [notifications]);
 
+    const handleToggleDropdown = () => {
+        const willOpen = !showNotifications;
+        setShowNotifications(willOpen);
+
+        // When opening the notification dropdown, call read-all API
+        if (willOpen && unreadCount > 0) {
+            markAllAsReadMutation.mutate();
+        }
+    };
+
     return (
         <div ref={notifRef} className="relative font-['Manrope',sans-serif]">
             {/* Bell Button */}
             <button
                 type="button"
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={handleToggleDropdown}
                 className="relative w-[38px] h-[38px] rounded-full bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex items-center justify-center text-[#DAB2FF] hover:bg-[rgba(124,58,237,0.2)] transition-all focus:outline-none cursor-pointer"
                 aria-label="Notifications"
             >
@@ -77,9 +89,9 @@ export function NotificationDropdown() {
                 </svg>
 
                 {/* Yellow Badge Counter */}
-                {notifications.length > 0 && (
+                {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-[#E8FF57] rounded-full flex items-center justify-center text-[9px] font-bold text-[#05033A]">
-                        {notifications.length > 99 ? "99+" : notifications.length}
+                        {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                 )}
             </button>
@@ -88,10 +100,23 @@ export function NotificationDropdown() {
             {showNotifications && (
                 <div className="absolute right-0 mt-3 w-[340px] sm:w-[400px] bg-[#05033A] border border-[rgba(180,95,242,0.3)] shadow-2xl rounded-xl p-4 sm:p-5 z-50 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between mb-4 border-b border-[#23165A] pb-3">
-                        <h3 className="font-semibold text-base text-white">Notifications</h3>
-                        <span className="text-xs text-[#B45FF2] bg-[#B45FF2]/10 px-2.5 py-0.5 rounded-full font-medium">
-                            {unreadCount > 0 ? `${unreadCount} Unread` : `${notifications.length} Total`}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-base text-white">Notifications</h3>
+                            <span className="text-xs text-[#B45FF2] bg-[#B45FF2]/10 px-2.5 py-0.5 rounded-full font-medium">
+                                {unreadCount > 0 ? `${unreadCount} Unread` : `${notifications.length} Total`}
+                            </span>
+                        </div>
+
+                        {unreadCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => markAllAsReadMutation.mutate()}
+                                disabled={markAllAsReadMutation.isPending}
+                                className="text-[11px] text-[#A78BFA] hover:text-[#C4B5FD] font-semibold cursor-pointer transition-colors"
+                            >
+                                Mark all as read
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto pr-1">
@@ -119,12 +144,19 @@ export function NotificationDropdown() {
                             notifications.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="flex flex-col gap-1 border-b border-[#23165A] pb-3 last:border-b-0 hover:bg-white/5 p-2 rounded-lg transition-colors cursor-pointer"
+                                    className={`flex flex-col gap-1 border-b border-[#23165A] pb-3 last:border-b-0 hover:bg-white/5 p-2 rounded-lg transition-colors cursor-pointer ${
+                                        !item.isRead ? "bg-purple-950/20" : ""
+                                    }`}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className="font-bold text-xs text-white">
-                                            {item.title}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            {!item.isRead && (
+                                                <span className="w-1.5 h-1.5 rounded-full bg-[#E8FF57]" />
+                                            )}
+                                            <span className="font-bold text-xs text-white">
+                                                {item.title}
+                                            </span>
+                                        </div>
                                         <span className="font-medium text-[11px] text-[#B45FF2]">
                                             {item.time}
                                         </span>

@@ -17,27 +17,59 @@ export function ChangePasswordTab() {
 
     const updatePasswordMutation = useUpdatePasswordMutation();
 
+    const validatePassword = (pwd: string, currPwd?: string): string | null => {
+        if (!currPwd) {
+            return "Please enter your current password.";
+        }
+        if (!pwd) {
+            return "Please enter a new password.";
+        }
+        if (currPwd === pwd) {
+            return "New password must be different from your current password.";
+        }
+        if (pwd.length < 8) {
+            return "New password must be at least 8 characters long.";
+        }
+        if (pwd.length > 50) {
+            return "New password cannot exceed 50 characters.";
+        }
+        if (!/[A-Z]/.test(pwd)) {
+            return "New password must contain at least 1 uppercase letter (A-Z).";
+        }
+        if (!/[a-z]/.test(pwd)) {
+            return "New password must contain at least 1 lowercase letter (a-z).";
+        }
+        if (!/[0-9]/.test(pwd)) {
+            return "New password must contain at least 1 number (0-9).";
+        }
+        if (!/[^a-zA-Z0-9]/.test(pwd)) {
+            return "New password must contain at least 1 special character (!@#$%^&* etc.).";
+        }
+        return null;
+    };
+
+    // Live validation flags
+    const hasMinLength = newPassword.length >= 8;
+    const hasUppercase = /[A-Z]/.test(newPassword);
+    const hasLowercase = /[a-z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    const hasSpecial = /[^a-zA-Z0-9]/.test(newPassword);
+    const isDifferent = Boolean(newPassword && currentPassword && newPassword !== currentPassword);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSuccessMessage("");
         setErrorMessage("");
 
+        const passwordError = validatePassword(newPassword, currentPassword);
+        if (passwordError) {
+            setErrorMessage(passwordError);
+            toast.error(passwordError);
+            return;
+        }
+
         if (newPassword !== confirmPassword) {
             const msg = "New passwords do not match!";
-            setErrorMessage(msg);
-            toast.error(msg);
-            return;
-        }
-
-        if (currentPassword === newPassword) {
-            const msg = "New password must be different from your current password.";
-            setErrorMessage(msg);
-            toast.error(msg);
-            return;
-        }
-
-        if (newPassword.length < 6) {
-            const msg = "New password must be at least 6 characters long.";
             setErrorMessage(msg);
             toast.error(msg);
             return;
@@ -96,7 +128,7 @@ export function ChangePasswordTab() {
                     className="flex flex-col items-start w-full max-w-[448px] gap-[20px]"
                 >
                     {successMessage && (
-                        <div className="w-full max-w-[400px] p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2">
+                        <div className="w-full max-w-[400px] p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
                             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                             </svg>
@@ -105,7 +137,7 @@ export function ChangePasswordTab() {
                     )}
 
                     {errorMessage && (
-                        <div className="w-full max-w-[400px] p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-2">
+                        <div className="w-full max-w-[400px] p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
                             <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -243,7 +275,43 @@ export function ChangePasswordTab() {
                                 )}
                             </button>
                         </div>
+
+                        {/* Real-time Password Strength Requirements */}
+                        {newPassword && (
+                            <div className="w-full mt-2.5 p-3 rounded-xl bg-purple-950/40 border border-purple-800/30 flex flex-col gap-1.5 text-[11px] animate-in fade-in duration-200">
+                                <div className="font-semibold text-purple-200 text-[11.5px] mb-0.5">Password requirements:</div>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                                    <div className={`flex items-center gap-1.5 ${hasMinLength ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                        <span>{hasMinLength ? "✓" : "○"}</span>
+                                        <span>8+ characters</span>
+                                    </div>
+                                    <div className={`flex items-center gap-1.5 ${hasUppercase ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                        <span>{hasUppercase ? "✓" : "○"}</span>
+                                        <span>1 uppercase (A-Z)</span>
+                                    </div>
+                                    <div className={`flex items-center gap-1.5 ${hasLowercase ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                        <span>{hasLowercase ? "✓" : "○"}</span>
+                                        <span>1 lowercase (a-z)</span>
+                                    </div>
+                                    <div className={`flex items-center gap-1.5 ${hasNumber ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                        <span>{hasNumber ? "✓" : "○"}</span>
+                                        <span>1 number (0-9)</span>
+                                    </div>
+                                    <div className={`flex items-center gap-1.5 ${hasSpecial ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                        <span>{hasSpecial ? "✓" : "○"}</span>
+                                        <span>1 special char (!@#$)</span>
+                                    </div>
+                                    {currentPassword && (
+                                        <div className={`flex items-center gap-1.5 ${isDifferent ? "text-emerald-400 font-medium" : "text-rose-400 font-medium"}`}>
+                                            <span>{isDifferent ? "✓" : "○"}</span>
+                                            <span>Unique from current</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
+
 
                     {/* 3. CONFIRM NEW PASSWORD FIELD */}
                     <div className="flex flex-col items-start w-full max-w-[400px]">

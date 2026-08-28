@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import {
     ResponsiveContainer,
     AreaChart,
@@ -27,34 +27,22 @@ export interface VisitorTrendsChartProps {
     className?: string;
     showRetention?: boolean;
     variant?: "default" | "retention";
-    timeframeOptions?: string[];
-    defaultTimeframe?: string;
 }
 
-const DEFAULT_MONTHLY_DATA: TrendDataPoint[] = [
-    { name: "Jan", visitors: 480, checkIns: 200, retention: 410, new: 200, repeat: 320, lost: 450 },
-    { name: "Feb", visitors: 520, checkIns: 240, retention: 450, new: 240, repeat: 360, lost: 490 },
-    { name: "Mar", visitors: 550, checkIns: 250, retention: 460, new: 250, repeat: 380, lost: 510 },
-    { name: "Apr", visitors: 540, checkIns: 260, retention: 450, new: 260, repeat: 370, lost: 500 },
-    { name: "May", visitors: 560, checkIns: 280, retention: 470, new: 280, repeat: 390, lost: 520 },
-    { name: "Jun", visitors: 620, checkIns: 320, retention: 500, new: 320, repeat: 430, lost: 560 },
-    { name: "Jul", visitors: 780, checkIns: 450, retention: 600, new: 450, repeat: 580, lost: 720 },
-    { name: "Aug", visitors: 1100, checkIns: 880, retention: 950, new: 680, repeat: 890, lost: 1080 },
-    { name: "Sep", visitors: 1250, checkIns: 1020, retention: 1120, new: 920, repeat: 1150, lost: 1320 },
-    { name: "Oct", visitors: 1320, checkIns: 1080, retention: 1180, new: 980, repeat: 1220, lost: 1390 },
-    { name: "Nov", visitors: 980, checkIns: 720, retention: 850, new: 650, repeat: 880, lost: 1020 },
-    { name: "Dec", visitors: 600, checkIns: 350, retention: 520, new: 300, repeat: 450, lost: 620 },
-];
-
-const CustomTooltip = ({ active, payload, isRetentionVariant }: any) => {
+const CustomTooltip = ({ active, payload, label, isRetentionVariant }: any) => {
     if (active && payload && payload.length) {
         if (isRetentionVariant) {
-            const newVal = payload.find((p: any) => p.dataKey === "new")?.value || 456;
-            const repeatVal = payload.find((p: any) => p.dataKey === "repeat")?.value || 540;
-            const lostVal = payload.find((p: any) => p.dataKey === "lost")?.value || 456;
+            const newVal = payload.find((p: any) => p.dataKey === "new")?.value ?? 0;
+            const repeatVal = payload.find((p: any) => p.dataKey === "repeat")?.value ?? 0;
+            const lostVal = payload.find((p: any) => p.dataKey === "lost")?.value ?? 0;
 
             return (
                 <div className="bg-[#0C0854]/95 backdrop-blur-md border border-[#7C3AED]/40 rounded-xl p-3 shadow-[0px_8px_32px_rgba(0,0,0,0.6)] flex flex-col gap-2 min-w-[140px] font-['Manrope',sans-serif] z-50">
+                    {label && (
+                        <span className="text-[10px] font-bold text-[#8B7EC8] uppercase tracking-wider">
+                            {label}
+                        </span>
+                    )}
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-[#E8FF57] shrink-0" />
@@ -80,22 +68,27 @@ const CustomTooltip = ({ active, payload, isRetentionVariant }: any) => {
             );
         }
 
-        const visitorsVal = payload.find((p: any) => p.dataKey === "visitors")?.value || 456;
-        const checkInsVal = payload.find((p: any) => p.dataKey === "checkIns")?.value || 540;
-        const retentionVal = payload.find((p: any) => p.dataKey === "retention")?.value || 456;
+        const visitorsVal = payload.find((p: any) => p.dataKey === "visitors")?.value ?? 0;
+        const checkInsVal = payload.find((p: any) => p.dataKey === "checkIns")?.value ?? 0;
+        const retentionVal = payload.find((p: any) => p.dataKey === "retention")?.value ?? 0;
 
         return (
             <div className="bg-[#0C0854]/95 backdrop-blur-md border border-[#7C3AED]/40 rounded-xl p-3 shadow-[0px_8px_32px_rgba(0,0,0,0.6)] flex flex-col gap-2 min-w-[140px] font-['Manrope',sans-serif] z-50">
+                {label && (
+                    <span className="text-[10px] font-bold text-[#8B7EC8] uppercase tracking-wider">
+                        {label}
+                    </span>
+                )}
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#E8FF57] shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-[#9448F2] shrink-0" />
                         <span className="text-xs font-medium text-[#C4B5FD]">Visitors</span>
                     </div>
                     <span className="text-xs font-extrabold text-white">{visitorsVal}</span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#9448F2] shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-[#E8FF57] shrink-0" />
                         <span className="text-xs font-medium text-[#C4B5FD]">Check-Ins</span>
                     </div>
                     <span className="text-xs font-extrabold text-white">{checkInsVal}</span>
@@ -120,39 +113,95 @@ export function VisitorTrendsChart({
     className = "",
     showRetention = true,
     variant = "default",
-    timeframeOptions = ["Monthly", "Weekly", "Yearly"],
-    defaultTimeframe = "Monthly",
 }: VisitorTrendsChartProps) {
-    const [selectedTimeframe, setSelectedTimeframe] = useState(defaultTimeframe);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-
     const { data: apiVisitorData } = useGetVisitorAnalyticsQuery();
 
-    const chartData = React.useMemo(() => {
-        if (data) return data;
+    const chartData = useMemo(() => {
+        if (data && Array.isArray(data) && data.length > 0) return data;
         const apiTrends = apiVisitorData?.data?.visitorTrends;
         if (apiTrends && Array.isArray(apiTrends) && apiTrends.length > 0) {
             return apiTrends.map((t: any) => ({
                 name: t.month || t.date || "Day",
-                visitors: t.visitors || t.count || 0,
-                checkIns: t.checkIns || t.count || 0,
-                retention: t.retention || 0,
-                new: t.new || 0,
-                repeat: t.repeat || t.retention || 0,
-                lost: t.lost || 0,
+                visitors: t.visitors ?? t.count ?? 0,
+                checkIns: t.checkIns ?? t.count ?? 0,
+                retention: t.retention ?? 0,
+                new: t.new ?? 0,
+                repeat: t.repeat ?? t.retention ?? 0,
+                lost: t.lost ?? 0,
             }));
         }
         return [
-            { name: "Jan", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
-            { name: "Feb", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
-            { name: "Mar", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
-            { name: "Apr", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
-            { name: "May", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
-            { name: "Jun", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Day 1", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Day 2", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Day 3", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Day 4", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
+            { name: "Day 5", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
         ];
     }, [data, apiVisitorData]);
 
     const isRetentionVariant = variant === "retention";
+
+    // Dynamically calculate Y-Axis domain and ticks based on actual data
+    const { yDomain, yTicks } = useMemo(() => {
+        if (!chartData || chartData.length === 0) {
+            return { yDomain: [0, 10], yTicks: [0, 2, 4, 6, 8, 10] };
+        }
+
+        let maxVal = 0;
+        chartData.forEach((d) => {
+            if (isRetentionVariant) {
+                maxVal = Math.max(maxVal, d.new || 0, d.repeat || 0, d.lost || 0);
+            } else {
+                maxVal = Math.max(
+                    maxVal,
+                    d.visitors || 0,
+                    d.checkIns || 0,
+                    showRetention ? d.retention || 0 : 0
+                );
+            }
+        });
+
+        if (maxVal <= 0) {
+            return { yDomain: [0, 10], yTicks: [0, 2, 4, 6, 8, 10] };
+        }
+        if (maxVal <= 4) {
+            return { yDomain: [0, 4], yTicks: [0, 1, 2, 3, 4] };
+        }
+        if (maxVal <= 10) {
+            const ceil = Math.ceil(maxVal / 2) * 2;
+            const step = ceil / 4;
+            return { yDomain: [0, ceil], yTicks: [0, step, step * 2, step * 3, ceil] };
+        }
+        if (maxVal <= 25) {
+            const ceil = Math.ceil(maxVal / 5) * 5;
+            const step = ceil / 5;
+            return { yDomain: [0, ceil], yTicks: [0, step, step * 2, step * 3, step * 4, ceil] };
+        }
+        if (maxVal <= 100) {
+            const ceil = Math.ceil(maxVal / 10) * 10;
+            const step = ceil / 4;
+            return { yDomain: [0, ceil], yTicks: [0, step, step * 2, step * 3, ceil] };
+        }
+        if (maxVal <= 500) {
+            const ceil = Math.ceil(maxVal / 50) * 50;
+            const step = ceil / 4;
+            return { yDomain: [0, ceil], yTicks: [0, step, step * 2, step * 3, ceil] };
+        }
+
+        const power = Math.pow(10, Math.floor(Math.log10(maxVal)));
+        const magnitude = maxVal / power;
+        let factor = 1;
+        if (magnitude <= 2) factor = 2;
+        else if (magnitude <= 5) factor = 5;
+        else factor = 10;
+
+        const ceiling = factor * power;
+        const step = ceiling / 4;
+        return {
+            yDomain: [0, ceiling],
+            yTicks: [0, Math.round(step), Math.round(step * 2), Math.round(step * 3), ceiling],
+        };
+    }, [chartData, isRetentionVariant, showRetention]);
 
     return (
         <div
@@ -186,7 +235,7 @@ export function VisitorTrendsChart({
                     </p>
                 </div>
 
-                {/* Right Legend & Timeframe Filter Dropdown */}
+                {/* Right Legend */}
                 <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                     {isRetentionVariant ? (
                         <>
@@ -231,38 +280,6 @@ export function VisitorTrendsChart({
                             )}
                         </>
                     )}
-
-                    {/* Monthly Timeframe Filter Pill */}
-                    <div className="relative">
-                        <button
-                            type="button"
-                            onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[rgba(14,9,60,0.8)] border border-[rgba(124,58,237,0.3)] hover:border-[#7C3AED] text-white font-semibold text-[12px] leading-[16px] transition-all"
-                        >
-                            <span>{selectedTimeframe}</span>
-                            <svg className={`w-3 h-3 text-[#8B7EC8] transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-
-                        {dropdownOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-[120px] bg-[#0E093C] border border-[rgba(124,58,237,0.3)] rounded-xl shadow-xl overflow-hidden z-50">
-                                {timeframeOptions.map((option) => (
-                                    <button
-                                        key={option}
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedTimeframe(option);
-                                            setDropdownOpen(false);
-                                        }}
-                                        className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-[rgba(124,58,237,0.2)] transition-colors ${selectedTimeframe === option ? "text-[#E8FF57]" : "text-[#8B7EC8]"}`}
-                                    >
-                                        {option}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 
@@ -312,8 +329,9 @@ export function VisitorTrendsChart({
                             fontWeight={400}
                             tickLine={false}
                             axisLine={false}
-                            domain={[0, 1400]}
-                            ticks={[0, 350, 700, 1050, 1400]}
+                            domain={yDomain}
+                            ticks={yTicks}
+                            allowDecimals={false}
                         />
 
                         <Tooltip content={<CustomTooltip isRetentionVariant={isRetentionVariant} />} />
@@ -327,6 +345,8 @@ export function VisitorTrendsChart({
                                     stroke="#F87171"
                                     strokeWidth={2.5}
                                     fill="url(#lostGradient)"
+                                    dot={{ r: 3, fill: "#0E093C", stroke: "#F87171", strokeWidth: 1.5 }}
+                                    activeDot={{ r: 5, fill: "#F87171", stroke: "#0E093C", strokeWidth: 2 }}
                                 />
 
                                 {/* Repeat Curve (Purple) */}
@@ -336,6 +356,8 @@ export function VisitorTrendsChart({
                                     stroke="#9448F2"
                                     strokeWidth={3}
                                     fill="url(#visitorsGradient)"
+                                    dot={{ r: 3, fill: "#0E093C", stroke: "#9448F2", strokeWidth: 1.5 }}
+                                    activeDot={{ r: 5, fill: "#9448F2", stroke: "#0E093C", strokeWidth: 2 }}
                                 />
 
                                 {/* New Curve (Yellow Dashed) */}
@@ -346,6 +368,8 @@ export function VisitorTrendsChart({
                                     strokeWidth={2.5}
                                     strokeDasharray="4 4"
                                     fill="url(#checkInsGradient)"
+                                    dot={{ r: 3, fill: "#0E093C", stroke: "#E8FF57", strokeWidth: 1.5 }}
+                                    activeDot={{ r: 5, fill: "#E8FF57", stroke: "#0E093C", strokeWidth: 2 }}
                                 />
                             </>
                         ) : (
@@ -357,6 +381,8 @@ export function VisitorTrendsChart({
                                         stroke="#22D3EE"
                                         strokeWidth={2.5}
                                         fill="url(#retentionGradient)"
+                                        dot={{ r: 3, fill: "#0E093C", stroke: "#22D3EE", strokeWidth: 1.5 }}
+                                        activeDot={{ r: 5, fill: "#22D3EE", stroke: "#0E093C", strokeWidth: 2 }}
                                     />
                                 )}
                                 <Area
@@ -365,6 +391,8 @@ export function VisitorTrendsChart({
                                     stroke="#9448F2"
                                     strokeWidth={3}
                                     fill="url(#visitorsGradient)"
+                                    dot={{ r: 3, fill: "#0E093C", stroke: "#9448F2", strokeWidth: 1.5 }}
+                                    activeDot={{ r: 5, fill: "#9448F2", stroke: "#0E093C", strokeWidth: 2 }}
                                 />
                                 <Area
                                     type="monotone"
@@ -373,6 +401,8 @@ export function VisitorTrendsChart({
                                     strokeWidth={2.5}
                                     strokeDasharray="4 4"
                                     fill="url(#checkInsGradient)"
+                                    dot={{ r: 3, fill: "#0E093C", stroke: "#E8FF57", strokeWidth: 1.5 }}
+                                    activeDot={{ r: 5, fill: "#E8FF57", stroke: "#0E093C", strokeWidth: 2 }}
                                 />
                             </>
                         )}

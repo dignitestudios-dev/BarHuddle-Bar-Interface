@@ -45,6 +45,14 @@ export function CreateNewPassword() {
         return null;
     };
 
+    // Live validation flags
+    const hasMinLength = password.length >= 8;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+    const doPasswordsMatch = Boolean(confirmPassword && password === confirmPassword);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -96,7 +104,7 @@ export function CreateNewPassword() {
             </div>
 
             {/* Form Container */}
-            <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-6">
+            <form onSubmit={handleSubmit} className="w-full flex flex-col items-center gap-5">
                 {/* Password Field */}
                 <div className="w-full max-w-[388px]">
                     <InputField
@@ -125,6 +133,35 @@ export function CreateNewPassword() {
                     />
                 </div>
 
+                {/* Password requirements checklist */}
+                {password && (
+                    <div className="w-full max-w-[388px] p-3 rounded-xl bg-purple-950/40 border border-purple-800/30 flex flex-col gap-1.5 text-[11px] -mt-2 animate-in fade-in duration-200">
+                        <div className="font-semibold text-purple-200 text-[11.5px] mb-0.5">Password requirements:</div>
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                            <div className={`flex items-center gap-1.5 ${hasMinLength ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                <span>{hasMinLength ? "✓" : "○"}</span>
+                                <span>8+ characters</span>
+                            </div>
+                            <div className={`flex items-center gap-1.5 ${hasUppercase ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                <span>{hasUppercase ? "✓" : "○"}</span>
+                                <span>1 uppercase (A-Z)</span>
+                            </div>
+                            <div className={`flex items-center gap-1.5 ${hasLowercase ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                <span>{hasLowercase ? "✓" : "○"}</span>
+                                <span>1 lowercase (a-z)</span>
+                            </div>
+                            <div className={`flex items-center gap-1.5 ${hasNumber ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                <span>{hasNumber ? "✓" : "○"}</span>
+                                <span>1 number (0-9)</span>
+                            </div>
+                            <div className={`flex items-center gap-1.5 ${hasSpecial ? "text-emerald-400 font-medium" : "text-white/50"}`}>
+                                <span>{hasSpecial ? "✓" : "○"}</span>
+                                <span>1 special char (!@#$)</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Confirm Password Field */}
                 <div className="w-full max-w-[388px]">
                     <InputField
@@ -151,12 +188,11 @@ export function CreateNewPassword() {
                             </button>
                         }
                     />
+                    {confirmPassword && !doPasswordsMatch && (
+                        <p className="text-rose-400 text-[11px] mt-1.5">Passwords do not match</p>
+                    )}
                 </div>
 
-                {/* Password requirements hint */}
-                <div className="w-full max-w-[388px] text-[12px] text-white/60 -mt-2">
-                    Must be at least 8 characters with uppercase, lowercase, number, and special character.
-                </div>
 
                 {/* Update Password CTA Button */}
                 <div className="w-full max-w-[388px] mt-2">

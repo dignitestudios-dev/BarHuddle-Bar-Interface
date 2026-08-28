@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { EventsPageHeader } from "./EventsPageHeader";
 import { EventCard, EventCardData } from "./EventCard";
 import { CreateEventModal } from "./CreateEventModal";
@@ -17,7 +17,19 @@ const DEFAULT_EVENT_IMAGE = "https://images.unsplash.com/photo-1516450360452-931
 
 export function Events() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<"events" | "boosted">("events");
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const tabParam = searchParams?.get("tab")?.toLowerCase();
+    const activeTab: "events" | "boosted" = tabParam === "boosted" || tabParam === "boost" ? "boosted" : "events";
+
+    const handleTabChange = (newTab: "events" | "boosted") => {
+        const params = new URLSearchParams(searchParams?.toString() || "");
+        params.set("tab", newTab);
+        const queryStr = params.toString();
+        router.push(`${pathname}?${queryStr}`);
+    };
+
+
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<any | null>(null);
     const [deletingEvent, setDeletingEvent] = useState<{ id: string; title: string } | null>(null);
@@ -43,24 +55,22 @@ export function Events() {
     const updateEventMutation = useUpdateEventMutation();
     const deleteEventMutation = useDeleteEventMutation();
 
-    // Map API events from /venue-owner/events
+    // Map regular events from API
     const { regularEvents, rawEventsMap } = useMemo(() => {
-        const rawEvents = Array.isArray(apiEventsData?.data)
-            ? apiEventsData.data
-            : Array.isArray(apiEventsData?.data?.events)
-                ? apiEventsData.data.events
-                : Array.isArray(apiEventsData?.events)
-                    ? apiEventsData.events
-                    : Array.isArray(apiEventsData)
-                        ? apiEventsData
-                        : [];
-
-        if (!rawEvents || rawEvents.length === 0) return { regularEvents: [], rawEventsMap: new Map() };
+        const rawEvents = Array.isArray(apiEventsData?.data) 
+            ? apiEventsData.data 
+            : Array.isArray(apiEventsData?.events) 
+                ? apiEventsData.events 
+                : Array.isArray(apiEventsData) 
+                    ? apiEventsData 
+                    : [];
 
         const map = new Map<string, any>();
         const mappedList: EventCardData[] = rawEvents.map((evt: any) => {
             const id = String(evt._id || evt.id);
             map.set(id, evt);
+            if (evt._id) map.set(String(evt._id), evt);
+            if (evt.id) map.set(String(evt.id), evt);
 
             const ratioVal = String(evt.maleToFemaleRatio || evt.gender?.ratio || evt.metrics?.ratio || evt.ratio || "0:0");
             const rateVal = String(
@@ -89,8 +99,36 @@ export function Events() {
             };
         });
 
+        // Also index boosted events from apiBoostedData
+        const rawBoosts = Array.isArray(apiBoostedData?.data)
+            ? apiBoostedData.data
+            : Array.isArray(apiBoostedData?.data?.boosts)
+                ? apiBoostedData.data.boosts
+                : Array.isArray(apiBoostedData?.boosts)
+                    ? apiBoostedData.boosts
+                    : Array.isArray(apiBoostedData)
+                        ? apiBoostedData
+                        : [];
+
+        rawBoosts.forEach((item: any) => {
+            const evt = item.event && typeof item.event === "object"
+                ? item.event
+                : item.eventId && typeof item.eventId === "object"
+                ? item.eventId
+                : item;
+
+            const targetId = String(evt._id || evt.id || item.eventId || item._id || item.id);
+            if (!map.has(targetId)) {
+                map.set(targetId, evt);
+            }
+            if (evt._id) map.set(String(evt._id), evt);
+            if (evt.id) map.set(String(evt.id), evt);
+            if (item._id) map.set(String(item._id), evt);
+            if (item.id) map.set(String(item.id), evt);
+        });
+
         return { regularEvents: mappedList, rawEventsMap: map };
-    }, [apiEventsData]);
+    }, [apiEventsData, apiBoostedData]);
 
     // Map API boosted events from /venue-owner/boosts
     const boostedEventsFromApi: EventCardData[] = useMemo(() => {
@@ -108,9 +146,16 @@ export function Events() {
 
         return rawBoosts
             .map((item: any) => {
-                const evt = item.event || item.eventId || item;
+                const evt = item.event && typeof item.event === "object"
+                    ? item.event
+                    : item.eventId && typeof item.eventId === "object"
+                    ? item.eventId
+                    : item;
+
                 const isItemBoosted = item.isBoosted === true || evt.isBoosted === true || item.status === "active" || (evt.activeBoosts && evt.activeBoosts > 0);
                 if (!isItemBoosted && item.status !== undefined && item.status !== "active") return null;
+
+                const eventRealId = String(evt._id || evt.id || (typeof item.eventId === "string" ? item.eventId : "") || item._id || item.id);
 
                 const ratioVal = String(evt.maleToFemaleRatio || evt.gender?.ratio || item.ratio || evt.metrics?.ratio || evt.ratio || "0:0");
                 const rateVal = String(
@@ -124,7 +169,7 @@ export function Events() {
                 const viewsVal = String(evt.views ?? evt.viewCount ?? item.views ?? evt.metrics?.views ?? "0");
 
                 return {
-                    id: String(evt._id || evt.id || item._id || item.id),
+                    id: eventRealId,
                     title: evt.name || evt.title || item.title || "Boosted Event",
                     venueName: evt.venue?.name || evt.venueName || "Venue",
                     dateTime: evt.startAt 
@@ -254,13 +299,27 @@ export function Events() {
         }
     };
 
-    const handleEditClick = (event: EventCardData) => {
-        const raw = rawEventsMap.get(String(event.id)) || event;
-        setEditingEvent(raw);
+    const handleEditClick = (event: EventCardData, raw?: any) => {
+        const rawEvent = raw || rawEventsMap.get(String(event.id)) || event;
+        const normalized = {
+            ...rawEvent,
+            _id: rawEvent._id || rawEvent.id || String(event.id),
+            id: rawEvent.id || rawEvent._id || String(event.id),
+            title: rawEvent.title || rawEvent.name || event.title,
+            name: rawEvent.name || rawEvent.title || event.title,
+            description: rawEvent.description || "",
+            startAt: rawEvent.startAt || rawEvent.date,
+            endAt: rawEvent.endAt,
+            artist: rawEvent.artist || "",
+            banner: rawEvent.banner || rawEvent.coverImage || rawEvent.imageUrl || event.imageUrl,
+        };
+        setEditingEvent(normalized);
     };
 
-    const handleDeleteClick = (event: EventCardData) => {
-        setDeletingEvent({ id: String(event.id), title: event.title });
+    const handleDeleteClick = (event: EventCardData, raw?: any) => {
+        const eventId = String(raw?._id || raw?.id || event.id);
+        const eventTitle = event.title || raw?.title || raw?.name || "Event";
+        setDeletingEvent({ id: eventId, title: eventTitle });
     };
 
     return (
@@ -268,7 +327,7 @@ export function Events() {
             {/* Top Section: Header with Events Title, + Create button, and Tab Selector */}
             <EventsPageHeader
                 activeTab={activeTab}
-                onTabChange={(tab) => setActiveTab(tab)}
+                onTabChange={handleTabChange}
                 onCreateEvent={() => setIsCreateModalOpen(true)}
             />
 

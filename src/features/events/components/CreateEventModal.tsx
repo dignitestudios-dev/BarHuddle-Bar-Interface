@@ -9,9 +9,16 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
+import { toast } from "sonner";
 
+const MAX_IMAGES_COUNT = 5;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ACCEPTED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+
+const TITLE_MAX_LENGTH = 100;
+const ARTIST_MAX_LENGTH = 100;
+const DESCRIPTION_MAX_LENGTH = 500;
 
 const getTodayStart = () => {
     const today = new Date();
@@ -20,7 +27,10 @@ const getTodayStart = () => {
 };
 
 const createEventSchema = z.object({
-    title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
+    title: z
+        .string()
+        .min(3, "Title must be at least 3 characters")
+        .max(TITLE_MAX_LENGTH, `Title cannot exceed ${TITLE_MAX_LENGTH} characters`),
     date: z.date({
         message: "Date is required",
     }).refine((date) => {
@@ -30,9 +40,28 @@ const createEventSchema = z.object({
     }),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
-    artist: z.string().optional(),
-    description: z.string().min(10, "Description must be at least 10 characters").max(1000, "Description is too long"),
-    images: z.array(z.any()),
+    artist: z
+        .string()
+        .max(ARTIST_MAX_LENGTH, `Artist name cannot exceed ${ARTIST_MAX_LENGTH} characters`)
+        .optional(),
+    description: z
+        .string()
+        .min(10, "Description must be at least 10 characters")
+        .max(DESCRIPTION_MAX_LENGTH, `Description cannot exceed ${DESCRIPTION_MAX_LENGTH} characters`),
+    images: z
+        .array(z.any())
+        .max(MAX_IMAGES_COUNT, `You can upload a maximum of ${MAX_IMAGES_COUNT} images`)
+        .refine(
+            (files) =>
+                files.every((file) => {
+                    if (!(file instanceof File)) return true;
+                    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+                    return ACCEPTED_IMAGE_EXTENSIONS.includes(ext) || ACCEPTED_IMAGE_TYPES.includes(file.type);
+                }),
+            {
+                message: "Only PNG, JPG, and WEBP images are allowed",
+            }
+        ),
 }).refine(
     (data) => {
         if (data.startTime && data.endTime) {
@@ -93,6 +122,9 @@ export function CreateEventModal({
     });
 
     const watchImages = watch("images");
+    const watchTitle = watch("title") || "";
+    const watchArtist = watch("artist") || "";
+    const watchDescription = watch("description") || "";
 
     // Pre-populate fields if editing or reset if creating
     useEffect(() => {
@@ -171,8 +203,54 @@ export function CreateEventModal({
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
-            setValue("images", [...(watchImages || []), ...newFiles], { shouldValidate: true });
+            const rawFiles = Array.from(e.target.files);
+            const currentImages = watchImages || [];
+
+            // 1. Filter only accepted formats (PNG, JPG, WEBP)
+            const validFiles: File[] = [];
+            const invalidFormatNames: string[] = [];
+
+            rawFiles.forEach((file) => {
+                const ext = "." + file.name.split(".").pop()?.toLowerCase();
+                const isValidMime = ACCEPTED_IMAGE_TYPES.includes(file.type);
+                const isValidExt = ACCEPTED_IMAGE_EXTENSIONS.includes(ext);
+
+                if (!isValidMime && !isValidExt) {
+                    invalidFormatNames.push(file.name);
+                } else if (file.size > MAX_FILE_SIZE) {
+                    toast.error(`"${file.name}" exceeds the 20MB size limit.`);
+                } else {
+                    validFiles.push(file);
+                }
+            });
+
+            if (invalidFormatNames.length > 0) {
+                toast.error(
+                    `Only PNG, JPG, and WEBP images are allowed. Rejected: ${invalidFormatNames.join(", ")}`
+                );
+            }
+
+            if (validFiles.length === 0) {
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
+
+            // 2. Enforce maximum 5 images limit
+            const availableSlots = MAX_IMAGES_COUNT - currentImages.length;
+            if (availableSlots <= 0) {
+                toast.error(`Maximum of ${MAX_IMAGES_COUNT} images allowed.`);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
+
+            if (validFiles.length > availableSlots) {
+                toast.warning(`Only ${availableSlots} more image(s) could be added (max ${MAX_IMAGES_COUNT} allowed).`);
+            }
+
+            const filesToAdd = validFiles.slice(0, availableSlots);
+            setValue("images", [...currentImages, ...filesToAdd], { shouldValidate: true });
+
+            if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
 
@@ -198,6 +276,8 @@ export function CreateEventModal({
     };
 
     const isEditMode = Boolean(eventToEdit);
+    const currentImagesCount = (watchImages || []).length;
+    const isMaxImagesReached = currentImagesCount >= MAX_IMAGES_COUNT;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
@@ -226,34 +306,58 @@ export function CreateEventModal({
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 w-full">
                     {/* Upload Images Section */}
                     <div className="flex flex-col gap-3 w-full">
-                        <label className="font-semibold text-[14px] leading-[19px] text-white">
-                            Upload Images
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className="font-semibold text-[14px] leading-[19px] text-white">
+                                Upload Images
+                            </label>
+                            <span className={cn(
+                                "text-xs font-semibold px-2.5 py-0.5 rounded-full border",
+                                isMaxImagesReached
+                                    ? "bg-purple-500/20 text-[#E8FF57] border-[#E8FF57]/40"
+                                    : "bg-[rgba(124,58,237,0.15)] text-[#C4B5FD] border-[rgba(124,58,237,0.3)]"
+                            )}>
+                                {currentImagesCount}/{MAX_IMAGES_COUNT} images
+                            </span>
+                        </div>
 
                         <input
                             ref={fileInputRef}
                             type="file"
                             multiple
-                            accept="image/png, image/jpeg, image/webp"
+                            accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                             onChange={handleFileChange}
                             className="hidden"
+                            disabled={isMaxImagesReached}
                         />
 
                         {/* Dropzone Container */}
                         <div
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full h-[151px] rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:bg-[rgba(124,58,237,0.18)] transition-all group"
+                            onClick={() => {
+                                if (isMaxImagesReached) {
+                                    toast.error(`Maximum of ${MAX_IMAGES_COUNT} images reached. Remove an image to upload a new one.`);
+                                } else {
+                                    fileInputRef.current?.click();
+                                }
+                            }}
+                            className={cn(
+                                "w-full h-[145px] rounded-[24px] border flex flex-col items-center justify-center gap-1.5 transition-all p-4 text-center",
+                                isMaxImagesReached
+                                    ? "bg-[rgba(124,58,237,0.06)] border-[rgba(124,58,237,0.2)] opacity-70 cursor-not-allowed"
+                                    : "bg-[rgba(124,58,237,0.12)] border-[rgba(124,58,237,0.25)] hover:bg-[rgba(124,58,237,0.18)] cursor-pointer group"
+                            )}
                         >
                             <div className="w-[30px] h-[30px] flex items-center justify-center text-[#B45FF2]">
                                 <svg className="w-7.5 h-7.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                             </div>
-                            <span className="font-medium text-[15px] leading-[20px] text-white/80 group-hover:text-white transition-colors">
-                                Upload Image
+                            <span className="font-medium text-[15px] leading-[20px] text-white/90 group-hover:text-white transition-colors">
+                                {isMaxImagesReached ? "Maximum 5 images added" : "Upload Images"}
                             </span>
-                            <span className="font-normal text-[15px] leading-[20px] text-white/80">
-                                Upto 20 Mbs, JPG, PNG, WEBP
+                            <span className="font-normal text-[12px] sm:text-[13px] leading-[18px] text-white/60">
+                                {isMaxImagesReached
+                                    ? "Remove an image below to upload a different one"
+                                    : "Supports PNG, JPG, WEBP up to 20MB (Max 5 images)"}
                             </span>
                         </div>
                         {errors.images && <span className="text-red-400 text-xs mt-1">{errors.images.message as string}</span>}
@@ -291,12 +395,18 @@ export function CreateEventModal({
 
                     {/* Event Title */}
                     <div className="flex flex-col gap-2 w-full">
-                        <label className="font-semibold text-[14px] leading-[19px] text-white">
-                            Event Title
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className="font-semibold text-[14px] leading-[19px] text-white">
+                                Event Title
+                            </label>
+                            <span className="text-xs text-[#9D8FD0] font-medium">
+                                {watchTitle.length}/{TITLE_MAX_LENGTH}
+                            </span>
+                        </div>
                         <input
                             type="text"
                             {...register("title")}
+                            maxLength={TITLE_MAX_LENGTH}
                             placeholder="Ladies Night"
                             className="w-full h-12 px-4 rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-white/70 text-[14px] leading-[19px] focus:outline-none focus:border-[#B45FF2] transition-colors"
                         />
@@ -375,26 +485,39 @@ export function CreateEventModal({
 
                     {/* Artist Field */}
                     <div className="flex flex-col gap-2 w-full">
-                        <label className="font-semibold text-[14px] leading-[19px] text-white">
-                            Artist
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className="font-semibold text-[14px] leading-[19px] text-white">
+                                Artist
+                            </label>
+                            <span className="text-xs text-[#9D8FD0] font-medium">
+                                {watchArtist.length}/{ARTIST_MAX_LENGTH}
+                            </span>
+                        </div>
                         <input
                             type="text"
                             {...register("artist")}
+                            maxLength={ARTIST_MAX_LENGTH}
                             placeholder="Select Artist"
                             className="w-full h-12 px-4 rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-white/70 text-[14px] leading-[19px] focus:outline-none focus:border-[#B45FF2] transition-colors"
                         />
+                        {errors.artist && (
+                            <span className="text-red-400 text-xs px-2">{errors.artist.message}</span>
+                        )}
                     </div>
-
-
 
                     {/* Description Field */}
                     <div className="flex flex-col gap-2 w-full">
-                        <label className="font-semibold text-[14px] leading-[19px] text-white">
-                            Description
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className="font-semibold text-[14px] leading-[19px] text-white">
+                                Description
+                            </label>
+                            <span className="text-xs text-[#9D8FD0] font-medium">
+                                {watchDescription.length}/{DESCRIPTION_MAX_LENGTH}
+                            </span>
+                        </div>
                         <textarea
                             {...register("description")}
+                            maxLength={DESCRIPTION_MAX_LENGTH}
                             placeholder="Write here"
                             className="w-full h-[120px] p-4 rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-white/70 text-[14px] leading-[19px] focus:outline-none focus:border-[#B45FF2] transition-colors resize-none"
                         />

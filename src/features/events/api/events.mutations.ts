@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { eventService } from "./events.service";
 import { eventsKeys } from "./events.queries";
+import { eventBoostingKeys } from "@/features/event-boosting/api/boost.queries";
 
 export const useCreateEventMutation = () => {
   const queryClient = useQueryClient();
@@ -8,6 +9,7 @@ export const useCreateEventMutation = () => {
     mutationFn: (data: any) => eventService.createEvent(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventsKeys.all });
+      queryClient.invalidateQueries({ queryKey: eventBoostingKeys.all });
     },
   });
 };
@@ -18,6 +20,7 @@ export const useUpdateEventMutation = () => {
     mutationFn: ({ id, data }: { id: string; data?: any }) => eventService.updateEvent(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventsKeys.all });
+      queryClient.invalidateQueries({ queryKey: eventBoostingKeys.all });
     },
   });
 };
@@ -28,7 +31,9 @@ export const useDeleteEventMutation = () => {
     mutationFn: ({ id }: { id: string; data?: any }) => eventService.deleteEvent(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: eventsKeys.all });
+      queryClient.invalidateQueries({ queryKey: eventBoostingKeys.all });
     },
   });
 };
+
 

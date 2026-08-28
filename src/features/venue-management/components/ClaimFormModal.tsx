@@ -16,6 +16,11 @@ export interface ClaimFormModalProps {
     onSubmitted?: () => void;
 }
 
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg"];
+const ALLOWED_MIME_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+
 export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFormModalProps) {
     const { mutateAsync: claimVenue, isPending: isClaiming } = useClaimVenueMutation();
     const { mutateAsync: getMe, isPending: isFetchingMe } = useGetMeMutation();
@@ -26,6 +31,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
     const [email, setEmail] = useState(user?.email || "");
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [hasDefaultFile, setHasDefaultFile] = useState(false);
+    const [fileError, setFileError] = useState<string>("");
     const [isSubmitted, setIsSubmitted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -36,6 +42,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
             setIsSubmitted(false);
             setUploadedFile(null);
             setHasDefaultFile(false);
+            setFileError("");
         }
     }, [isOpen, user]);
 
@@ -43,7 +50,33 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setUploadedFile(e.target.files[0]);
+            const file = e.target.files[0];
+            
+            // 1. Check file size against allowed limit
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                const uploadedMb = (file.size / (1024 * 1024)).toFixed(1);
+                const errorMsg = `File size exceeds the allowed limit of ${MAX_FILE_SIZE_MB}MB (${uploadedMb}MB uploaded). Please upload a smaller document.`;
+                setFileError(errorMsg);
+                toast.error(errorMsg);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
+
+            // 2. Check file format / extension
+            const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+            const isValidExtension = ALLOWED_EXTENSIONS.includes(fileExtension);
+            const isValidMime = ALLOWED_MIME_TYPES.includes(file.type) || file.type === "";
+
+            if (!isValidExtension && !isValidMime) {
+                const errorMsg = "Invalid file type. Supported formats are PDF, PNG, JPG, and JPEG.";
+                setFileError(errorMsg);
+                toast.error(errorMsg);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
+
+            setFileError("");
+            setUploadedFile(file);
             setHasDefaultFile(true);
         }
     };
@@ -52,6 +85,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
         e.stopPropagation();
         setUploadedFile(null);
         setHasDefaultFile(false);
+        setFileError("");
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -64,6 +98,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
         }
 
         if (!uploadedFile) {
+            setFileError("Please upload an ownership proof document.");
             toast.error("Please upload an ownership proof document.");
             return;
         }
@@ -75,6 +110,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
         formData.append("ownershipProof", uploadedFile);
 
         try {
+            setFileError("");
             await claimVenue(formData);
             
             // Hit /users API to fetch updated user state and update Redux
@@ -93,7 +129,24 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
             onSubmitted?.();
         } catch (error: any) {
             console.error("Failed to claim venue:", error);
-            toast.error(error?.response?.data?.message || "Failed to submit ownership documents");
+            const backendMsg = error?.response?.data?.message || error?.message || "";
+            let displayMsg = backendMsg;
+
+            if (
+                error?.response?.status === 413 ||
+                backendMsg.toLowerCase().includes("large") ||
+                backendMsg.toLowerCase().includes("size") ||
+                backendMsg.toLowerCase().includes("limit") ||
+                backendMsg.toLowerCase().includes("entity") ||
+                backendMsg.toLowerCase().includes("payload")
+            ) {
+                displayMsg = `File size exceeds the allowed limit of ${MAX_FILE_SIZE_MB}MB. Please choose a smaller document.`;
+            } else if (!displayMsg) {
+                displayMsg = "Failed to submit ownership documents. Please verify your file size and format.";
+            }
+
+            setFileError(displayMsg);
+            toast.error(displayMsg);
         }
     };
 
@@ -173,7 +226,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
                             {/* Upload Dropzone Box */}
                             <div
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-full h-[140px] rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-[rgba(124,58,237,0.18)] transition-all group"
+                                className={`w-full h-[135px] rounded-[24px] bg-[rgba(124,58,237,0.12)] border ${fileError ? 'border-red-500/50 bg-red-500/5' : 'border-[rgba(124,58,237,0.25)]'} flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-[rgba(124,58,237,0.18)] transition-all group p-4 text-center`}
                             >
                                 <div className="w-[32px] h-[32px] flex items-center justify-center text-[#B45FF2]">
                                     <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -184,35 +237,51 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
                                     {hasDefaultFile ? "Change uploaded document" : "Choose document to upload"}
                                 </span>
                                 <span className="font-normal text-[12px] leading-[16px] text-white/50">
-                                    Supports PDF, JPG, PNG up to 20MB
+                                    Supports PDF, JPG, PNG up to {MAX_FILE_SIZE_MB}MB
                                 </span>
                             </div>
 
-                            {/* Uploaded File Preview Thumbnail */}
-                            {hasDefaultFile && (
-                                <div className="relative mt-2 w-[90px] h-[90px] rounded-[16px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex flex-col items-center justify-center gap-1">
+                            {/* Inline File Error Banner */}
+                            {fileError && (
+                                <div className="flex items-start gap-2 p-3 rounded-[16px] bg-red-500/10 border border-red-500/25 text-red-400 text-xs sm:text-sm font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>{fileError}</span>
+                                </div>
+                            )}
+
+                            {/* Uploaded File Preview Card */}
+                            {hasDefaultFile && uploadedFile && (
+                                <div className="relative mt-1 p-3 rounded-[16px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 bg-[#DC1D00] rounded-lg shrink-0 flex flex-col items-center justify-center p-1 shadow">
+                                            <span className="font-bold text-[8px] leading-[9px] text-white bg-white/20 px-1 py-0.5 rounded tracking-tighter uppercase">
+                                                {uploadedFile.name.split('.').pop() || 'DOC'}
+                                            </span>
+                                            <svg className="w-3.5 h-3.5 text-white mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-xs font-semibold text-white truncate max-w-[240px]">
+                                                {uploadedFile.name}
+                                            </span>
+                                            <span className="text-[11px] text-[#9D8FD0]">
+                                                {(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB
+                                            </span>
+                                        </div>
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={handleRemoveFile}
-                                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#FF0000] text-white flex items-center justify-center shadow-md hover:scale-110 transition-transform cursor-pointer"
+                                        className="w-7 h-7 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
                                         aria-label="Remove file"
                                     >
                                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
-
-                                    <div className="w-10 h-12 bg-[#DC1D00] rounded-md relative flex flex-col items-center justify-center p-1 shadow">
-                                        <span className="font-bold text-[9px] leading-[10px] text-white bg-white/20 px-1 py-0.5 rounded tracking-tighter">
-                                            DOC
-                                        </span>
-                                        <svg className="w-4 h-4 text-white mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <span className="text-[10px] text-white/70 truncate max-w-[80px]">
-                                        {uploadedFile ? uploadedFile.name : "Proof.pdf"}
-                                    </span>
                                 </div>
                             )}
                         </div>

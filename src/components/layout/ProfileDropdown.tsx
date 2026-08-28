@@ -4,10 +4,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getAvatarUrl } from "@/context/ProfileContext";
+import { LogoutConfirmationModal } from "@/components/ui/LogoutConfirmationModal";
 
 export function ProfileDropdown() {
     const router = useRouter();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const { user, handleLogout } = useAuth();
     const profileRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +30,11 @@ export function ProfileDropdown() {
     const handleViewProfileClick = () => {
         setShowProfileMenu(false);
         router.push("/app/profile");
+    };
+
+    const handleLogoutClick = () => {
+        setShowProfileMenu(false);
+        setIsLogoutModalOpen(true);
     };
 
     // Calculate display name, avatar, and initials
@@ -99,20 +106,25 @@ export function ProfileDropdown() {
 
                     <button
                         type="button"
-                        onClick={() => {
-                            setShowProfileMenu(false);
-                            handleLogout();
-                        }}
+                        onClick={handleLogoutClick}
                         className="w-full text-left font-medium text-sm text-[#FF3636] hover:text-red-400 py-1.5 px-2 rounded hover:bg-white/5 transition-colors cursor-pointer"
                     >
                         Log Out
                     </button>
                 </div>
             )}
+
+            {/* Logout Confirmation Modal */}
+            <LogoutConfirmationModal
+                isOpen={isLogoutModalOpen}
+                onClose={() => setIsLogoutModalOpen(false)}
+                onConfirm={() => {
+                    setIsLogoutModalOpen(false);
+                    handleLogout();
+                }}
+            />
         </div>
     );
 }
 
 export default ProfileDropdown;
-
-

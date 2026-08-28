@@ -132,24 +132,25 @@ export function PromotionCard({
                         </svg>
                         <div className="flex items-center gap-1 flex-wrap">
                             {ALL_DAYS.map((day) => {
-                                const isActiveDay = promotion.activeDays.includes(day);
+                                const isActiveDay = Array.isArray(promotion.activeDays) && promotion.activeDays.includes(day);
                                 return (
                                     <span
                                         key={day}
                                         className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
                                             isActiveDay
                                                 ? isGreenTag
-                                                    ? "bg-[rgba(74,222,128,0.1)] border border-[rgba(74,222,128,0.2)] text-[#4ADE80]"
+                                                    ? "bg-[rgba(74,222,128,0.18)] border border-[rgba(74,222,128,0.4)] text-[#4ADE80] shadow-[0_0_8px_rgba(74,222,128,0.2)]"
                                                     : isYellowTag
-                                                    ? "bg-[rgba(232,255,87,0.1)] border border-[rgba(232,255,87,0.2)] text-[#E8FF57]"
-                                                    : "bg-[rgba(159,79,250,0.1)] border border-[rgba(159,79,250,0.2)] text-[#C4B5FD]"
-                                                : "bg-[rgba(124,58,237,0.06)] border border-[rgba(124,58,237,0.1)] text-[#8B7EC8]/40"
+                                                    ? "bg-[rgba(232,255,87,0.18)] border border-[rgba(232,255,87,0.4)] text-[#E8FF57] shadow-[0_0_8px_rgba(232,255,87,0.2)]"
+                                                    : "bg-[rgba(159,79,250,0.2)] border border-[rgba(159,79,250,0.45)] text-[#C4B5FD] shadow-[0_0_8px_rgba(159,79,250,0.2)]"
+                                                : "bg-[rgba(124,58,237,0.03)] border border-[rgba(124,58,237,0.08)] text-[#8B7EC8]/25 opacity-35"
                                         }`}
                                     >
                                         {day}
                                     </span>
                                 );
                             })}
+
                         </div>
                     </div>
                 </div>
