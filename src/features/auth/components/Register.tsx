@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useRef } from "react";
 import { Button, InputField } from "@/components/ui";
+import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 
@@ -113,17 +114,13 @@ export function Register() {
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="focus:outline-none p-1 hover:text-[#B972FC] transition-colors"
+                            className="focus:outline-none p-1 text-[#B972FC] hover:text-[#D188FF] transition-colors cursor-pointer flex items-center justify-center"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
                         >
                             {showPassword ? (
-                                <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
+                                <EyeOff className="w-5 h-5" />
                             ) : (
-                                <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.025 10.025 0 0111.44 3.029C20.268 10.057 16.478 13 12 13c-.88 0-1.737-.113-2.553-.326m-4.52-4.52l12.14 12.14" />
-                                </svg>
+                                <Eye className="w-5 h-5" />
                             )}
                         </button>
                     }
@@ -141,17 +138,13 @@ export function Register() {
                         <button
                             type="button"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="focus:outline-none p-1 hover:text-[#B972FC] transition-colors"
+                            className="focus:outline-none p-1 text-[#B972FC] hover:text-[#D188FF] transition-colors cursor-pointer flex items-center justify-center"
+                            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
                         >
                             {showConfirmPassword ? (
-                                <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
+                                <EyeOff className="w-5 h-5" />
                             ) : (
-                                <svg className="w-5 h-5 text-[#B972FC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.025 10.025 0 0111.44 3.029C20.268 10.057 16.478 13 12 13c-.88 0-1.737-.113-2.553-.326m-4.52-4.52l12.14 12.14" />
-                                </svg>
+                                <Eye className="w-5 h-5" />
                             )}
                         </button>
                     }

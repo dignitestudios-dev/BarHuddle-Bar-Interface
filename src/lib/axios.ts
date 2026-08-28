@@ -1,6 +1,74 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
+/**
+ * Retrieves or creates a persistent unique device ID for this browser / client.
+ * This prevents multiple devices/browsers sharing the same device ID and causing
+ * unexpected session invalidation across different devices.
+ */
+export function getDeviceUniqueId(): string {
+  if (typeof window === "undefined") {
+    return "web-server";
+  }
+
+  try {
+    const storedId =
+      localStorage.getItem("device_unique_id") ||
+      Cookies.get("device_unique_id");
+
+    if (storedId && storedId.trim().length > 0) {
+      return storedId;
+    }
+
+    // Generate a unique identifier
+    const newId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? `web-${crypto.randomUUID()}`
+        : `web-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
+    localStorage.setItem("device_unique_id", newId);
+    Cookies.set("device_unique_id", newId, { expires: 365, path: "/" });
+
+    return newId;
+  } catch {
+    return "web-client";
+  }
+}
+
+/**
+ * Formats a clean, readable device model name based on the user agent and platform.
+ */
+export function getDeviceModel(): string {
+  if (typeof window === "undefined" || !navigator) {
+    return "Web Client";
+  }
+
+  try {
+    const userAgent = navigator.userAgent;
+    let browser = "Browser";
+    let os = "Web";
+
+    // Detect OS
+    if (/Windows/i.test(userAgent)) os = "Windows";
+    else if (/Macintosh|Mac OS X/i.test(userAgent)) os = "macOS";
+    else if (/iPhone/i.test(userAgent)) os = "iPhone";
+    else if (/iPad/i.test(userAgent)) os = "iPad";
+    else if (/Android/i.test(userAgent)) os = "Android";
+    else if (/Linux/i.test(userAgent)) os = "Linux";
+
+    // Detect Browser
+    if (/Edg/i.test(userAgent)) browser = "Edge";
+    else if (/Chrome/i.test(userAgent) && !/Chromium|Edg/i.test(userAgent)) browser = "Chrome";
+    else if (/Safari/i.test(userAgent) && !/Chrome|Chromium|Edg/i.test(userAgent)) browser = "Safari";
+    else if (/Firefox/i.test(userAgent)) browser = "Firefox";
+    else if (/Opera|OPR/i.test(userAgent)) browser = "Opera";
+
+    return `${browser} on ${os}`;
+  } catch {
+    return navigator.userAgent || "Web Client";
+  }
+}
+
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.dev.barhuddle.com/",
   timeout: 10000,
@@ -13,9 +81,9 @@ axiosInstance.interceptors.request.use((config) => {
     const token = localStorage.getItem("auth-token") || Cookies.get("auth-token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
 
-    // Add required device headers
-    config.headers.deviceuniqueid = "web-client-id";
-    config.headers.devicemodel = navigator.userAgent;
+    // Add required unique device headers
+    config.headers.deviceuniqueid = getDeviceUniqueId();
+    config.headers.devicemodel = getDeviceModel();
   }
   return config;
 });

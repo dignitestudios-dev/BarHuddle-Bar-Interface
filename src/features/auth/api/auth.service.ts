@@ -126,3 +126,13 @@ export async function deleteVenueOwnerAccount(): Promise<any> {
   const { data } = await axiosInstance.delete("/venue-owner/account");
   return data;
 }
+
+export async function logoutUser(): Promise<any> {
+  try {
+    const { data } = await axiosInstance.post("/auth/logout");
+    return data;
+  } catch (error) {
+    console.error("Logout API error:", error);
+    return null;
+  }
+}
