@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cleanImageUrl } from "@/utils/image";
 
 export interface RankedEventItem {
     id: string;
@@ -59,8 +60,11 @@ export function TopPerformingEventsCard({
     className = "",
     title = "Top Performing Events",
     tagText = "RANKINGS",
-    items = DEFAULT_RANKED_EVENTS,
+    items = [],
 }: TopPerformingEventsCardProps) {
+    if (!items || items.length === 0) {
+        return null;
+    }
     return (
         <div
             className={`relative w-full max-w-[340px] min-h-[420px] p-6 flex flex-col justify-between bg-[#0E093C]/75 backdrop-blur-xl border border-[rgba(124,58,237,0.2)] shadow-[0px_4px_24px_rgba(0,0,0,0.4),inset_0px_1px_0px_rgba(255,255,255,0.06)] rounded-[24px] overflow-hidden select-none font-['Manrope',sans-serif] ${className}`}
@@ -94,7 +98,7 @@ export function TopPerformingEventsCard({
                         {/* Left: Thumbnail & Details */}
                         <div className="flex items-center gap-3 min-w-0">
                             <img
-                                src={item.image}
+                                src={cleanImageUrl(item.image, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                                 alt={item.title}
                                 className="w-10 h-10 rounded-[12px] object-cover shrink-0 border border-[rgba(124,58,237,0.2)]"
                             />

@@ -5,12 +5,18 @@ import { useProfile } from "@/context/ProfileContext";
 import { EditProfileModal } from "@/components/layout/EditProfileModal";
 import { useGetEventsQuery } from "@/features/events/api/events.queries";
 import { useMyVenuesQuery } from "@/features/venue-management/api/venue.queries";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 export default function ProfilePage() {
     const { fullName, email, initials, avatarUrl, bio, updateFullName } = useProfile();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    const { data: apiEventsData } = useGetEventsQuery();
+    const { selectedVenueId } = useSelectedVenue();
+    const { data: apiEventsData } = useGetEventsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
     const { data: myVenuesData } = useMyVenuesQuery(1, 10);
 
     const eventsCount = Array.isArray(apiEventsData?.data)

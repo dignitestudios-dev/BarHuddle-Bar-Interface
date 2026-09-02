@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cleanImageUrl } from "@/utils/image";
 
 export interface PromotionData {
     id: number | string;
@@ -52,7 +53,7 @@ export function PromotionCard({
             <div className="relative w-full h-[176px] bg-[#3C0366] overflow-hidden shrink-0">
                 {/* Promo Image */}
                 <img
-                    src={promotion.imageUrl}
+                    src={cleanImageUrl(promotion.imageUrl, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                     alt={promotion.title}
                     className="w-full h-full object-cover opacity-75 group-hover:scale-105 transition-transform duration-500"
                 />

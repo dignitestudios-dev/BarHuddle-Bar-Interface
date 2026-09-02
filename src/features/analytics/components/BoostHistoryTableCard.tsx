@@ -10,6 +10,7 @@ import {
     useGetBoostedEventsQuery,
     useGetBoostedEventVisitorsQuery,
 } from "../api/analytics.queries";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 export type ReportFilterOption = "Visitors" | "Events" | "Boost";
 
@@ -61,11 +62,14 @@ export function BoostHistoryTableCard({
     const [eventsPage, setEventsPage] = useState(1);
     const [boostPage, setBoostPage] = useState(1);
 
-    const { data: visitorAnalytics } = useGetVisitorAnalyticsQuery();
-    const { data: boostedEventVisitorsResponse } = useGetBoostedEventVisitorsQuery({ page: visitorsPage, limit: 10 });
-    const { data: normalEventsResponse } = useGetNormalEventsQuery({ page: eventsPage, limit: 10 });
-    const { data: boostedSentimentResponse } = useGetBoostedSentimentEventsQuery({ page: boostPage, limit: 10 });
-    const { data: boostedEventsResponse } = useGetBoostedEventsQuery({ page: boostPage, limit: 10 });
+    const { selectedVenueId } = useSelectedVenue();
+    const venueParams = selectedVenueId ? { venueId: selectedVenueId } : undefined;
+
+    const { data: visitorAnalytics } = useGetVisitorAnalyticsQuery(venueParams);
+    const { data: boostedEventVisitorsResponse } = useGetBoostedEventVisitorsQuery({ page: visitorsPage, limit: 10, ...venueParams });
+    const { data: normalEventsResponse } = useGetNormalEventsQuery({ page: eventsPage, limit: 10, ...venueParams });
+    const { data: boostedSentimentResponse } = useGetBoostedSentimentEventsQuery({ page: boostPage, limit: 10, ...venueParams });
+    const { data: boostedEventsResponse } = useGetBoostedEventsQuery({ page: boostPage, limit: 10, ...venueParams });
 
     // Visitors tab data populated from GET /analytics/boosted/events/visitors
     const visitorsData: VisitorReportRow[] = React.useMemo(() => {

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { cleanImageUrl } from "@/utils/image";
 
 export interface EventCardData {
     id: number | string;
@@ -86,7 +87,7 @@ export function EventCard({
 
                 {/* Event Photo */}
                 <img
-                    src={event.imageUrl}
+                    src={cleanImageUrl(event.imageUrl, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                     alt={event.title}
                     className="w-full h-full object-cover opacity-75 group-hover:scale-105 transition-transform duration-500"
                 />

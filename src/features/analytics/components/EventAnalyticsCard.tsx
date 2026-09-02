@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cleanImageUrl } from "@/utils/image";
 
 export interface EventTagConfig {
     label: string;
@@ -61,7 +62,7 @@ export function EventAnalyticsCard({
             <div className="relative w-[237.9px] h-[112px] bg-[#3C0366] shrink-0 overflow-hidden">
                 {/* Image */}
                 <img
-                    src={image}
+                    src={cleanImageUrl(image, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                     alt={title}
                     className="w-full h-full object-cover opacity-80 transition-transform duration-300 hover:scale-105"
                 />

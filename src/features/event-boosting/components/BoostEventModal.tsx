@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { EventCardData } from "@/features/events/components";
+import { cleanImageUrl } from "@/utils/image";
 
 
 export interface BoostEventModalProps {
@@ -89,8 +90,8 @@ export function BoostEventModal({
                     <div className="flex items-center gap-3 overflow-hidden flex-1">
                         <div className="w-[80px] h-[56px] rounded-[12px] bg-[#3C0366] overflow-hidden shrink-0">
                             <img
-                                src={event.imageUrl}
-                                alt={event.title}
+                                src={cleanImageUrl(event?.imageUrl, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
+                                alt={event?.title || "Event"}
                                 className="w-full h-full object-cover opacity-85"
                             />
                         </div>

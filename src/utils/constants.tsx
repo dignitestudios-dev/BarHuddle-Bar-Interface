@@ -29,7 +29,16 @@ export const navItems: NavItem[] = [
             </svg>
         ),
     },
-
+    // {
+    //     name: "Venue Management",
+    //     href: "/app/venue-management",
+    //     icon: (
+    //         <svg className="w-[17px] h-[17px]" viewBox="0 0 17 17" fill="none">
+    //             <path d="M2.5 14.5V6.5L8.5 2.5L14.5 6.5V14.5H2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    //             <path d="M6.5 14.5V10.5H10.5V14.5" stroke="currentColor" strokeWidth="1.4" />
+    //         </svg>
+    //     ),
+    // },
     {
         name: "Events",
         href: "/app/events",

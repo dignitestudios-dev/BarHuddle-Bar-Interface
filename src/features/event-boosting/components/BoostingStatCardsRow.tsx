@@ -3,6 +3,7 @@
 import React from "react";
 import { useGetBoostsQuery } from "../api/boost.queries";
 import { useGetEventsQuery } from "@/features/events/api/events.queries";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 export interface BoostingStatCardData {
     id: string;
@@ -21,8 +22,17 @@ export function BoostingStatCardsRow({
     cards,
     className = "",
 }: BoostingStatCardsRowProps) {
-    const { data: apiBoostsData } = useGetBoostsQuery();
-    const { data: apiEventsData } = useGetEventsQuery();
+    const { selectedVenueId } = useSelectedVenue();
+    const { data: apiBoostsData } = useGetBoostsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
+    const { data: apiEventsData } = useGetEventsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
 
     const displayCards = React.useMemo(() => {
         if (cards) return cards;

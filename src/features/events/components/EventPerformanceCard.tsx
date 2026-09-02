@@ -4,6 +4,8 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useGetEventsQuery, useGetEventPerformanceQuery } from "@/features/events/api/events.queries";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cleanImageUrl } from "@/utils/image";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 export interface EventPerformanceItem {
     id: number | string;
@@ -39,7 +41,8 @@ function EventPerformanceRow({ event }: { event: any }) {
           })
         : "Active Event";
 
-    const imageSrc = event.coverImage || event.banner || event.image || event.images?.[0] || event.imageUrl;
+    const rawImg = event.banner || event.bannerUrl || event.banners?.[0] || event.imageUrl;
+    const imageSrc = cleanImageUrl(rawImg);
 
     return (
         <div className="relative w-full min-h-[103px] p-2.5 bg-[rgba(10,6,45,0.6)] border border-[rgba(124,58,237,0.15)] rounded-[18px] flex items-center gap-3 transition-all hover:border-[rgba(124,58,237,0.35)]">
@@ -119,7 +122,12 @@ export function EventPerformanceCard({
     className = "",
 }: EventPerformanceCardProps) {
     const router = useRouter();
-    const { data: apiEventsData, isLoading } = useGetEventsQuery();
+    const { selectedVenueId } = useSelectedVenue();
+    const { data: apiEventsData, isLoading } = useGetEventsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
 
     const eventsList = React.useMemo(() => {
         if (events) return events;

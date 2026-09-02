@@ -5,10 +5,25 @@ export interface Promotion {
   // add other fields
 }
 
+export interface PromotionQueryParams {
+  page?: number;
+  limit?: number;
+  venueId?: string;
+  [key: string]: any;
+}
+
 export const promotionService = {
-  getPromotions: async (page = 1, limit = 10) => {
+  getPromotions: async (
+    paramsOrPage?: PromotionQueryParams | number,
+    limit = 10,
+    venueId?: string
+  ) => {
+    const params = typeof paramsOrPage === "object"
+      ? { page: 1, limit: 10, ...paramsOrPage }
+      : { page: paramsOrPage ?? 1, limit, ...(venueId ? { venueId } : {}) };
+
     const response = await axiosInstance.get("/venue-owner/promotions", {
-      params: { page, limit },
+      params,
     });
     return response.data;
   },
@@ -23,8 +38,10 @@ export const promotionService = {
     const response = await axiosInstance.get(`/venue-owner/promotions/${id}`);
     return response.data;
   },
-  getPromotionAnalytics: async () => {
-    const response = await axiosInstance.get("/venue-owner/analytics/promotions");
+  getPromotionAnalytics: async (venueId?: string) => {
+    const response = await axiosInstance.get("/venue-owner/analytics/promotions", {
+      params: venueId ? { venueId } : undefined,
+    });
     return response.data;
   },
   updatePromotion: async (id: string, data: any) => {
