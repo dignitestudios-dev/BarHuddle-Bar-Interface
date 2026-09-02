@@ -20,10 +20,10 @@ export const analyticsKeys = {
   performanceSummary: (params?: AnalyticsFilterParams) => [...analyticsKeys.all, 'performance-summary', params] as const,
   boostedOverview: (params?: AnalyticsFilterParams) => [...analyticsKeys.all, 'boosted-overview', params] as const,
   organicVsBoosted: (params?: AnalyticsFilterParams) => [...analyticsKeys.all, 'organic-vs-boosted', params] as const,
-  boostedEvents: (params?: { page?: number; limit?: number }) => [...analyticsKeys.all, 'boosted-events', params] as const,
-  boostedEventVisitors: (params?: { page?: number; limit?: number }) => [...analyticsKeys.all, 'boosted-event-visitors', params] as const,
-  normalEvents: (params?: { page?: number; limit?: number }) => [...analyticsKeys.all, 'normal-events', params] as const,
-  boostedSentimentEvents: (params?: { page?: number; limit?: number }) => [...analyticsKeys.all, 'boosted-sentiment-events', params] as const,
+  boostedEvents: (params?: { page?: number; limit?: number; venueId?: string }) => [...analyticsKeys.all, 'boosted-events', params] as const,
+  boostedEventVisitors: (params?: { page?: number; limit?: number; venueId?: string }) => [...analyticsKeys.all, 'boosted-event-visitors', params] as const,
+  normalEvents: (params?: { page?: number; limit?: number; venueId?: string }) => [...analyticsKeys.all, 'normal-events', params] as const,
+  boostedSentimentEvents: (params?: { page?: number; limit?: number; venueId?: string }) => [...analyticsKeys.all, 'boosted-sentiment-events', params] as const,
 };
 
 export const useGetOverviewQuery = (params?: AnalyticsFilterParams) => {
@@ -117,52 +117,52 @@ export const useGetOrganicVsBoostedQuery = (params?: AnalyticsFilterParams) => {
   });
 };
 
-export const useGetBoostedEventsQuery = (params?: { page?: number; limit?: number }) => {
+export const useGetBoostedEventsQuery = (params?: { page?: number; limit?: number; venueId?: string }) => {
   return useQuery({
     queryKey: analyticsKeys.boostedEvents(params),
     queryFn: () => analyticService.getBoostedEvents(params),
   });
 };
 
-export const useGetBoostedEventVisitorsQuery = (params?: { page?: number; limit?: number }) => {
+export const useGetBoostedEventVisitorsQuery = (params?: { page?: number; limit?: number; venueId?: string }) => {
   return useQuery({
     queryKey: analyticsKeys.boostedEventVisitors(params),
     queryFn: () => analyticService.getBoostedEventVisitors(params),
   });
 };
 
-export const useGetNormalEventsQuery = (params?: { page?: number; limit?: number }) => {
+export const useGetNormalEventsQuery = (params?: { page?: number; limit?: number; venueId?: string }) => {
   return useQuery({
     queryKey: analyticsKeys.normalEvents(params),
     queryFn: () => analyticService.getNormalEvents(params),
   });
 };
 
-export const useGetBoostedSentimentEventsQuery = (params?: { page?: number; limit?: number }) => {
+export const useGetBoostedSentimentEventsQuery = (params?: { page?: number; limit?: number; venueId?: string }) => {
   return useQuery({
     queryKey: analyticsKeys.boostedSentimentEvents(params),
     queryFn: () => analyticService.getBoostedSentimentEvents(params),
   });
 };
 
-export const useGetDashboardQuery = () => {
+export const useGetDashboardQuery = (params?: { venueId?: string }) => {
   return useQuery({
-    queryKey: analyticsKeys.lists(),
-    queryFn: () => analyticService.getDashboard(),
+    queryKey: [...analyticsKeys.lists(), 'dashboard', params],
+    queryFn: () => analyticService.getDashboard(params),
   });
 };
 
-export const useGetVisitorAnalyticsQuery = () => {
+export const useGetVisitorAnalyticsQuery = (params?: { venueId?: string }) => {
   return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'visitors'],
-    queryFn: () => analyticService.getVisitorAnalytics(),
+    queryKey: [...analyticsKeys.lists(), 'visitors', params],
+    queryFn: () => analyticService.getVisitorAnalytics(params),
   });
 };
 
-export const useGetRetentionAnalyticsQuery = () => {
+export const useGetRetentionAnalyticsQuery = (params?: { venueId?: string }) => {
   return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'retention'],
-    queryFn: () => analyticService.getRetentionAnalytics(),
+    queryKey: [...analyticsKeys.lists(), 'retention', params],
+    queryFn: () => analyticService.getRetentionAnalytics(params),
   });
 };
 
@@ -173,9 +173,9 @@ export const useGetSentimentAnalyticsQuery = (params?: AnalyticsFilterParams) =>
   });
 };
 
-export const useGetEventsAnalyticsQuery = () => {
+export const useGetEventsAnalyticsQuery = (params?: { venueId?: string }) => {
   return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'events'],
-    queryFn: () => analyticService.getEventsAnalytics(),
+    queryKey: [...analyticsKeys.lists(), 'events', params],
+    queryFn: () => analyticService.getEventsAnalytics(params),
   });
 };

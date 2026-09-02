@@ -2,6 +2,7 @@
 
 import { VenueCarouselSection } from "@/features/venue-management/components";
 import { Skeleton } from "@/components/ui";
+import { cleanImageUrl, extractImageUrls } from "@/utils/image";
 
 export interface EventDetailViewProps {
     event?: any;
@@ -164,27 +165,36 @@ export function EventDetailView({
     const venueName = event?.venue?.name || "Venue";
     const venueAddress = event?.venue?.address || "";
     const city = venueAddress ? venueAddress.split(",").slice(-2, -1)[0]?.trim() || "Location" : "";
-
-    const customSlides = event ? [
-        {
-            id: 1,
+    const customSlides = event ? (() => {
+        // Only show banner images (never coverImage or venue coverImage)
+        const rawList = [
+            ...extractImageUrls(event?.banner),
+            ...extractImageUrls(event?.banners),
+            ...extractImageUrls(event?.bannerUrl),
+            ...extractImageUrls(event?.bannerImages),
+        ];
+        const unique = Array.from(new Set(rawList.filter(Boolean)));
+        if (unique.length === 0) {
+            return [{
+                id: 1,
+                title: venueName,
+                category: event?.venue?.category || "Bar",
+                locationCity: city,
+                fullAddress: venueAddress,
+                isOpen: true,
+                imageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80",
+            }];
+        }
+        return unique.map((imgUrl, index) => ({
+            id: index + 1,
             title: venueName,
             category: event?.venue?.category || "Bar",
             locationCity: city,
             fullAddress: venueAddress,
             isOpen: true,
-            imageUrl: event?.banner || event?.venue?.coverImage || "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80",
-        },
-        ...(event?.venue?.coverImage && event?.banner ? [{
-            id: 2,
-            title: venueName,
-            category: event?.venue?.category || "Bar",
-            locationCity: city,
-            fullAddress: venueAddress,
-            isOpen: true,
-            imageUrl: event.venue.coverImage,
-        }] : [])
-    ] : undefined;
+            imageUrl: cleanImageUrl(imgUrl, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80"),
+        }));
+    })() : undefined;
 
     return (
         <div className={`w-full max-w-[1200px] flex flex-col gap-6 font-['Manrope',sans-serif] ${className}`}>

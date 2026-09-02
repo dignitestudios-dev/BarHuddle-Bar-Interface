@@ -4,6 +4,7 @@ export interface AnalyticsFilterParams {
   filter?: string;
   startDate?: string;
   endDate?: string;
+  venueId?: string;
 }
 
 
@@ -386,7 +387,7 @@ export const analyticService = {
   },
 
   getBoostedEvents: async (
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; venueId?: string }
   ): Promise<BoostedEventsResponseData> => {
     const response = await axiosInstance.get<BoostedEventsResponseData>(
       "/analytics/boosted/events",
@@ -396,7 +397,7 @@ export const analyticService = {
   },
 
   getBoostedEventVisitors: async (
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; venueId?: string }
   ): Promise<BoostedEventVisitorsResponse> => {
     const response = await axiosInstance.get<BoostedEventVisitorsResponse>(
       "/analytics/boosted/events/visitors",
@@ -406,7 +407,7 @@ export const analyticService = {
   },
 
   getNormalEvents: async (
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; venueId?: string }
   ): Promise<NormalEventsReportResponse> => {
     const response = await axiosInstance.get<NormalEventsReportResponse>(
       "/analytics/events/normal",
@@ -416,7 +417,7 @@ export const analyticService = {
   },
 
   getBoostedSentimentEvents: async (
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; venueId?: string }
   ): Promise<BoostedSentimentEventsResponse> => {
     const response = await axiosInstance.get<BoostedSentimentEventsResponse>(
       "/analytics/events/boosted-sentiment",
@@ -435,20 +436,20 @@ export const analyticService = {
     return response.data;
   },
 
-  getDashboard: async () => {
-    const response = await axiosInstance.get("/venue-owner/dashboard");
+  getDashboard: async (params?: { venueId?: string }) => {
+    const response = await axiosInstance.get("/venue-owner/dashboard", { params });
     return response.data;
   },
-  getVisitorAnalytics: async () => {
-    const response = await axiosInstance.get("/venue-owner/analytics/visitors");
+  getVisitorAnalytics: async (params?: { venueId?: string }) => {
+    const response = await axiosInstance.get("/venue-owner/analytics/visitors", { params });
     return response.data;
   },
-  getRetentionAnalytics: async () => {
-    const response = await axiosInstance.get("/venue-owner/analytics/retention");
+  getRetentionAnalytics: async (params?: { venueId?: string }) => {
+    const response = await axiosInstance.get("/venue-owner/analytics/retention", { params });
     return response.data;
   },
-  getEventsAnalytics: async () => {
-    const response = await axiosInstance.get("/venue-owner/analytics/events");
+  getEventsAnalytics: async (params?: { venueId?: string }) => {
+    const response = await axiosInstance.get("/venue-owner/analytics/events", { params });
     return response.data;
   },
 };

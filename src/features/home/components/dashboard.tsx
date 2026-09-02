@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
+import { format } from "date-fns";
 import { StatsCard } from "@/components/ui";
 import { VisitorTrendsChart } from "@/components/charts/VisitorTrendsChart";
 import { CustomerDonutChart } from "@/components/charts/CustomerDonutChart";
@@ -8,7 +9,13 @@ import { EventPerformanceCard } from "@/features/events/components";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statsList } from "@/utils/constants";
 import VisitorSentimentsChart from "@/components/charts/VisitorSentimentsChart";
-import { useGetDashboardQuery } from "@/features/analytics/api/analytics.queries";
+import {
+    useGetOverviewQuery,
+    useGetVisitorsGraphQuery,
+    useGetCustomerBreakdownGraphQuery,
+    useGetSentimentAnalyticsQuery,
+} from "@/features/analytics/api/analytics.queries";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 interface DashboardCardItem {
     id: string;
@@ -21,191 +28,198 @@ interface DashboardCardItem {
 }
 
 export function Dashboard() {
-    const { data: dashboardData, isLoading } = useGetDashboardQuery();
+    const { selectedVenueId } = useSelectedVenue();
 
-    const d = dashboardData?.data || {};
+    const filterParams = useMemo(() => {
+        return {
+            filter: "monthly",
+            ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+        };
+    }, [selectedVenueId]);
 
-    const stats = React.useMemo<DashboardCardItem[]>(() => {
-        if (Array.isArray(d.cards) && d.cards.length > 0) {
-            const variantMap: Record<string, "purple" | "cyan" | "yellow" | "green" | "coral" | "pink" | "orange"> = {
-                total_visitors: "purple",
-                total_check_ins: "cyan",
-                avg_stay_duration: "yellow",
-                new_customers: "green",
-                repeat_customers: "purple",
-                lost_customers: "coral",
-                event_attendance: "pink",
-                avg_stay_duration_2: "orange",
-            };
+    // Replaced legacy /venue-owner/dashboard API with analytics APIs
+    const { data: overviewResponse, isLoading: isLoadingOverview } = useGetOverviewQuery(filterParams);
+    const { data: visitorsGraphResponse, isLoading: isLoadingVisitors } = useGetVisitorsGraphQuery(filterParams);
+    const { data: customerBreakdownResponse, isLoading: isLoadingCustomers } = useGetCustomerBreakdownGraphQuery(filterParams);
+    const { data: sentimentResponse, isLoading: isLoadingSentiment } = useGetSentimentAnalyticsQuery(filterParams);
 
-            const defaultVariants: ("purple" | "cyan" | "yellow" | "green" | "coral" | "pink" | "orange")[] = [
-                "purple",
-                "cyan",
-                "yellow",
-                "green",
-                "purple",
-                "coral",
-                "pink",
-                "orange",
-            ];
+    const isLoading = isLoadingOverview && isLoadingVisitors;
 
-            return d.cards.map((card: any, idx: number) => {
-                const growthStr = card.growth || (card.growthPercent !== undefined ? `${card.growthPercent >= 0 ? "+" : ""}${card.growthPercent}%` : "");
-                const isPositive = card.growthPercent !== undefined ? card.growthPercent >= 0 : !String(card.growth || "").startsWith("-");
-                const matchedIcon = statsList.find((s) => s.title.toLowerCase() === card.label?.toLowerCase())?.icon || statsList[idx % statsList.length]?.icon;
-                const variant = (card.id && variantMap[card.id]) || defaultVariants[idx % defaultVariants.length];
+    const o = overviewResponse?.data;
 
-                return {
-                    id: card.id || String(idx),
-                    title: card.label || "Metric",
-                    value: card.formattedValue || (typeof card.value === "number" ? card.value.toLocaleString() : String(card.value ?? 0)),
-                    trend: growthStr,
-                    isPositive,
-                    variant,
-                    icon: matchedIcon,
-                };
-            });
-        }
+    // Map 8 Overview Stats Cards from GET /analytics/overview
+    const stats = useMemo<DashboardCardItem[]>(() => {
+        const data = (o as any) || {};
 
-        // Fallback if cards array is not present
         return [
             {
                 id: "total_visitors",
                 title: "Total Visitors",
-                value: (d.totalVisitors ?? d.totalVisits ?? d.visitors ?? 0).toLocaleString(),
-                trend: d.totalVisitorsGrowth ?? d.visitorTrend ?? "+18.4%",
-                isPositive: !String(d.totalVisitorsGrowth || d.visitorTrend || "").startsWith("-"),
+                value: (data.totalVisitors ?? data.totalVisits ?? 0).toLocaleString(),
+                trend: data.totalVisitorsGrowth || data.growth || "+0%",
+                isPositive: !String(data.totalVisitorsGrowth || data.growth || "").startsWith("-"),
                 variant: "purple" as const,
                 icon: statsList[0]?.icon,
             },
             {
                 id: "total_check_ins",
                 title: "Total Check-Ins",
-                value: (d.totalCheckIns ?? 0).toLocaleString(),
-                trend: d.totalCheckInsGrowth ?? "+18.4%",
-                isPositive: !String(d.totalCheckInsGrowth || "").startsWith("-"),
+                value: (data.totalCheckIns ?? 0).toLocaleString(),
+                trend: data.totalCheckInsGrowth || "+0%",
+                isPositive: !String(data.totalCheckInsGrowth || "").startsWith("-"),
                 variant: "cyan" as const,
                 icon: statsList[1]?.icon,
             },
             {
                 id: "avg_stay_duration",
                 title: "Avg Stay Duration",
-                value: typeof d.avgStayDuration === "number" ? `${d.avgStayDuration} mins` : (d.avgStayDuration || "45.5 mins"),
-                trend: d.avgStayDurationGrowth ?? "+18.4%",
-                isPositive: !String(d.avgStayDurationGrowth || "").startsWith("-"),
+                value: typeof data.avgStay === "number" ? `${data.avgStay} mins` : (data.avgStay || "0 mins"),
+                trend: data.avgStayGrowth || "+0%",
+                isPositive: !String(data.avgStayGrowth || "").startsWith("-"),
                 variant: "yellow" as const,
                 icon: statsList[2]?.icon,
             },
             {
                 id: "new_customers",
                 title: "New Customers",
-                value: (d.newCustomers ?? 0).toLocaleString(),
-                trend: d.newCustomersGrowth ?? "+18.4%",
-                isPositive: !String(d.newCustomersGrowth || "").startsWith("-"),
+                value: (data.newCustomers ?? 0).toLocaleString(),
+                trend: data.newCustomersGrowth || "+0%",
+                isPositive: !String(data.newCustomersGrowth || "").startsWith("-"),
                 variant: "green" as const,
                 icon: statsList[3]?.icon,
             },
             {
                 id: "repeat_customers",
                 title: "Repeat Customers",
-                value: (d.repeatCustomers ?? 0).toLocaleString(),
-                trend: d.repeatCustomersGrowth ?? "+18.4%",
-                isPositive: !String(d.repeatCustomersGrowth || "").startsWith("-"),
+                value: (data.repeatCustomers ?? 0).toLocaleString(),
+                trend: data.repeatCustomersGrowth || "+0%",
+                isPositive: !String(data.repeatCustomersGrowth || "").startsWith("-"),
                 variant: "purple" as const,
                 icon: statsList[4]?.icon,
             },
             {
                 id: "lost_customers",
                 title: "Lost Customers",
-                value: (d.lostCustomers ?? 0).toLocaleString(),
-                trend: d.lostCustomersGrowth ?? "+18.4%",
-                isPositive: !String(d.lostCustomersGrowth || "").startsWith("-"),
+                value: (data.lostCustomers ?? 0).toLocaleString(),
+                trend: data.lostCustomersGrowth || "+0%",
+                isPositive: !String(data.lostCustomersGrowth || "").startsWith("-"),
                 variant: "coral" as const,
                 icon: statsList[5]?.icon,
             },
             {
                 id: "event_attendance",
                 title: "Event Attendance",
-                value: (d.eventAttendance ?? 0).toLocaleString(),
-                trend: d.eventAttendanceGrowth ?? "+18.4%",
-                isPositive: !String(d.eventAttendanceGrowth || "").startsWith("-"),
+                value: (data.eventAttendance ?? 0).toLocaleString(),
+                trend: data.eventAttendanceGrowth || "+0%",
+                isPositive: !String(data.eventAttendanceGrowth || "").startsWith("-"),
                 variant: "pink" as const,
                 icon: statsList[6]?.icon,
             },
             {
-                id: "avg_stay_duration_2",
+                id: "avg_rating",
                 title: "Avg Rating",
-                value: (d.avgRating ?? 4.8).toString(),
-                trend: "+18.4%",
+                value: (data.avgRating ?? (sentimentResponse?.data?.sentimentScore?.score ? (sentimentResponse.data.sentimentScore.score / 20).toFixed(1) : "0")).toString(),
+                trend: "+0%",
                 isPositive: true,
                 variant: "orange" as const,
                 icon: statsList[7]?.icon,
             },
         ];
-    }, [d]);
+    }, [o, sentimentResponse]);
 
-    const visitorTrendsData = React.useMemo(() => {
-        const rawTrends = d.visitorTrends?.trends;
-        if (rawTrends && Array.isArray(rawTrends) && rawTrends.length > 0) {
-            return rawTrends.map((t: any) => ({
-                name: t.month || t.name || t.date || "Month",
-                visitors: t.visitors ?? 0,
-                checkIns: t.checkIns ?? 0,
-                retention: t.retention ?? 0,
-                new: t.new ?? 0,
-                repeat: t.repeat ?? t.retention ?? 0,
-                lost: t.lost ?? 0,
-            }));
-        }
-        return undefined;
-    }, [d.visitorTrends]);
+    // Visitor trends mapped from GET /analytics/overview/vistors-graph
+    const visitorTrendsData = useMemo(() => {
+        const raw = visitorsGraphResponse?.data;
+        if (!raw || !Array.isArray(raw) || raw.length === 0) return undefined;
 
-    const customerSegments = React.useMemo(() => {
-        const cb = d.customerBreakdown;
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        return raw.map((item: any) => {
+            let label = "Day";
+            if (item.month !== undefined && item.month !== null) {
+                const mNum = Number(item.month);
+                label = monthNames[(mNum - 1) % 12] || `M${item.month}`;
+            } else if (item.date) {
+                try {
+                    const d = new Date(item.date);
+                    if (!isNaN(d.getTime())) {
+                        label = format(d, "MMM dd");
+                    }
+                } catch {
+                    label = String(item.date);
+                }
+            } else if (item.name) {
+                label = item.name;
+            }
+
+            return {
+                name: label,
+                visitors: item.visitors ?? 0,
+                checkIns: item.checkIns ?? 0,
+                retention: 0,
+                new: item.new ?? 0,
+                repeat: item.repeat ?? 0,
+                lost: item.lost ?? 0,
+            };
+        });
+    }, [visitorsGraphResponse]);
+
+    // Customer Breakdown mapped from GET /analytics/overview/customer-breakdown-graph
+    const customerSegments = useMemo(() => {
+        const cb = customerBreakdownResponse?.data as any;
         if (!cb) return undefined;
-        const newPct = cb.new ?? cb.now ?? 0;
-        const repeatPct = cb.repeat ?? 0;
-        const lostPct = cb.lost ?? 0;
+
+        const newCount = typeof cb.newCustomers === "object" ? (cb.newCustomers?.count ?? 0) : (cb.newCustomers ?? 0);
+        const newPct = typeof cb.newCustomers === "object" ? (cb.newCustomers?.percentage ?? 0) : (cb.new ?? cb.now ?? 0);
+
+        const repeatCount = typeof cb.repeatCustomers === "object" ? (cb.repeatCustomers?.count ?? 0) : (cb.repeatCustomers ?? 0);
+        const repeatPct = typeof cb.repeatCustomers === "object" ? (cb.repeatCustomers?.percentage ?? 0) : (cb.repeat ?? 0);
+
+        const lostCount = typeof cb.lostCustomers === "object" ? (cb.lostCustomers?.count ?? 0) : (cb.lostCustomers ?? 0);
+        const lostPct = typeof cb.lostCustomers === "object" ? (cb.lostCustomers?.percentage ?? 0) : (cb.lost ?? 0);
+
         return [
             {
                 name: "New",
-                value: cb.newCustomers ?? 0,
-                percentage: newPct,
+                value: newCount,
+                percentage: Math.round(newPct),
                 color: "#4ADE80",
                 glowColor: "rgba(74, 222, 128, 0.6)",
             },
             {
                 name: "Repeat",
-                value: cb.repeatCustomers ?? 0,
-                percentage: repeatPct,
+                value: repeatCount,
+                percentage: Math.round(repeatPct),
                 color: "#7C3AED",
                 glowColor: "rgba(124, 58, 237, 0.6)",
             },
             {
                 name: "Lost",
-                value: cb.lostCustomers ?? 0,
-                percentage: lostPct,
+                value: lostCount,
+                percentage: Math.round(lostPct),
                 color: "#F87171",
                 glowColor: "rgba(248, 113, 113, 0.6)",
             },
         ];
-    }, [d.customerBreakdown]);
+    }, [customerBreakdownResponse]);
 
-    const totalCustomersFormatted = React.useMemo(() => {
-        const total = d.customerBreakdown?.totalCustomers;
+    const totalCustomersFormatted = useMemo(() => {
+        const total = customerBreakdownResponse?.data?.totalCustomers;
         if (total !== undefined && total !== null) {
             return total >= 1000 ? `${(total / 1000).toFixed(1)}K` : total.toString();
         }
         return undefined;
-    }, [d.customerBreakdown]);
+    }, [customerBreakdownResponse]);
 
-    const sentimentItems = React.useMemo(() => {
-        const s = d.sentimentScore;
+    // Sentiment Scores mapped from GET /venue-owner/analytics/sentiment
+    const sentimentItems = useMemo(() => {
+        const s = sentimentResponse?.data?.sentimentScore;
         if (!s) return undefined;
+
         return [
             {
                 name: "Worth It",
-                percentage: s.worthIt ?? 0,
+                percentage: Math.round(s.worthIt ?? 0),
                 color: "#E8FF57",
                 bgColor: "rgba(232, 255, 87, 0.03)",
                 borderColor: "rgba(232, 255, 87, 0.094)",
@@ -213,7 +227,7 @@ export function Dashboard() {
             },
             {
                 name: "Mid",
-                percentage: s.mid ?? 0,
+                percentage: Math.round(s.mid ?? 0),
                 color: "#22D3EE",
                 bgColor: "rgba(34, 211, 238, 0.03)",
                 borderColor: "rgba(34, 211, 238, 0.094)",
@@ -221,14 +235,16 @@ export function Dashboard() {
             },
             {
                 name: "Not Worth It",
-                percentage: s.notWorthIt ?? 0,
+                percentage: Math.round(s.notWorthIt ?? 0),
                 color: "#F472B6",
                 bgColor: "rgba(244, 114, 182, 0.03)",
                 borderColor: "rgba(244, 114, 182, 0.094)",
                 offsetClass: "w-full",
             },
         ];
-    }, [d.sentimentScore]);
+    }, [sentimentResponse]);
+
+    const overallSentimentScore = sentimentResponse?.data?.sentimentScore?.score;
 
     if (isLoading) {
         return (
@@ -295,11 +311,11 @@ export function Dashboard() {
                 {/* Bottom Row: Event Performance + Visitor Sentiments */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 max-w-[1200px] gap-6">
                     <div className="w-full min-w-0">
-                        <EventPerformanceCard events={d.eventPerformance} />
+                        <EventPerformanceCard />
                     </div>
                     <div className="w-full min-w-0">
                         <VisitorSentimentsChart
-                            overallScore={d.sentimentScore?.score}
+                            overallScore={overallSentimentScore}
                             sentiments={sentimentItems}
                         />
                     </div>

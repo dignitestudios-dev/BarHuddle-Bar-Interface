@@ -11,6 +11,8 @@ import { useGetPromotionsQuery, useGetPromotionAnalyticsQuery } from "../api/pro
 import { useCreatePromotionMutation, useUpdatePromotionMutation, useDeletePromotionMutation } from "../api/promotions.mutations";
 import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
 import { useAppSelector } from "@/store";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
+import { cleanImageUrl } from "@/utils/image";
 import { toast } from "sonner";
 
 const DEFAULT_PROMOTION_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
@@ -20,13 +22,18 @@ export function Promotions() {
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
     const [deletingPromotion, setDeletingPromotion] = useState<{ id: string; title: string } | null>(null);
-
     const user = useAppSelector((state) => state.auth.user);
-    const { data: apiPromotionsData, isLoading } = useGetPromotionsQuery(1, 20);
-    const { data: apiAnalyticsData, isLoading: isAnalyticsLoading } = useGetPromotionAnalyticsQuery();
+    const { selectedVenueId } = useSelectedVenue();
+    const { data: apiPromotionsData, isLoading } = useGetPromotionsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
+    const { data: apiAnalyticsData, isLoading: isAnalyticsLoading } = useGetPromotionAnalyticsQuery(selectedVenueId);
     const { data: ownerVenuesData } = useGetOwnerVenuesQuery();
 
     const primaryVenueId = React.useMemo(() => {
+        if (selectedVenueId) return selectedVenueId;
         const rawVenues = Array.isArray((ownerVenuesData as any)?.data)
             ? (ownerVenuesData as any).data
             : Array.isArray((ownerVenuesData as any)?.venues)
@@ -36,7 +43,7 @@ export function Promotions() {
                     : [];
         const first = rawVenues[0];
         return first?.venue?._id || first?.venue?.id || first?._id || first?.id || (user as any)?.venueId || (user as any)?.claimedVenueId || "";
-    }, [ownerVenuesData, user]);
+    }, [selectedVenueId, ownerVenuesData, user]);
 
     const createPromotionMutation = useCreatePromotionMutation();
     const updatePromotionMutation = useUpdatePromotionMutation();
@@ -138,8 +145,8 @@ export function Promotions() {
                 promo.performanceRate ?? promo.performancePercent ?? promo.metrics?.performancePercent ?? (promo.redemptionRate ?? 0)
             );
 
-            // Image
-            const img = promo.banner || promo.imageUrl || promo.coverImage || promo.venue?.coverImage || promo.images?.[0] || DEFAULT_PROMOTION_IMAGE;
+            // Image: only show banner images, never coverImage
+            const img = cleanImageUrl(promo.banner || promo.bannerUrl || promo.banners?.[0] || promo.imageUrl, DEFAULT_PROMOTION_IMAGE);
 
             return {
                 id,
@@ -209,33 +216,33 @@ export function Promotions() {
 
     const handleUpdatePromotion = async (id: string, updatedPromoData: any) => {
         try {
-            const hasFiles = updatedPromoData.images && Array.isArray(updatedPromoData.images) && updatedPromoData.images.some((img: any) => img instanceof File);
+            const hasNewFiles = updatedPromoData.images && Array.isArray(updatedPromoData.images) && updatedPromoData.images.some((img: any) => img instanceof File);
+            const existingBanners: string[] = updatedPromoData.existingBanners || [];
 
-            if (hasFiles) {
-                const formData = new FormData();
-                // Explicitly DO NOT append venueId on edit
-                formData.append("title", updatedPromoData.title);
-                formData.append("description", updatedPromoData.description);
-                formData.append("startAt", updatedPromoData.startAt);
-                formData.append("endAt", updatedPromoData.endAt);
-                formData.append("status", updatedPromoData.status || "active");
+            // Always use FormData so we can send both keepBannerUrls and new files together
+            const formData = new FormData();
+            // Explicitly DO NOT append venueId on edit
+            formData.append("title", updatedPromoData.title);
+            formData.append("description", updatedPromoData.description);
+            formData.append("startAt", updatedPromoData.startAt);
+            formData.append("endAt", updatedPromoData.endAt);
+            formData.append("status", updatedPromoData.status || "active");
+
+            // Append remaining existing banner URLs under 'banner' key
+            existingBanners.forEach((url: string) => {
+                formData.append("banner", url);
+            });
+
+            // Append newly uploaded File objects under 'banner' key
+            if (hasNewFiles) {
                 updatedPromoData.images.forEach((file: any) => {
                     if (file instanceof File) {
                         formData.append("banner", file);
                     }
                 });
-                await updatePromotionMutation.mutateAsync({ id, data: formData });
-            } else {
-                const payload = {
-                    // Explicitly DO NOT include venueId on edit
-                    title: updatedPromoData.title,
-                    description: updatedPromoData.description,
-                    startAt: updatedPromoData.startAt,
-                    endAt: updatedPromoData.endAt,
-                    status: updatedPromoData.status || "active",
-                };
-                await updatePromotionMutation.mutateAsync({ id, data: payload });
             }
+
+            await updatePromotionMutation.mutateAsync({ id, data: formData });
 
             setEditingPromotion(null);
             toast.success("Promotion updated successfully!");
@@ -259,7 +266,14 @@ export function Promotions() {
 
     const handleEditClick = (promo: PromotionData) => {
         const raw = rawPromosMap.get(String(promo.id)) || promo;
-        setEditingPromotion(raw);
+        const normalized = {
+            ...raw,
+            _id: raw._id || raw.id || String(promo.id),
+            id: raw.id || raw._id || String(promo.id),
+            // Pass raw banners array so the modal shows all existing thumbnails
+            banners: raw.banners || raw.banner || raw.bannerUrl || raw.imageUrl,
+        };
+        setEditingPromotion(normalized);
     };
 
     const handleDeleteClick = (promo: PromotionData) => {

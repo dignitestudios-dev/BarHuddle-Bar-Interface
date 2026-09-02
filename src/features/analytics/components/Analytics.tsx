@@ -13,26 +13,36 @@ import { BoostTab } from "./BoostTab";
 import { ReportsTab } from "./ReportsTab";
 import { AnalyticsFilterParams } from "../api/analytics.service";
 
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
+
 export function Analytics() {
+    const { selectedVenueId } = useSelectedVenue();
     const [dateFilter, setDateFilter] = useState<DateFilterOption>("Weekly");
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [endDate, setEndDate] = useState<Date | undefined>(undefined);
     const [activeTab, setActiveTab] = useState<AnalyticsTab>("Overview");
 
     const filterParams: AnalyticsFilterParams = useMemo(() => {
+        const base: AnalyticsFilterParams = {};
+        if (selectedVenueId) {
+            base.venueId = selectedVenueId;
+        }
+
         if (dateFilter === "Custom" && startDate && endDate) {
             const startStr = format(startDate, "yyyy-MM-dd");
             const endStr = format(endDate, "yyyy-MM-dd");
             return {
+                ...base,
                 filter: "custom",
                 startDate: startStr,
                 endDate: endStr,
             };
         }
         return {
+            ...base,
             filter: dateFilter.toLowerCase(),
         };
-    }, [dateFilter, startDate, endDate]);
+    }, [dateFilter, startDate, endDate, selectedVenueId]);
 
 
 

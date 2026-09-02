@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { cleanImageUrl, extractImageUrls } from "@/utils/image";
 
 const MAX_IMAGES_COUNT = 5;
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -92,7 +93,10 @@ export function CreateEventModal({
     isLoading = false,
 }: CreateEventModalProps) {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    // New file blob previews (only for newly selected files)
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    // Existing server-side banner URLs (shown in edit mode; removed when user clicks ✕)
+    const [existingBanners, setExistingBanners] = useState<string[]>([]);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     const {
@@ -135,12 +139,12 @@ export function CreateEventModal({
                     images: [],
                 });
 
-                const existingImg = eventToEdit.banner || eventToEdit.coverImage || eventToEdit.imageUrl || eventToEdit.images?.[0];
-                if (existingImg) {
-                    setImagePreviews([existingImg]);
-                } else {
-                    setImagePreviews([]);
-                }
+                // Load existing server-side banner URLs into dedicated state
+                const rawImgs = eventToEdit.banners || eventToEdit.banner || eventToEdit.bannerUrl || eventToEdit.imageUrl;
+                const cleanedList = extractImageUrls(rawImgs);
+                setExistingBanners(cleanedList);
+                // Clear new-file previews
+                setImagePreviews([]);
             } else {
                 reset({
                     title: "",
@@ -150,6 +154,7 @@ export function CreateEventModal({
                     description: "",
                     images: [],
                 });
+                setExistingBanners([]);
                 setImagePreviews([]);
             }
         }
@@ -157,11 +162,19 @@ export function CreateEventModal({
 
     if (!isOpen) return null;
 
-    const handleRemoveImage = (index: number) => {
+    const handleRemoveExistingBanner = (index: number) => {
+        setExistingBanners((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleRemoveNewImage = (index: number) => {
         const currentImages = watchImages || [];
         const newImages = currentImages.filter((_, i) => i !== index);
         setValue("images", newImages, { shouldValidate: true });
-        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+        setImagePreviews((prev) => {
+            const url = prev[index];
+            if (url && url.startsWith("blob:")) URL.revokeObjectURL(url);
+            return prev.filter((_, i) => i !== index);
+        });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,15 +226,19 @@ export function CreateEventModal({
             const filesToAdd = validFiles.slice(0, availableSlots);
             setValue("images", [...currentImages, ...filesToAdd], { shouldValidate: true });
 
+            // Generate blob preview URLs for the newly added files
+            const newPreviewUrls = filesToAdd.map((file) => URL.createObjectURL(file));
+            setImagePreviews((prev) => [...prev, ...newPreviewUrls]);
+
             if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
 
     const onSubmit = (data: CreateEventFormValues) => {
         if (eventToEdit) {
-            // Edit mode: DO NOT send venueId
+            // Edit mode: pass existingBanners (kept URLs) + new files
             const eventId = String(eventToEdit._id || eventToEdit.id);
-            onUpdate?.(eventId, data);
+            onUpdate?.(eventId, { ...data, existingBanners });
         } else {
             // Create mode: attach venueId if present
             const createData: any = { ...data };
@@ -234,12 +251,17 @@ export function CreateEventModal({
     };
 
     const handleClose = () => {
+        // Revoke any new-file blob URLs to prevent memory leaks
+        imagePreviews.forEach((url) => {
+            if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+        });
         reset();
         onClose();
     };
 
     const isEditMode = Boolean(eventToEdit);
-    const currentImagesCount = (watchImages || []).length;
+    // Total image count = existing server banners kept + newly picked files
+    const currentImagesCount = existingBanners.length + (watchImages || []).length;
     const isMaxImagesReached = currentImagesCount >= MAX_IMAGES_COUNT;
 
     return (
@@ -325,31 +347,65 @@ export function CreateEventModal({
                         </div>
                         {errors.images && <span className="text-red-400 text-xs mt-1">{errors.images.message as string}</span>}
 
-                        {/* Image Thumbnails Row */}
-                        {imagePreviews.length > 0 && (
-                            <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-none py-1.5 w-full">
-                                {imagePreviews.map((imgUrl, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="relative w-[76px] h-[90px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
-                                    >
-                                        <img
-                                            src={imgUrl}
-                                            alt={`Event ${idx + 1}`}
-                                            className="w-full h-full object-cover opacity-80"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveImage(idx)}
-                                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[#FF0000] text-white flex items-center justify-center shadow-md hover:scale-110 transition-transform cursor-pointer"
-                                            aria-label="Remove image"
+                        {/* Existing Banner Thumbnails (edit mode) */}
+                        {existingBanners.length > 0 && (
+                            <div className="flex flex-col gap-1.5 pt-2 w-full">
+                                <span className="text-[11px] font-semibold text-[#8B7EC8] uppercase tracking-wide">Current Banners</span>
+                                <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-none pb-1 w-full">
+                                    {existingBanners.map((imgUrl, idx) => (
+                                        <div
+                                            key={`existing-${idx}`}
+                                            className="relative w-[76px] h-[90px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                         >
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                ))}
+                                            <img
+                                                src={cleanImageUrl(imgUrl)}
+                                                alt={`Current banner ${idx + 1}`}
+                                                className="w-full h-full object-cover opacity-80"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveExistingBanner(idx)}
+                                                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[#FF0000] text-white flex items-center justify-center shadow-md hover:scale-110 transition-transform cursor-pointer"
+                                                aria-label="Remove existing banner"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* New File Previews */}
+                        {imagePreviews.length > 0 && (
+                            <div className="flex flex-col gap-1.5 pt-2 w-full">
+                                {existingBanners.length > 0 && <span className="text-[11px] font-semibold text-[#8B7EC8] uppercase tracking-wide">New Images</span>}
+                                <div className="flex items-center gap-2.5 overflow-x-auto scrollbar-none pb-1 w-full">
+                                    {imagePreviews.map((imgUrl, idx) => (
+                                        <div
+                                            key={`new-${idx}`}
+                                            className="relative w-[76px] h-[90px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
+                                        >
+                                            <img
+                                                src={imgUrl}
+                                                alt={`New image ${idx + 1}`}
+                                                className="w-full h-full object-cover opacity-80"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveNewImage(idx)}
+                                                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[#FF0000] text-white flex items-center justify-center shadow-md hover:scale-110 transition-transform cursor-pointer"
+                                                aria-label="Remove new image"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

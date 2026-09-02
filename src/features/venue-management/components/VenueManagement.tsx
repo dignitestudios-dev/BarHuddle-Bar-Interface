@@ -1,21 +1,19 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { ClaimVenuesBanner } from "./ClaimVenuesBanner";
 import { VenueCard, type VenueCardData } from "./VenueCard";
 import { VenueDetailView } from "./VenueDetailView";
 import { ClaimFormModal } from "./ClaimFormModal";
 
-
-
 import { useMyVenuesQuery } from "../api/venue.queries";
-import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useAppSelector } from "@/store";
 
 export function VenueManagement() {
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const page = Number(searchParams?.get("page")) || 1;
     const limit = Number(searchParams?.get("limit")) || 10;
@@ -33,7 +31,13 @@ export function VenueManagement() {
         setIsClaimModalOpen(true);
     };
 
-    const { data: venues, isLoading, isError, isFetching } = useMyVenuesQuery(page, limit, search);
+    const isFirstLogin = pathname === "/venue-management";
+
+    const { data: venues, isLoading, isError, isFetching } = useMyVenuesQuery(
+        page,
+        limit,
+        search
+    );
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,7 +48,7 @@ export function VenueManagement() {
             params.delete("search");
         }
         params.set("page", "1"); // Reset to page 1 on new search
-        router.push(`/venue-management?${params.toString()}`);
+        router.push(`${pathname}?${params.toString()}`);
     };
 
     const displayVenues = venues && venues.length > 0
@@ -60,24 +64,38 @@ export function VenueManagement() {
         : [];
 
     return (
-        <div className="w-full min-h-screen flex flex-col items-center justify-start bg-transparent font-['Manrope',sans-serif] animate-in fade-in zoom-in-95 duration-500 pt-8 sm:pt-12 pb-16 px-4">
+        <div className={`w-full min-h-screen flex flex-col items-center justify-start bg-transparent font-['Manrope',sans-serif] animate-in fade-in zoom-in-95 duration-500 ${isFirstLogin ? "pt-8 sm:pt-12" : "pt-4 sm:pt-6"} pb-16 px-4`}>
             {/* Ambient Background Glows */}
             <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#7C3AED] opacity-[0.15] blur-[120px] pointer-events-none" />
             <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#E8FF57] opacity-[0.05] blur-[120px] pointer-events-none" />
 
-            <main className="relative w-full max-w-[1200px] flex flex-col gap-10 z-10">
-                {/* Header Section */}
-                <div className="flex flex-col items-center text-center gap-3 w-full">
-                    <h1 className="font-extrabold text-[40px] sm:text-[48px] leading-[48px] sm:leading-[56px] text-white tracking-tight drop-shadow-md">
-                        Let's Get Started
-                    </h1>
-                    <p className="text-[#9D8FD0] text-[15px] sm:text-[16px] max-w-[600px] mx-auto">
-                        Welcome to BarHuddle! Find and claim your venues below to unlock your exclusive dashboard and management tools.
-                    </p>
-                </div>
+            <main className="relative w-full max-w-[1200px] flex flex-col gap-8 sm:gap-10 z-10">
+                {isFirstLogin ? (
+                    <>
+                        {/* Header Section for First Login Onboarding */}
+                        <div className="flex flex-col items-center text-center gap-3 w-full">
+                            <h1 className="font-extrabold text-[40px] sm:text-[48px] leading-[48px] sm:leading-[56px] text-white tracking-tight drop-shadow-md">
+                                Let's Get Started
+                            </h1>
+                            <p className="text-[#9D8FD0] text-[15px] sm:text-[16px] max-w-[600px] mx-auto">
+                                Welcome to BarHuddle! Find and claim your venues below to unlock your exclusive dashboard and management tools.
+                            </p>
+                        </div>
 
-                {/* Top Claim Your Venues Banner */}
-                <ClaimVenuesBanner className="mx-auto w-full" />
+                        {/* Top Claim Your Venues Banner */}
+                        <ClaimVenuesBanner className="mx-auto w-full" />
+                    </>
+                ) : (
+                    /* Top Header for Venue Management Tab */
+                    <div className="w-full flex flex-col gap-1">
+                        <h1 className="font-extrabold text-[32px] sm:text-[36px] leading-[40px] sm:leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
+                            Venue Management
+                        </h1>
+                        <p className="text-[#9D8FD0] text-[14px] sm:text-[15px]">
+                            Browse, search, and manage all venues in BarHuddle.
+                        </p>
+                    </div>
+                )}
 
                 {/* Search Bar Section */}
                 <form onSubmit={handleSearch} className="w-full max-w-[600px] mx-auto relative flex items-center">
@@ -105,7 +123,7 @@ export function VenueManagement() {
                 <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-[rgba(124,58,237,0.3)] to-transparent" />
 
                 {/* Venues Grid */}
-                <div className="flex flex-col  gap-4">
+                <div className="flex flex-col gap-4">
                     <h2 className="text-xl font-bold text-white mb-2">Available Venues</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full place-items-center sm:place-items-center">
                         {!search ? (
@@ -121,9 +139,15 @@ export function VenueManagement() {
                                 </p>
                             </div>
                         ) : isLoading || isFetching ? (
-                            <div className="col-span-full py-12 flex flex-col items-center justify-center gap-4">
-                                <div className="w-10 h-10 border-4 border-[#7C3AED]/30 border-t-[#7C3AED] rounded-full animate-spin" />
-                                <span className="text-[#9D8FD0] font-medium">Discovering venues...</span>
+                            <div className="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} className="h-[472px] w-full rounded-[20px] bg-[#140E50]/65 border border-[rgba(124,58,237,0.25)] p-4 flex flex-col gap-4 animate-pulse">
+                                        <div className="w-full h-[220px] rounded-xl bg-purple-900/30" />
+                                        <div className="h-6 w-3/4 bg-purple-900/40 rounded" />
+                                        <div className="h-4 w-1/2 bg-purple-900/30 rounded" />
+                                        <div className="mt-auto h-10 w-full bg-purple-900/40 rounded-xl" />
+                                    </div>
+                                ))}
                             </div>
                         ) : isError ? (
                             <div className="col-span-full py-12 flex items-center justify-center text-red-400 bg-red-500/10 rounded-2xl border border-red-500/20 w-full">
@@ -131,9 +155,13 @@ export function VenueManagement() {
                             </div>
                         ) : displayVenues.length === 0 ? (
                             <div className="col-span-full py-12 flex flex-col items-center justify-center gap-4 text-center">
-                                <h3 className="text-xl font-bold text-white">No Venues Found</h3>
+                                <h3 className="text-xl font-bold text-white">
+                                    {search ? "No Venues Found" : "No Venues Available"}
+                                </h3>
                                 <p className="text-[#9D8FD0] text-sm max-w-[400px]">
-                                    We couldn't find any venues matching "{search}". Try a different name or location.
+                                    {search 
+                                        ? `We couldn't find any venues matching "${search}". Try a different name or location.` 
+                                        : "There are currently no venues listed. Check back later or use the search bar."}
                                 </p>
                             </div>
                         ) : (

@@ -11,6 +11,8 @@ import { useGetEventsQuery, useGetBoostedEventsQuery } from "../api/events.queri
 import { useCreateEventMutation, useUpdateEventMutation, useDeleteEventMutation } from "../api/events.mutations";
 import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
 import { useAppSelector } from "@/store";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
+import { cleanImageUrl } from "@/utils/image";
 import { toast } from "sonner";
 
 const DEFAULT_EVENT_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
@@ -33,13 +35,22 @@ export function Events() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<any | null>(null);
     const [deletingEvent, setDeletingEvent] = useState<{ id: string; title: string } | null>(null);
-
     const user = useAppSelector((state) => state.auth.user);
-    const { data: apiEventsData, isLoading: isLoadingEvents } = useGetEventsQuery();
-    const { data: apiBoostedData, isLoading: isLoadingBoosted } = useGetBoostedEventsQuery(1, 20);
+    const { selectedVenueId } = useSelectedVenue();
+    const { data: apiEventsData, isLoading: isLoadingEvents } = useGetEventsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
+    const { data: apiBoostedData, isLoading: isLoadingBoosted } = useGetBoostedEventsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
     const { data: ownerVenuesData } = useGetOwnerVenuesQuery();
 
     const primaryVenueId = useMemo(() => {
+        if (selectedVenueId) return selectedVenueId;
         const rawVenues = Array.isArray((ownerVenuesData as any)?.data)
             ? (ownerVenuesData as any).data
             : Array.isArray((ownerVenuesData as any)?.venues)
@@ -49,7 +60,7 @@ export function Events() {
                     : [];
         const first = rawVenues[0];
         return first?.venue?._id || first?.venue?.id || first?._id || first?.id || (user as any)?.venueId || (user as any)?.claimedVenueId || "";
-    }, [ownerVenuesData, user]);
+    }, [selectedVenueId, ownerVenuesData, user]);
 
     const createEventMutation = useCreateEventMutation();
     const updateEventMutation = useUpdateEventMutation();
@@ -90,7 +101,7 @@ export function Events() {
                 dateTime: evt.startAt 
                     ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                     : "TBD",
-                imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || DEFAULT_EVENT_IMAGE,
+                imageUrl: cleanImageUrl(evt.banner || evt.bannerUrl || evt.banners?.[0] || evt.imageUrl, DEFAULT_EVENT_IMAGE),
                 views: viewsVal,
                 ratio: ratioVal,
                 conversionRate: rateVal,
@@ -175,7 +186,7 @@ export function Events() {
                     dateTime: evt.startAt 
                         ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                         : "TBD",
-                    imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || item.banner || DEFAULT_EVENT_IMAGE,
+                    imageUrl: cleanImageUrl(evt.banner || item.banner || evt.bannerUrl || evt.imageUrl, DEFAULT_EVENT_IMAGE),
                     views: viewsVal,
                     ratio: ratioVal,
                     conversionRate: rateVal,
@@ -270,8 +281,15 @@ export function Events() {
             formData.append("endAt", endAt);
             formData.append("status", "published");
 
+            // Append remaining existing banner URLs under 'banner' key
+            const existingBanners: string[] = updatedEventData.existingBanners || [];
+            existingBanners.forEach((url: string) => {
+                formData.append("banner", url);
+            });
+
+            // Append newly uploaded File objects under 'banner' key
             if (updatedEventData.images && Array.isArray(updatedEventData.images)) {
-                updatedEventData.images.forEach((file: File) => {
+                updatedEventData.images.forEach((file: any) => {
                     if (file instanceof File) {
                         formData.append("banner", file);
                     }
@@ -310,7 +328,8 @@ export function Events() {
             description: rawEvent.description || "",
             startAt: rawEvent.startAt || rawEvent.date,
             endAt: rawEvent.endAt,
-            banner: rawEvent.banner || rawEvent.coverImage || rawEvent.imageUrl || event.imageUrl,
+            // Pass raw banners array so the modal shows all existing thumbnails
+            banners: rawEvent.banners || rawEvent.banner || rawEvent.bannerUrl || rawEvent.imageUrl,
         };
         setEditingEvent(normalized);
     };

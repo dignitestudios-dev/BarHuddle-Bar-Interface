@@ -12,6 +12,8 @@ import { useGetEventsQuery } from "@/features/events/api/events.queries";
 import { useCreateBoostMutation } from "../api/boost.mutations";
 import { useUpdateEventMutation, useDeleteEventMutation } from "@/features/events/api/events.mutations";
 import { toast } from "sonner";
+import { cleanImageUrl } from "@/utils/image";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 const DEFAULT_EVENT_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
 
@@ -25,8 +27,17 @@ export function EventBoosting() {
     const [editingEvent, setEditingEvent] = useState<any | null>(null);
     const [deletingEvent, setDeletingEvent] = useState<{ id: string; title: string } | null>(null);
 
-    const { data: apiBoostsData, isLoading: isLoadingBoosts } = useGetBoostsQuery();
-    const { data: apiEventsData, isLoading: isLoadingEvents } = useGetEventsQuery();
+    const { selectedVenueId } = useSelectedVenue();
+    const { data: apiBoostsData, isLoading: isLoadingBoosts } = useGetBoostsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
+    const { data: apiEventsData, isLoading: isLoadingEvents } = useGetEventsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
     const createBoostMutation = useCreateBoostMutation();
     const updateEventMutation = useUpdateEventMutation();
     const deleteEventMutation = useDeleteEventMutation();
@@ -103,7 +114,7 @@ export function EventBoosting() {
                 title: evt.title || evt.name || item.title || "Unnamed Event",
                 venueName: evt.venue?.name || evt.venueName || "Venue",
                 dateTime: formattedDateTime,
-                imageUrl: evt.banner || evt.coverImage || evt.images?.[0] || item.banner || evt.venue?.coverImage || DEFAULT_EVENT_IMAGE,
+                imageUrl: cleanImageUrl(evt.banner || item.banner || evt.bannerUrl || evt.banners?.[0] || evt.imageUrl, DEFAULT_EVENT_IMAGE),
                 views: viewsVal,
                 ratio: ratioVal,
                 conversionRate: rateVal,
@@ -161,7 +172,7 @@ export function EventBoosting() {
             description: rawEvent.description || "",
             startAt: rawEvent.startAt || rawEvent.date,
             endAt: rawEvent.endAt,
-            banner: rawEvent.banner || rawEvent.coverImage || rawEvent.imageUrl || event.imageUrl,
+            banner: cleanImageUrl(rawEvent.banner || rawEvent.bannerUrl || rawEvent.banners?.[0] || event.imageUrl),
         };
         setEditingEvent(normalized);
     };

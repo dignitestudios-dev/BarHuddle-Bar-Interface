@@ -12,9 +12,26 @@ export interface CreateBoostPayload {
   amount: number;
 }
 
+export interface BoostQueryParams {
+  page?: number;
+  limit?: number;
+  venueId?: string;
+  [key: string]: any;
+}
+
 export const boostService = {
-  getBoosts: async () => {
-    const response = await axiosInstance.get("/venue-owner/boosts");
+  getBoosts: async (
+    paramsOrPage?: BoostQueryParams | number,
+    limit = 10,
+    venueId?: string
+  ) => {
+    const params = typeof paramsOrPage === "object"
+      ? { page: 1, limit: 10, ...paramsOrPage }
+      : paramsOrPage !== undefined
+      ? { page: paramsOrPage, limit, ...(venueId ? { venueId } : {}) }
+      : { page: 1, limit: 10 };
+
+    const response = await axiosInstance.get("/venue-owner/boosts", { params });
     return response.data;
   },
   createBoost: async (data: CreateBoostPayload) => {

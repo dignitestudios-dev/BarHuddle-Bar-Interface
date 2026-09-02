@@ -14,6 +14,7 @@ import {
     useGetTimeOfDayGraphQuery,
 } from "../api/analytics.queries";
 import { AnalyticsFilterParams } from "../api/analytics.service";
+import { cleanImageUrl } from "@/utils/image";
 
 const DEFAULT_EVENT_IMAGE = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80";
 
@@ -75,7 +76,7 @@ export function EventsTab({ filterParams }: EventsTabProps) {
                 date: rawDate
                     ? format(new Date(rawDate), "MMM dd")
                     : "TBD",
-                image: item.banner || item.image || DEFAULT_EVENT_IMAGE,
+                image: cleanImageUrl(item.banner || item.image, DEFAULT_EVENT_IMAGE),
                 tag: tagConfig,
                 attendees: item.attendees ?? 0,
                 engagement: item.engagement ?? 0,
@@ -94,7 +95,7 @@ export function EventsTab({ filterParams }: EventsTabProps) {
             title: item.title || "Event",
             attendees: `${item.attendees ?? 0} attendees`,
             engagement: item.engagement ?? 0,
-            image: item.banner || item.image || DEFAULT_EVENT_IMAGE,
+            image: cleanImageUrl(item.banner || item.image, DEFAULT_EVENT_IMAGE),
         }));
     }, [bestEventsData]);
 
@@ -262,14 +263,9 @@ export function EventsTab({ filterParams }: EventsTabProps) {
                 ))}
             </div>
 
-            {/* Event Analytics Cards Carousel Row */}
-            <div className="w-full max-w-[1200px]">
-                {eventsList.length === 0 ? (
-                    <div className="w-full py-12 flex flex-col items-center justify-center gap-2 border border-dashed border-[rgba(124,58,237,0.2)] rounded-[24px] bg-[#0E093C]/50 text-center">
-                        <span className="font-semibold text-white/70">No event analytics available</span>
-                        <span className="text-xs text-white/40">Events created will show analytics cards here.</span>
-                    </div>
-                ) : (
+            {/* Event Analytics Cards Carousel Row - only show when events exist */}
+            {eventsList.length > 0 && (
+                <div className="w-full max-w-[1200px]">
                     <div className="flex items-center gap-4 overflow-x-auto scrollbar-none pb-2">
                         {eventsList.map((event) => (
                             <EventAnalyticsCard
@@ -283,8 +279,8 @@ export function EventsTab({ filterParams }: EventsTabProps) {
                             />
                         ))}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Lower Charts Row: Attendance Trend & Top Performing Events */}
             <div className="max-w-[1200px] w-full flex flex-col lg:flex-row gap-6 items-stretch">
@@ -292,10 +288,12 @@ export function EventsTab({ filterParams }: EventsTabProps) {
                     data={attendanceTrendData}
                     className="flex-1 max-w-full"
                 />
-                <TopPerformingEventsCard
-                    items={rankedList.length > 0 ? rankedList : undefined}
-                    className="w-full lg:w-[320px] xl:w-[340px] shrink-0"
-                />
+                {rankedList.length > 0 && (
+                    <TopPerformingEventsCard
+                        items={rankedList}
+                        className="w-full lg:w-[320px] xl:w-[340px] shrink-0"
+                    />
+                )}
             </div>
 
             {/* Traffic By Time Chart */}

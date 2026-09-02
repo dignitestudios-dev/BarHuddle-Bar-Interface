@@ -5,9 +5,23 @@ export interface Event {
   // add other fields
 }
 
+export interface EventQueryParams {
+  page?: number;
+  limit?: number;
+  venueId?: string;
+  [key: string]: any;
+}
+
 export const eventService = {
-  getEvents: async () => {
-    const response = await axiosInstance.get("/venue-owner/events");
+  getEvents: async (params?: EventQueryParams) => {
+    const queryParams = {
+      page: 1,
+      limit: 10,
+      ...params,
+    };
+    const response = await axiosInstance.get("/venue-owner/events", {
+      params: queryParams,
+    });
     return response.data;
   },
   createEvent: async (data: FormData) => {
@@ -37,9 +51,17 @@ export const eventService = {
     const response = await axiosInstance.get(`/venue-owner/events/${id}/performance`);
     return response.data;
   },
-  getBoostedEvents: async (page = 1, limit = 10) => {
+  getBoostedEvents: async (
+    paramsOrPage?: { page?: number; limit?: number; venueId?: string } | number,
+    limit = 10,
+    venueId?: string
+  ) => {
+    const params = typeof paramsOrPage === "object"
+      ? { page: 1, limit: 10, ...paramsOrPage }
+      : { page: paramsOrPage ?? 1, limit, ...(venueId ? { venueId } : {}) };
+
     const response = await axiosInstance.get("/venue-owner/boosts", {
-      params: { page, limit },
+      params,
     });
     return response.data;
   },

@@ -5,9 +5,15 @@ import { RadialGlow } from "./RadialGlow";
 import { BoostingStatCardsRow } from "./BoostingStatCardsRow";
 
 import { useGetBoostsQuery } from "../api/boost.queries";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 export function EventBoostingHeader() {
-    const { data: apiBoostsData } = useGetBoostsQuery();
+    const { selectedVenueId } = useSelectedVenue();
+    const { data: apiBoostsData } = useGetBoostsQuery({
+        page: 1,
+        limit: 10,
+        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+    });
 
     const avgReach = apiBoostsData?.avgBoostedReach !== undefined && apiBoostsData?.avgBoostedReach !== null
         ? (apiBoostsData.avgBoostedReach >= 1000 ? `${(apiBoostsData.avgBoostedReach / 1000).toFixed(0)}K+` : `${apiBoostsData.avgBoostedReach}`)

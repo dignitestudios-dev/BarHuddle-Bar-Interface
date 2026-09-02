@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { cleanImageUrl } from "@/utils/image";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { VenueDetailView } from "./VenueDetailView";
 
@@ -78,7 +79,7 @@ export function VenueCard({
                     
                     {venue.imageUrl ? (
                         <Image 
-                            src={venue.imageUrl} 
+                            src={cleanImageUrl(venue.imageUrl)} 
                             alt={venue.title} 
                             fill 
                             className="object-cover" 
