@@ -29,16 +29,26 @@ export const navItems: NavItem[] = [
             </svg>
         ),
     },
-    // {
-    //     name: "Venue Management",
-    //     href: "/app/venue-management",
-    //     icon: (
-    //         <svg className="w-[17px] h-[17px]" viewBox="0 0 17 17" fill="none">
-    //             <path d="M2.5 14.5V6.5L8.5 2.5L14.5 6.5V14.5H2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    //             <path d="M6.5 14.5V10.5H10.5V14.5" stroke="currentColor" strokeWidth="1.4" />
-    //         </svg>
-    //     ),
-    // },
+    {
+        name: "Venue Management",
+        href: "/app/venue-management",
+        icon: (
+            <svg className="w-[17px] h-[17px]" viewBox="0 0 17 17" fill="none">
+                <path d="M2.5 14.5V6.5L8.5 2.5L14.5 6.5V14.5H2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                <path d="M6.5 14.5V10.5H10.5V14.5" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+        ),
+    },
+    {
+        name: "My Venue",
+        href: "/app/my-venue",
+        icon: (
+            <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+        ),
+    },
     {
         name: "Events",
         href: "/app/events",

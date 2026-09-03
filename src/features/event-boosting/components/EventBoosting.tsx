@@ -172,6 +172,7 @@ export function EventBoosting() {
             description: rawEvent.description || "",
             startAt: rawEvent.startAt || rawEvent.date,
             endAt: rawEvent.endAt,
+            banners: rawEvent.banners || rawEvent.banner || rawEvent.bannerUrl || rawEvent.imageUrl,
             banner: cleanImageUrl(rawEvent.banner || rawEvent.bannerUrl || rawEvent.banners?.[0] || event.imageUrl),
         };
         setEditingEvent(normalized);
@@ -205,11 +206,23 @@ export function EventBoosting() {
             formData.append("endAt", endAt);
             formData.append("status", "published");
 
+            // Append remaining existing banner URLs under 'banner' key as strings (strictly capped to 5)
+            const MAX_IMAGES = 5;
+            const existingBanners: string[] = (updatedEventData.existingBanners || []).slice(0, MAX_IMAGES);
+            existingBanners.forEach((url: string) => {
+                if (typeof url === "string" && url.trim()) {
+                    formData.append("banner", String(url).trim());
+                }
+            });
+
+            // Append newly uploaded File objects under 'banner' key (up to remaining slots)
+            const remainingSlots = Math.max(0, MAX_IMAGES - existingBanners.length);
             if (updatedEventData.images && Array.isArray(updatedEventData.images)) {
-                updatedEventData.images.forEach((file: File) => {
-                    if (file instanceof File) {
-                        formData.append("banner", file);
-                    }
+                const newFiles = updatedEventData.images
+                    .filter((file: any) => file instanceof File)
+                    .slice(0, remainingSlots);
+                newFiles.forEach((file: File) => {
+                    formData.append("banner", file);
                 });
             }
 

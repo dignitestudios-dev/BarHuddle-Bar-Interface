@@ -44,9 +44,9 @@ export function SubscriptionPlansScreen({
 
     return (
         <div className={`w-full flex flex-col gap-8 py-4 font-['Manrope',sans-serif] animate-in fade-in duration-300 ${className}`}>
-            {/* Top Navigation Header with Back / Skip Button */}
-            <div className="w-full flex items-center justify-between min-h-[57px] relative z-30 pointer-events-auto">
-                {onBack ? (
+            {/* Top Navigation Header with Back / Skip Button on Left */}
+            <div className="w-full flex items-center justify-start gap-4 min-h-[57px] relative z-30 pointer-events-auto">
+                {onBack && (
                     <button
                         type="button"
                         onClick={onBack}
@@ -57,15 +57,13 @@ export function SubscriptionPlansScreen({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                ) : (
-                    <div />
                 )}
 
-                {/* Skip CTA Button */}
+                {/* Skip CTA Button on Left */}
                 <button
                     type="button"
                     onClick={handleContinue}
-                    className="relative z-30 h-[48px] px-8 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-125 hover:from-[#8B5CF6] hover:to-[#B45FF2] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] hover:shadow-[0px_0px_36px_rgba(124,58,237,0.85)] flex items-center justify-center font-extrabold text-[15px] text-white hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer select-none mr-12 sm:mr-16"
+                    className="relative z-30 h-[48px] px-8 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-125 hover:from-[#8B5CF6] hover:to-[#B45FF2] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] hover:shadow-[0px_0px_36px_rgba(124,58,237,0.85)] flex items-center justify-center font-extrabold text-[15px] text-white hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer select-none"
                 >
                     <span className="pointer-events-none font-extrabold tracking-wide text-white">
                         Skip
@@ -306,13 +304,11 @@ function SubscriptionSkeleton({ className = "", onBack }: { className?: string; 
     return (
         <div className={`w-full flex flex-col gap-8 py-4 font-['Manrope',sans-serif] animate-pulse ${className}`}>
             {/* Top Navigation Header Skeleton */}
-            <div className="w-full flex items-center justify-between min-h-[57px]">
-                {onBack ? (
+            <div className="w-full flex items-center justify-start gap-4 min-h-[57px]">
+                {onBack && (
                     <div className="w-12 h-12 rounded-full bg-white/10" />
-                ) : (
-                    <div />
                 )}
-                <div className="w-[100px] h-[48px] rounded-full bg-white/10 mr-12 sm:mr-16" />
+                <div className="w-[100px] h-[48px] rounded-full bg-white/10" />
             </div>
 
             {/* Main Header Title & Subtitle Skeleton */}

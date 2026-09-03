@@ -123,7 +123,7 @@ export function OverallScoreCard({
             </div>
 
             {/* Bottom Status Banner Pill */}
-            <div className="w-full relative z-10 pt-2">
+            {/* <div className="w-full relative z-10 pt-2">
                 <div className="w-full px-3.5 py-2.5 rounded-full bg-[rgba(74,222,128,0.06)] border border-[rgba(74,222,128,0.2)] flex items-center gap-2 justify-center">
                     <svg className="w-3.5 h-3.5 text-[#4ADE80] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -132,7 +132,7 @@ export function OverallScoreCard({
                         {bannerText}
                     </span>
                 </div>
-            </div>
+            </div> */}
         </div>
     );
 }

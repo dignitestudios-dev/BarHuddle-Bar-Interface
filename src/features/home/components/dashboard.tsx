@@ -16,6 +16,7 @@ import {
     useGetSentimentAnalyticsQuery,
 } from "@/features/analytics/api/analytics.queries";
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
+import { cleanImageUrl } from "@/utils/image";
 
 interface DashboardCardItem {
     id: string;
@@ -28,7 +29,7 @@ interface DashboardCardItem {
 }
 
 export function Dashboard() {
-    const { selectedVenueId } = useSelectedVenue();
+    const { selectedVenueId, selectedVenue } = useSelectedVenue();
 
     const filterParams = useMemo(() => {
         return {
@@ -117,7 +118,7 @@ export function Dashboard() {
             },
             {
                 id: "avg_rating",
-                title: "Avg Rating",
+                title: "Google Avg Rating",
                 value: (data.avgRating ?? (sentimentResponse?.data?.sentimentScore?.score ? (sentimentResponse.data.sentimentScore.score / 20).toFixed(1) : "0")).toString(),
                 trend: "+0%",
                 isPositive: true,
@@ -275,10 +276,52 @@ export function Dashboard() {
         <div className="w-full flex flex-col font-['Manrope',sans-serif]">
             {/* Main Content Area */}
             <main className="flex-1 w-full px-6 py-8 flex flex-col gap-8">
-                {/* Dashboard Page Title */}
-                <h1 className="text-[32px] font-extrabold leading-[40px] text-white tracking-tight">
-                    Dashboard
-                </h1>
+                {/* Dashboard Page Header & Active Venue Card */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                        <h1 className="text-[32px] font-extrabold leading-[40px] text-white tracking-tight">
+                            Dashboard
+                        </h1>
+                        <p className="text-[#9D8FD0] text-[14px]">
+                            Real-time overview and analytics for your active venue.
+                        </p>
+                    </div>
+
+                    {selectedVenue && (
+                        <div
+                            className="group flex items-center gap-3.5 p-2.5 pr-5 rounded-2xl bg-[#140E50]/75 hover:bg-[#140E50] border border-[rgba(124,58,237,0.3)] hover:border-[rgba(124,58,237,0.6)] backdrop-blur-xl shadow-lg transition-all"
+                        >
+                            {selectedVenue.coverImage ? (
+                                <img
+                                    src={cleanImageUrl(selectedVenue.coverImage)}
+                                    alt={selectedVenue.name}
+                                    className="w-12 h-12 rounded-xl object-cover border border-purple-900/50 shrink-0 group-hover:scale-105 transition-transform"
+                                />
+                            ) : (
+                                <div className="w-12 h-12 rounded-xl bg-purple-900/40 border border-purple-800/40 flex items-center justify-center text-[#C27AFF] shrink-0">
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4" />
+                                    </svg>
+                                </div>
+                            )}
+                            <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-[14px] text-white truncate max-w-[160px] sm:max-w-[220px] group-hover:text-[#E8FF57] transition-colors">
+                                        {selectedVenue.name}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
+                                        Claimed
+                                    </span>
+                                </div>
+                                {selectedVenue.address && (
+                                    <span className="text-[11px] text-[#9D8FD0] truncate max-w-[200px] sm:max-w-[240px]">
+                                        {selectedVenue.address}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Overview Stats Cards Grid - 8 Cards (4 Columns) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

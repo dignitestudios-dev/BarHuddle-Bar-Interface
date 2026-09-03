@@ -11,6 +11,9 @@ export interface OwnerVenueItem {
   name: string;
   address?: string;
   coverImage?: string;
+  category?: string;
+  rating?: number;
+  isClaimed?: boolean;
 }
 
 export function useSelectedVenue() {
@@ -42,12 +45,18 @@ export function useSelectedVenue() {
         const name = String(item?.venue?.name || item?.venue?.title || item?.name || item?.title || "");
         const address = item?.venue?.address || item?.address || "";
         const coverImage = cleanImageUrl(item?.venue?.coverImage || item?.coverImage || "");
+        const category = item?.venue?.category || item?.category || "";
+        const rating = item?.venue?.rating ?? item?.rating;
+        const isClaimed = item?.venue?.isClaimed ?? item?.isClaimed ?? true;
         if (!id && !name) return null;
         return {
           id: id || name,
           name: name || "Unnamed Venue",
           address,
           coverImage,
+          category,
+          rating,
+          isClaimed,
         };
       })
       .filter((v: any): v is OwnerVenueItem => v !== null);

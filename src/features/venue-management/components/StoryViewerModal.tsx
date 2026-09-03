@@ -1,6 +1,7 @@
 "use client";
 
 import type { VisitorStory } from "./VenueStoriesSection";
+import { DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 
 export interface StoryViewerModalProps {
     story: VisitorStory | null;
@@ -22,7 +23,12 @@ export function StoryViewerModal({ story, onClose }: StoryViewerModalProps) {
                 <div className="flex items-center justify-between z-10 pt-2">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-purple-500 shrink-0">
-                            <img src={story.avatarUrl} alt={story.name} className="w-full h-full object-cover" />
+                            <img
+                                src={story.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"}
+                                alt=""
+                                onError={(e) => handleImageError(e, "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80")}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         <div className="flex flex-col">
                             <span className="font-bold text-white text-sm">{story.name}</span>
@@ -42,7 +48,12 @@ export function StoryViewerModal({ story, onClose }: StoryViewerModalProps) {
 
                 {/* Story Image */}
                 <div className="absolute inset-0 z-0">
-                    <img src={story.storyImageUrl} alt={`${story.name}'s story`} className="w-full h-full object-cover" />
+                    <img
+                        src={story.storyImageUrl || DEFAULT_VENUE_IMAGE}
+                        alt=""
+                        onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                        className="w-full h-full object-cover"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/30" />
                 </div>
             </div>

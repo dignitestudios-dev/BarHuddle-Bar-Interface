@@ -64,18 +64,22 @@ export function PromotionCard({
                 {/* Teal/Green Gradient Touch */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[rgba(74,222,128,0.2)] to-[rgba(34,211,238,0.12)] opacity-50 pointer-events-none" />
 
-                {/* Top Left Tag Badge (Special / 25% OFF / BOGO) */}
-                <div
-                    className={`absolute top-3.5 left-3.5 px-3 py-1 rounded-full flex items-center justify-center font-extrabold text-[12px] leading-[16px] tracking-[0.3px] shadow-lg ${
-                        isGreenTag
-                            ? "bg-[#4ADE80] text-[#04022E] shadow-[0px_0px_20px_rgba(74,222,128,0.5)]"
-                            : isYellowTag
-                            ? "bg-[#E8FF57] text-[#04022E] shadow-[0px_0px_20px_rgba(232,255,87,0.5)]"
-                            : "bg-[#9F4FFA] text-white shadow-[0px_0px_20px_rgba(159,79,250,0.5)]"
-                    }`}
-                >
-                    {promotion.tagText}
-                </div>
+                {/* Top Left Tag Badge (e.g. 25% OFF / BOGO) - 'Special' tag removed */}
+                {promotion.tagText &&
+                    promotion.tagText.trim() !== "" &&
+                    promotion.tagText.trim().toLowerCase() !== "special" && (
+                    <div
+                        className={`absolute top-3.5 left-3.5 px-3 py-1 rounded-full flex items-center justify-center font-extrabold text-[12px] leading-[16px] tracking-[0.3px] shadow-lg ${
+                            isGreenTag
+                                ? "bg-[#4ADE80] text-[#04022E] shadow-[0px_0px_20px_rgba(74,222,128,0.5)]"
+                                : isYellowTag
+                                ? "bg-[#E8FF57] text-[#04022E] shadow-[0px_0px_20px_rgba(232,255,87,0.5)]"
+                                : "bg-[#9F4FFA] text-white shadow-[0px_0px_20px_rgba(159,79,250,0.5)]"
+                        }`}
+                    >
+                        {promotion.tagText}
+                    </div>
+                )}
 
                 {/* Top Right Status Badge (Expired / Active) */}
                 <div

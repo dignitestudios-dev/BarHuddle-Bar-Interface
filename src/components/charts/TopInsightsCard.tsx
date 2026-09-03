@@ -105,14 +105,14 @@ export function TopInsightsCard({
         >
             {/* SecLabel & Title */}
             <div className="flex flex-col items-start gap-1 relative z-10 w-full mb-1">
-                <div className="flex items-center gap-1.5 h-[15px]">
+                {/* <div className="flex items-center gap-1.5 h-[15px]">
                     <svg className="w-3 h-3 text-[#C27AFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     <span className="font-extrabold text-[10px] leading-[15px] tracking-[1px] text-[#8B7EC8] uppercase">
                         {tagText}
                     </span>
-                </div>
+                </div> */}
 
                 <h3 className="font-extrabold text-[14px] leading-[20px] text-white pt-1">
                     {title}

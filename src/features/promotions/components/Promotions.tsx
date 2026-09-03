@@ -128,8 +128,10 @@ export function Promotions() {
             }
 
             // Tag & Category
-            const tag = promo.tagText || promo.discountText || promo.offerLabel || promo.promoType || "Special";
-            const categoryName = promo.category || promo.promoType || promo.venue?.name || "Special Offers";
+            const rawTag = promo.tagText || promo.discountText || promo.offerLabel || "";
+            const tag = (rawTag && rawTag.toLowerCase() !== "special") ? rawTag : "";
+            const rawCategory = promo.category || promo.venue?.name || "";
+            const categoryName = (rawCategory && rawCategory.toLowerCase() !== "special" && rawCategory.toLowerCase() !== "special offers") ? rawCategory : "Promotion";
 
             // Metrics
             const viewsCount = String(promo.views ?? promo.viewCount ?? promo.metrics?.views ?? "0");
@@ -217,8 +219,6 @@ export function Promotions() {
     const handleUpdatePromotion = async (id: string, updatedPromoData: any) => {
         try {
             const hasNewFiles = updatedPromoData.images && Array.isArray(updatedPromoData.images) && updatedPromoData.images.some((img: any) => img instanceof File);
-            const existingBanners: string[] = updatedPromoData.existingBanners || [];
-
             // Always use FormData so we can send both keepBannerUrls and new files together
             const formData = new FormData();
             // Explicitly DO NOT append venueId on edit
@@ -228,17 +228,23 @@ export function Promotions() {
             formData.append("endAt", updatedPromoData.endAt);
             formData.append("status", updatedPromoData.status || "active");
 
-            // Append remaining existing banner URLs under 'banner' key
+            // Append remaining existing banner URLs under 'banner' key as strings (strictly capped to 5)
+            const MAX_IMAGES = 5;
+            const existingBanners: string[] = (updatedPromoData.existingBanners || []).slice(0, MAX_IMAGES);
             existingBanners.forEach((url: string) => {
-                formData.append("banner", url);
+                if (typeof url === "string" && url.trim()) {
+                    formData.append("banner", String(url).trim());
+                }
             });
 
-            // Append newly uploaded File objects under 'banner' key
+            // Append newly uploaded File objects under 'banner' key (up to remaining slots)
+            const remainingSlots = Math.max(0, MAX_IMAGES - existingBanners.length);
             if (hasNewFiles) {
-                updatedPromoData.images.forEach((file: any) => {
-                    if (file instanceof File) {
-                        formData.append("banner", file);
-                    }
+                const newFiles = updatedPromoData.images
+                    .filter((file: any) => file instanceof File)
+                    .slice(0, remainingSlots);
+                newFiles.forEach((file: File) => {
+                    formData.append("banner", file);
                 });
             }
 

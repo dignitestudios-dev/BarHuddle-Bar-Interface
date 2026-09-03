@@ -107,7 +107,7 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
             },
             {
                 id: "avg-rating",
-                title: "Avg Rating",
+                title: "Google Avg Rating",
                 value: o?.avgRating !== undefined ? `${o.avgRating}★` : "0★",
                 trend: "+0.0",
                 isPositive: true,
@@ -151,20 +151,11 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
         const eveningVal = t?.evening ?? 0;
         const lateNightVal = t?.latenight ?? t?.lateNight ?? 0;
 
-        const maxVal = Math.max(morningVal, afternoonVal, eveningVal, lateNightVal, 1);
-        const MAX_HEIGHT = 241;
-
-        const calcHeight = (val: number) => {
-            if (val === 0) return 4;
-            return Math.max(12, Math.round((val / maxVal) * MAX_HEIGHT));
-        };
-
         return [
             {
                 id: "morning",
                 label: "Morning",
                 value: morningVal,
-                heightPx: calcHeight(morningVal),
                 color: "#22D3EE",
                 glowColor: "rgba(34, 211, 238, 0.4)",
             },
@@ -172,7 +163,6 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
                 id: "afternoon",
                 label: "Afternoon",
                 value: afternoonVal,
-                heightPx: calcHeight(afternoonVal),
                 color: "#A855F7",
                 glowColor: "rgba(168, 85, 247, 0.4)",
             },
@@ -180,7 +170,6 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
                 id: "evening",
                 label: "Evening",
                 value: eveningVal,
-                heightPx: calcHeight(eveningVal),
                 color: "#7C3AED",
                 glowColor: "rgba(124, 58, 237, 0.4)",
             },
@@ -188,7 +177,6 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
                 id: "late-night",
                 label: "Late Night",
                 value: lateNightVal,
-                heightPx: calcHeight(lateNightVal),
                 color: "#E8FF57",
                 glowColor: "rgba(232, 255, 87, 0.4)",
             },

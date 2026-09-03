@@ -84,17 +84,6 @@ export function BoostTab({ filterParams }: BoostTabProps) {
         const raw = organicVsBoostedResponse?.data;
         if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
 
-        const maxVal = Math.max(
-            ...raw.map((item) => Math.max(item.organic ?? 0, item.boosted ?? 0)),
-            1
-        );
-        const MAX_HEIGHT = 241;
-
-        const calcHeight = (val: number) => {
-            if (val === 0) return 4;
-            return Math.max(12, Math.round((val / maxVal) * MAX_HEIGHT));
-        };
-
         return raw.map((item, idx) => {
             let label = "Day";
             try {
@@ -110,9 +99,7 @@ export function BoostTab({ filterParams }: BoostTabProps) {
                 id: `grp-${idx}`,
                 label,
                 organicValue: item.organic ?? 0,
-                organicHeightPx: calcHeight(item.organic ?? 0),
                 boostedValue: item.boosted ?? 0,
-                boostedHeightPx: calcHeight(item.boosted ?? 0),
             };
         });
     }, [organicVsBoostedResponse]);

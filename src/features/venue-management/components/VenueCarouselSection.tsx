@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { cleanImageUrl } from "@/utils/image";
+import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 
 export interface CarouselSlide {
     id: number;
@@ -88,8 +88,9 @@ export function VenueCarouselSection({
             <div className="relative flex-1 h-[480px] bg-[#3C0366] rounded-[20px] overflow-hidden group shadow-[0px_0px_40px_rgba(0,0,0,0.5)]">
                 {/* Main Hero Background Image */}
                 <img
-                    src={cleanImageUrl(activeSlide.imageUrl, DEFAULT_SLIDES[0].imageUrl)}
-                    alt={activeSlide.title}
+                    src={cleanImageUrl(activeSlide.imageUrl, DEFAULT_VENUE_IMAGE)}
+                    alt=""
+                    onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
                     className="w-full h-full object-cover transition-all duration-500 rounded-[20px]"
                 />
 
@@ -207,8 +208,9 @@ export function VenueCarouselSection({
                         >
                             {/* Thumbnail Image */}
                             <img
-                                src={cleanImageUrl(slide.imageUrl, DEFAULT_SLIDES[0].imageUrl)}
-                                alt={`Thumbnail ${idx + 1}`}
+                                src={cleanImageUrl(slide.imageUrl, DEFAULT_VENUE_IMAGE)}
+                                alt=""
+                                onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
                                 className="w-full h-full object-cover"
                             />
 

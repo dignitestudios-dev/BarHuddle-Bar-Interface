@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 export interface TimeSlotData {
     id: string;
     label: string;
     value: number;
-    heightPx: number; // exact Figma height (max 241px)
+    heightPx?: number;
     color: string;
     glowColor: string;
 }
@@ -15,9 +15,9 @@ export interface OrganicBoostedGroup {
     id: string;
     label: string;
     organicValue: number;
-    organicHeightPx: number;
+    organicHeightPx?: number;
     boostedValue: number;
-    boostedHeightPx: number;
+    boostedHeightPx?: number;
 }
 
 export interface TrafficByTimeChartProps {
@@ -35,7 +35,6 @@ const DEFAULT_SLOTS: TimeSlotData[] = [
         id: "morning",
         label: "Morning",
         value: 200,
-        heightPx: 48,
         color: "#22D3EE",
         glowColor: "rgba(34, 211, 238, 0.4)",
     },
@@ -43,7 +42,6 @@ const DEFAULT_SLOTS: TimeSlotData[] = [
         id: "afternoon",
         label: "Afternoon",
         value: 415,
-        heightPx: 100,
         color: "#A855F7",
         glowColor: "rgba(168, 85, 247, 0.4)",
     },
@@ -51,7 +49,6 @@ const DEFAULT_SLOTS: TimeSlotData[] = [
         id: "evening",
         label: "Evening",
         value: 720,
-        heightPx: 174,
         color: "#7C3AED",
         glowColor: "rgba(124, 58, 237, 0.4)",
     },
@@ -59,38 +56,69 @@ const DEFAULT_SLOTS: TimeSlotData[] = [
         id: "late-night",
         label: "Late Night",
         value: 1000,
-        heightPx: 241,
         color: "#E8FF57",
         glowColor: "rgba(232, 255, 87, 0.4)",
     },
 ];
 
 const DEFAULT_ORGANIC_BOOSTED_GROUPS: OrganicBoostedGroup[] = [
-    { id: "1", label: "Ladies Night", organicValue: 200, organicHeightPx: 48, boostedValue: 260, boostedHeightPx: 62 },
-    { id: "2", label: "Ladies Night", organicValue: 620, organicHeightPx: 148, boostedValue: 900, boostedHeightPx: 216 },
-    { id: "3", label: "Ladies Night", organicValue: 340, organicHeightPx: 82, boostedValue: 500, boostedHeightPx: 120 },
-    { id: "4", label: "Ladies Night", organicValue: 100, organicHeightPx: 24, boostedValue: 140, boostedHeightPx: 34 },
-    { id: "5", label: "Ladies Night", organicValue: 780, organicHeightPx: 188, boostedValue: 470, boostedHeightPx: 112 },
-    { id: "6", label: "Ladies Night", organicValue: 180, organicHeightPx: 43, boostedValue: 260, boostedHeightPx: 62 },
-    { id: "7", label: "Ladies Night", organicValue: 560, organicHeightPx: 135, boostedValue: 820, boostedHeightPx: 196 },
-    { id: "8", label: "Ladies Night", organicValue: 270, organicHeightPx: 65, boostedValue: 390, boostedHeightPx: 94 },
-    { id: "9", label: "Ladies Night", organicValue: 150, organicHeightPx: 36, boostedValue: 560, boostedHeightPx: 134 },
-    { id: "10", label: "Ladies Night", organicValue: 180, organicHeightPx: 43, boostedValue: 220, boostedHeightPx: 53 },
+    { id: "1", label: "Ladies Night", organicValue: 200, boostedValue: 260 },
+    { id: "2", label: "Ladies Night", organicValue: 620, boostedValue: 900 },
+    { id: "3", label: "Ladies Night", organicValue: 340, boostedValue: 500 },
+    { id: "4", label: "Ladies Night", organicValue: 100, boostedValue: 140 },
+    { id: "5", label: "Ladies Night", organicValue: 780, boostedValue: 470 },
+    { id: "6", label: "Ladies Night", organicValue: 180, boostedValue: 260 },
+    { id: "7", label: "Ladies Night", organicValue: 560, boostedValue: 820 },
+    { id: "8", label: "Ladies Night", organicValue: 270, boostedValue: 390 },
+    { id: "9", label: "Ladies Night", organicValue: 150, boostedValue: 560 },
+    { id: "10", label: "Ladies Night", organicValue: 180, boostedValue: 220 },
 ];
 
-const Y_AXIS_TICKS = [
-    { label: "1000", positionPx: 0 },
-    { label: "750", positionPx: 60 },
-    { label: "500", positionPx: 120 },
-    { label: "250", positionPx: 180 },
-    { label: "0", positionPx: 241 },
-];
+function formatTickLabel(val: number): string {
+    if (val >= 1000000) {
+        return (val / 1000000).toFixed(val % 1000000 === 0 ? 0 : 1) + "M";
+    }
+    if (val >= 10000) {
+        return (val / 1000).toFixed(val % 1000 === 0 ? 0 : 1) + "k";
+    }
+    return Math.round(val).toString();
+}
+
+export function calculateYAxisScale(dataMax: number): {
+    yMax: number;
+    ticks: { label: string; positionPx: number }[];
+} {
+    const raw = Math.max(dataMax, 0);
+
+    // Candidate maximums with clean integer steps (divided by 4)
+    const candidates = [
+        4, 8, 12, 20, 40, 60, 80, 100,
+        120, 160, 200, 240, 300, 400, 500, 600, 800, 1000,
+        1200, 1600, 2000, 2400, 3000, 4000, 5000, 10000,
+    ];
+
+    let yMax = candidates.find((c) => c >= raw);
+    if (!yMax) {
+        yMax = Math.ceil(raw / 4000) * 4000;
+    }
+
+    const step = yMax / 4;
+    const ticks = [
+        { label: formatTickLabel(yMax), positionPx: 0 },
+        { label: formatTickLabel(step * 3), positionPx: 60 },
+        { label: formatTickLabel(step * 2), positionPx: 120 },
+        { label: formatTickLabel(step * 1), positionPx: 180 },
+        { label: "0", positionPx: 241 },
+    ];
+
+    return { yMax, ticks };
+}
 
 const ZERO_SLOTS: TimeSlotData[] = [
-    { id: "morning", label: "Morning", value: 0, heightPx: 4, color: "#22D3EE", glowColor: "rgba(34, 211, 238, 0.4)" },
-    { id: "afternoon", label: "Afternoon", value: 0, heightPx: 4, color: "#A855F7", glowColor: "rgba(168, 85, 247, 0.4)" },
-    { id: "evening", label: "Evening", value: 0, heightPx: 4, color: "#7C3AED", glowColor: "rgba(124, 58, 237, 0.4)" },
-    { id: "late-night", label: "Late Night", value: 0, heightPx: 4, color: "#E8FF57", glowColor: "rgba(232, 255, 87, 0.4)" },
+    { id: "morning", label: "Morning", value: 0, color: "#22D3EE", glowColor: "rgba(34, 211, 238, 0.4)" },
+    { id: "afternoon", label: "Afternoon", value: 0, color: "#A855F7", glowColor: "rgba(168, 85, 247, 0.4)" },
+    { id: "evening", label: "Evening", value: 0, color: "#7C3AED", glowColor: "rgba(124, 58, 237, 0.4)" },
+    { id: "late-night", label: "Late Night", value: 0, color: "#E8FF57", glowColor: "rgba(232, 255, 87, 0.4)" },
 ];
 
 export function TrafficByTimeChart({
@@ -109,6 +137,21 @@ export function TrafficByTimeChart({
     const displayTag = tagText || (isOrganicBoosted ? "BOOST ANALYTICS" : "TRAFFIC PATTERN");
     const displayTitle = title || (isOrganicBoosted ? "Organic vs Boosted" : "Traffic by Time of Day");
     const displaySubtitle = subtitle || (isOrganicBoosted ? "Performance comparison across events" : "Visitor density across the day");
+
+    // Dynamically calculate the Y-axis maximum and tick labels to match the real data values
+    const rawMax = useMemo(() => {
+        if (isOrganicBoosted) {
+            return Math.max(...groups.map((g) => Math.max(g.organicValue ?? 0, g.boostedValue ?? 0)), 0);
+        }
+        return Math.max(...slots.map((s) => s.value ?? 0), 0);
+    }, [isOrganicBoosted, groups, slots]);
+
+    const { yMax, ticks } = useMemo(() => calculateYAxisScale(rawMax), [rawMax]);
+
+    const getBarHeight = (val: number) => {
+        if (!val || val <= 0) return 4;
+        return Math.max(8, Math.min(241, Math.round((val / yMax) * 241)));
+    };
 
     return (
         <div
@@ -163,7 +206,7 @@ export function TrafficByTimeChart({
             <div className="relative w-full h-[270px] mt-2 z-10 flex flex-col justify-end">
                 {/* Y-Axis Grid Lines & Labels Container */}
                 <div className="absolute inset-0 left-0 right-0 h-[241px]">
-                    {Y_AXIS_TICKS.map((tick) => (
+                    {ticks.map((tick) => (
                         <div
                             key={tick.label}
                             className="absolute w-full flex items-center gap-3"
@@ -212,7 +255,7 @@ export function TrafficByTimeChart({
                                         <div
                                             className="flex-1 max-w-[36px] rounded-t-[12px] bg-[#A855F7] transition-all duration-300 relative overflow-hidden"
                                             style={{
-                                                height: `${grp.organicHeightPx}px`,
+                                                height: `${getBarHeight(grp.organicValue)}px`,
                                                 boxShadow: isHovered ? "0px 0px 12px rgba(168,85,247,0.5)" : "none",
                                             }}
                                         />
@@ -220,7 +263,7 @@ export function TrafficByTimeChart({
                                         <div
                                             className="flex-1 max-w-[36px] rounded-t-[12px] bg-[#E8FF57] transition-all duration-300 relative overflow-hidden"
                                             style={{
-                                                height: `${grp.boostedHeightPx}px`,
+                                                height: `${getBarHeight(grp.boostedValue)}px`,
                                                 boxShadow: isHovered ? "0px 0px 12px rgba(232,255,87,0.5)" : "none",
                                             }}
                                         />
@@ -269,7 +312,7 @@ export function TrafficByTimeChart({
                                     <div
                                         className="w-full rounded-t-[12px] transition-all duration-300 relative overflow-hidden"
                                         style={{
-                                            height: `${slot.heightPx}px`,
+                                            height: `${getBarHeight(slot.value)}px`,
                                             backgroundColor: slot.color,
                                             boxShadow: isHovered
                                                 ? `0px 0px 20px ${slot.glowColor}, 0px 4px 12px rgba(0,0,0,0.3)`
