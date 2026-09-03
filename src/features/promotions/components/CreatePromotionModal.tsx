@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -32,7 +31,6 @@ const createPromotionSchema = z.object({
         .string()
         .min(3, "Title must be at least 3 characters")
         .max(TITLE_MAX_LENGTH, `Title cannot exceed ${TITLE_MAX_LENGTH} characters`),
-    promoType: z.string().min(1, "Promo type is required"),
     description: z
         .string()
         .min(5, "Description must be at least 5 characters")
@@ -122,7 +120,6 @@ export function CreatePromotionModal({
         resolver: zodResolver(createPromotionSchema),
         defaultValues: {
             title: "",
-            promoType: "Happy Hours",
             description: "",
             validFrom: undefined,
             validTo: undefined,
@@ -132,7 +129,6 @@ export function CreatePromotionModal({
 
     const watchImages = watch("images");
     const watchTitle = watch("title");
-    const watchPromoType = watch("promoType");
     const watchDescription = watch("description");
     const watchValidFrom = watch("validFrom");
     const watchValidTo = watch("validTo");
@@ -146,16 +142,15 @@ export function CreatePromotionModal({
 
                 reset({
                     title: promotionToEdit.title || promotionToEdit.name || "",
-                    promoType: promotionToEdit.category || promotionToEdit.promoType || "Happy Hours",
                     description: promotionToEdit.description || "",
                     validFrom: from ? new Date(from) : undefined,
                     validTo: to ? new Date(to) : undefined,
                     images: [],
                 });
 
-                // Load existing server-side banner URLs into dedicated state
+                // Load existing server-side banner URLs into dedicated state (max 5)
                 const rawImgs = promotionToEdit.banners || promotionToEdit.banner || promotionToEdit.bannerUrl || promotionToEdit.imageUrl;
-                const cleanedList = extractImageUrls(rawImgs);
+                const cleanedList = extractImageUrls(rawImgs).slice(0, MAX_IMAGES_COUNT);
                 setExistingBanners(cleanedList);
                 // Clear new-file previews
                 setImagePreviews([]);
@@ -163,7 +158,6 @@ export function CreatePromotionModal({
                 setStep(1);
                 reset({
                     title: "",
-                    promoType: "Happy Hours",
                     description: "",
                     validFrom: undefined,
                     validTo: undefined,
@@ -234,16 +228,17 @@ export function CreatePromotionModal({
                 return;
             }
 
-            // 2. Enforce maximum 5 images limit (existing + new)
-            const availableSlots = MAX_IMAGES_COUNT - currentImages.length - existingBanners.length;
+            // 2. Enforce total 5 images limit (previous existing + newly added)
+            const totalCurrent = existingBanners.length + currentImages.length;
+            const availableSlots = Math.max(0, MAX_IMAGES_COUNT - totalCurrent);
             if (availableSlots <= 0) {
-                toast.error(`Maximum of ${MAX_IMAGES_COUNT} images allowed.`);
+                toast.error(`Maximum of ${MAX_IMAGES_COUNT} images allowed (combined previous and new).`);
                 if (fileInputRef.current) fileInputRef.current.value = "";
                 return;
             }
 
             if (validFiles.length > availableSlots) {
-                toast.warning(`Only ${availableSlots} more image(s) could be added (max ${MAX_IMAGES_COUNT} allowed).`);
+                toast.warning(`Only ${availableSlots} more image(s) could be added (max ${MAX_IMAGES_COUNT} total allowed).`);
             }
 
             const filesToAdd = validFiles.slice(0, availableSlots);
@@ -264,11 +259,22 @@ export function CreatePromotionModal({
     };
 
     const handleContinueToPreview = () => {
+        const totalImagesCount = existingBanners.length + (watchImages || []).length;
+        if (totalImagesCount > MAX_IMAGES_COUNT) {
+            toast.error(`Total images (previous and new) cannot exceed ${MAX_IMAGES_COUNT}.`);
+            return;
+        }
         setStep(2);
     };
 
     const handlePublish = () => {
         const formValues = getValues();
+        const totalImagesCount = existingBanners.length + (formValues.images || []).length;
+        if (totalImagesCount > MAX_IMAGES_COUNT) {
+            toast.error(`Total images (previous and new) cannot exceed ${MAX_IMAGES_COUNT}.`);
+            return;
+        }
+
         const startAt = formValues.validFrom ? formValues.validFrom.toISOString() : new Date().toISOString();
         const endAt = formValues.validTo ? formValues.validTo.toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -294,10 +300,6 @@ export function CreatePromotionModal({
             }
             onCreate?.(payload);
         }
-
-        setStep(1);
-        reset();
-        onClose();
     };
 
     const handleCloseAll = () => {
@@ -319,6 +321,7 @@ export function CreatePromotionModal({
         <div 
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]"
             onClick={(e) => {
+                if (isLoading) return;
                 if (e.target === e.currentTarget) handleCloseAll();
             }}
         >
@@ -334,8 +337,14 @@ export function CreatePromotionModal({
                     {/* Close Button */}
                     <button
                         type="button"
-                        onClick={handleCloseAll}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer shrink-0"
+                        disabled={isLoading}
+                        onClick={isLoading ? undefined : handleCloseAll}
+                        className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center text-white/80 transition-all shrink-0",
+                            isLoading
+                                ? "opacity-30 cursor-not-allowed"
+                                : "hover:text-white hover:bg-white/10 cursor-pointer"
+                        )}
                         aria-label="Close modal"
                     >
                         <div className="w-[18px] h-[18px] border-[1.8px] border-white rounded-[1px] flex items-center justify-center">
@@ -477,53 +486,24 @@ export function CreatePromotionModal({
                             )}
                         </div>
 
-                        {/* Row 1: Promo Title & Promo Type */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                            {/* Promo Title */}
-                            <div className="flex flex-col gap-1.5 w-full">
-                                <div className="flex items-center justify-between">
-                                    <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
-                                        PROMO TITLE
-                                    </label>
-                                    <span className="text-[11px] text-[#8B7EC8] font-medium">
-                                        {(watchTitle || "").length}/{TITLE_MAX_LENGTH}
-                                    </span>
-                                </div>
-                                <input
-                                    type="text"
-                                    {...register("title")}
-                                    maxLength={TITLE_MAX_LENGTH}
-                                    placeholder="e.g. Happy Hour Special"
-                                    className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
-                                />
-                                {errors.title && <span className="text-red-400 text-xs">{errors.title.message}</span>}
-                            </div>
-
-                            {/* Promo Type */}
-                            <div className="flex flex-col gap-1.5 w-full">
+                        {/* Row 1: Promo Title */}
+                        <div className="flex flex-col gap-1.5 w-full">
+                            <div className="flex items-center justify-between">
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
-                                    PROMO TYPE
+                                    PROMO TITLE
                                 </label>
-                                <Controller
-                                    control={control}
-                                    name="promoType"
-                                    render={({ field }) => (
-                                        <Select value={field.value} onValueChange={field.onChange}>
-                                            <SelectTrigger className="w-full h-[46px]! px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white focus:outline-none focus:border-[#B45FF2] transition-colors">
-                                                <SelectValue placeholder="Select type" />
-                                            </SelectTrigger>
-                                            <SelectContent side="bottom" alignItemWithTrigger={false} className="bg-[#0A074A] border-[rgba(124,58,237,0.25)] text-white p-2" style={{ zIndex: 9999 }}>
-                                                {["Happy Hours", "Discounts", "Buy One Get One", "Special Offers"].map((type) => (
-                                                    <SelectItem key={type} value={type} className="px-4 py-3 !text-white hover:!text-white focus:!text-white data-[highlighted]:!text-white hover:bg-purple-900/40 focus:bg-purple-900/40 cursor-pointer rounded-lg" style={{ color: "#ffffff" }}>
-                                                        {type}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.promoType && <span className="text-red-400 text-xs">{errors.promoType.message}</span>}
+                                <span className="text-[11px] text-[#8B7EC8] font-medium">
+                                    {(watchTitle || "").length}/{TITLE_MAX_LENGTH}
+                                </span>
                             </div>
+                            <input
+                                type="text"
+                                {...register("title")}
+                                maxLength={TITLE_MAX_LENGTH}
+                                placeholder="e.g. Happy Hour Special"
+                                className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors"
+                            />
+                            {errors.title && <span className="text-red-400 text-xs">{errors.title.message}</span>}
                         </div>
 
                         {/* Row 2: Description */}
@@ -540,7 +520,7 @@ export function CreatePromotionModal({
                                 {...register("description")}
                                 maxLength={DESCRIPTION_MAX_LENGTH}
                                 placeholder="Describe your promotion in a few words…"
-                                className="w-full h-[90px] p-4 rounded-[20px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[20px] focus:outline-none focus:border-[#B45FF2] transition-colors resize-none"
+                                className="w-full h-[90px] p-4 rounded-[20px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white placeholder:text-[rgba(240,238,255,0.5)] text-[13px] leading-[20px] focus:outline-none focus:border-[#B45FF2] transition-colors resize-none font-['Manrope',sans-serif]"
                             />
                             {errors.description && <span className="text-red-400 text-xs">{errors.description.message}</span>}
                         </div>
@@ -560,7 +540,7 @@ export function CreatePromotionModal({
                                             <PopoverTrigger className="w-full text-left">
                                                 <div
                                                     className={cn(
-                                                        "w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer",
+                                                        "w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer font-['Manrope',sans-serif]",
                                                         !field.value ? "text-[rgba(240,238,255,0.5)]" : "text-white"
                                                     )}
                                                 >
@@ -568,7 +548,7 @@ export function CreatePromotionModal({
                                                     <CalendarIcon className="w-4 h-4 text-[#8B7EC8]" />
                                                 </div>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white" align="start" style={{ zIndex: 9999 }}>
+                                            <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white font-['Manrope',sans-serif]" align="start" style={{ zIndex: 9999 }}>
                                                 <Calendar
                                                     mode="single"
                                                     selected={field.value}
@@ -577,7 +557,7 @@ export function CreatePromotionModal({
                                                         field.onChange(date);
                                                         setIsFromCalendarOpen(false);
                                                     }}
-                                                    className="bg-[#0A074A] text-white"
+                                                    className="bg-[#0A074A] text-white font-['Manrope',sans-serif]"
                                                 />
                                             </PopoverContent>
                                         </Popover>
@@ -599,7 +579,7 @@ export function CreatePromotionModal({
                                             <PopoverTrigger className="w-full text-left">
                                                 <div
                                                     className={cn(
-                                                        "w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer",
+                                                        "w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-left flex items-center justify-between text-[13px] leading-[18px] transition-colors cursor-pointer font-['Manrope',sans-serif]",
                                                         !field.value ? "text-[rgba(240,238,255,0.5)]" : "text-white"
                                                     )}
                                                 >
@@ -607,7 +587,7 @@ export function CreatePromotionModal({
                                                     <CalendarIcon className="w-4 h-4 text-[#8B7EC8]" />
                                                 </div>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white" align="start" style={{ zIndex: 9999 }}>
+                                            <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white font-['Manrope',sans-serif]" align="start" style={{ zIndex: 9999 }}>
                                                 <Calendar
                                                     mode="single"
                                                     selected={field.value}
@@ -616,7 +596,7 @@ export function CreatePromotionModal({
                                                         field.onChange(date);
                                                         setIsToCalendarOpen(false);
                                                     }}
-                                                    className="bg-[#0A074A] text-white"
+                                                    className="bg-[#0A074A] text-white font-['Manrope',sans-serif]"
                                                 />
                                             </PopoverContent>
                                         </Popover>
@@ -660,10 +640,10 @@ export function CreatePromotionModal({
                                 {/* Gradient Cyan/Green Glow Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-br from-[#4ADE80]/20 to-[#22D3EE]/12 opacity-50 pointer-events-none" />
 
-                                {/* Promo Type Badge */}
+                                {/* Promo Badge */}
                                 <div className="absolute top-[18px] left-[19px] px-3 py-1 rounded-full bg-[#E8FF57] flex items-center justify-center">
                                     <span className="font-extrabold text-[12px] leading-[16px] text-[#04022E] tracking-tight">
-                                        {watchPromoType || "Promotion"}
+                                        {(promotionToEdit?.tagText && promotionToEdit.tagText.toLowerCase() !== "special") ? promotionToEdit.tagText : "Promotion"}
                                     </span>
                                 </div>
                             </div>
@@ -697,8 +677,12 @@ export function CreatePromotionModal({
                             {/* Back Button */}
                             <button
                                 type="button"
-                                onClick={() => setStep(1)}
-                                className="w-[91.6px] h-[52px] px-5 py-2.5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.22)] flex items-center justify-center font-bold text-[14px] leading-[20px] text-[#C4B5FD] hover:bg-[rgba(124,58,237,0.2)] transition-all cursor-pointer shrink-0"
+                                disabled={isLoading}
+                                onClick={() => !isLoading && setStep(1)}
+                                className={cn(
+                                    "w-[91.6px] h-[52px] px-5 py-2.5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.22)] flex items-center justify-center font-bold text-[14px] leading-[20px] text-[#C4B5FD] transition-all shrink-0",
+                                    isLoading ? "opacity-40 cursor-not-allowed" : "hover:bg-[rgba(124,58,237,0.2)] cursor-pointer"
+                                )}
                             >
                                 ← Back
                             </button>

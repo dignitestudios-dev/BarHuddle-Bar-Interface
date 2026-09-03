@@ -61,7 +61,11 @@ const authSlice = createSlice({
     },
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {
-        state.user = { ...state.user, ...action.payload };
+        state.user = { 
+          ...state.user, 
+          ...action.payload,
+          isSubscribed: action.payload.isSubscribed !== undefined ? action.payload.isSubscribed : state.user.isSubscribed,
+        };
       } else {
         state.user = action.payload as User;
       }

@@ -68,14 +68,25 @@ export function VenueHeader({
                         Edit Details
                     </button> */}
 
-                    {/* Claim Now Button */}
-                    <button
-                        type="button"
-                        onClick={handleClaimClick}
-                        className="w-[143px] h-[57px] px-[30px] py-3 rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-extrabold text-[16px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                    >
-                        Claim Now
-                    </button>
+                    {/* Claim Button */}
+                    {venue?.isClaimed ? (
+                        <button
+                            type="button"
+                            disabled
+                            className="h-[48px] sm:h-[57px] px-6 rounded-[24px] bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[14px] text-white/40 cursor-not-allowed select-none"
+                            title="This venue has already been claimed"
+                        >
+                            Claimed
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleClaimClick}
+                            className="h-[48px] sm:h-[57px] px-[24px] sm:px-[30px] rounded-[24px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.5),0px_0px_48px_rgba(232,255,87,0.1)] flex items-center justify-center font-extrabold text-[15px] sm:text-[16px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                        >
+                            Claim Now
+                        </button>
+                    )}
                 </div>
             </div>
 

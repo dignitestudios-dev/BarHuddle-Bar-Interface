@@ -70,7 +70,7 @@ export function getDeviceModel(): string {
 }
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.dev.barhuddle.com/",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.staging.barhuddle.com/",
   timeout: 300000,
   headers: { "Content-Type": "application/json" },
 });
@@ -85,6 +85,15 @@ axiosInstance.interceptors.request.use((config) => {
     config.headers.deviceuniqueid = getDeviceUniqueId();
     config.headers.devicemodel = getDeviceModel();
   }
+
+  // When sending FormData, let the browser set multipart/form-data with the correct boundary
+  if (config.data instanceof FormData) {
+    if (config.headers) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
+  }
+
   return config;
 });
 

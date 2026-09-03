@@ -46,7 +46,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} ${plusJakartaSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col text-white">
+      <body className={`${manrope.className} min-h-full flex flex-col text-white font-['Manrope',sans-serif]`}>
         <Providers>
           <RouteProxy>{children}</RouteProxy>
           <Toaster position="top-right" richColors />

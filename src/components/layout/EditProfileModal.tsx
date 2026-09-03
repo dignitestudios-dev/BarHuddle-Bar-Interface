@@ -2,9 +2,11 @@
 
 import React, { useState } from "react";
 import { useUpdateProfileMutation } from "@/features/auth/api/auth.mutations";
-import { useAppDispatch } from "@/store";
-import { updateUser } from "@/store/slices/auth.slice";
+import { RootState, useAppDispatch, useAppSelector } from "@/store";
+import { updateUser, User } from "@/store/slices/auth.slice";
 import { toast } from "sonner";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export interface EditProfileModalProps {
     isOpen: boolean;
@@ -21,33 +23,49 @@ export function EditProfileModal({
     onClose,
     currentFullName,
     currentEmail,
-    currentBio = "",
     currentAvatarUrl,
     onSave,
 }: EditProfileModalProps) {
     const [tempFullName, setTempFullName] = useState(currentFullName);
-    const [tempBio, setTempBio] = useState(currentBio);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl || null);
 
     const updateProfileMutation = useUpdateProfileMutation();
     const dispatch = useAppDispatch();
+    const { user: currentUser } = useAppSelector((state: RootState) => state.auth);
 
     // Prefill data when popup opens or props update
     React.useEffect(() => {
         if (isOpen) {
             setTempFullName(currentFullName || "");
-            setTempBio(currentBio || "");
             setPreviewUrl(currentAvatarUrl || null);
             setImageFile(null);
         }
-    }, [isOpen, currentFullName, currentBio, currentAvatarUrl]);
+    }, [isOpen, currentFullName, currentAvatarUrl]);
 
     if (!isOpen) return null;
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+
+            // 1. Validate image format
+            const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+            const ext = "." + file.name.split(".").pop()?.toLowerCase();
+            const validExts = [".jpg", ".jpeg", ".png", ".webp"];
+            if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+                toast.error("Only PNG, JPG, and WEBP images are supported.");
+                if (e.target) e.target.value = "";
+                return;
+            }
+
+            // 2. Strict 5MB limit
+            if (file.size > MAX_FILE_SIZE) {
+                toast.error("Profile picture size cannot exceed 5MB. Please upload a smaller image.");
+                if (e.target) e.target.value = "";
+                return;
+            }
+
             setImageFile(file);
             setPreviewUrl(URL.createObjectURL(file));
         }
@@ -58,26 +76,46 @@ export function EditProfileModal({
         try {
             const formData = new FormData();
             formData.append("name", tempFullName);
-            formData.append("bio", tempBio);
             if (imageFile) {
+                if (imageFile.size > MAX_FILE_SIZE) {
+                    toast.error("Profile picture size cannot exceed 5MB.");
+                    return;
+                }
                 formData.append("image", imageFile);
             }
 
             const response = await updateProfileMutation.mutateAsync(formData);
-            const updatedUser = response?.data || response?.user || response;
-            if (updatedUser) {
-                dispatch(updateUser(updatedUser));
+            const serverData = response?.data?.user || response?.data || response?.user || response;
+
+            // Only update profile details and strictly preserve existing auth & subscription state
+            const updatedProfile: Partial<User> = {
+                name: tempFullName,
+            };
+
+            if (serverData && typeof serverData === "object") {
+                if (serverData.name) updatedProfile.name = serverData.name;
+                if (serverData.profileImage) updatedProfile.profileImage = serverData.profileImage;
+                if (serverData.avatar) updatedProfile.avatar = serverData.avatar;
+                if (serverData.image) updatedProfile.image = serverData.image;
+                if (serverData.profilePicture) updatedProfile.profilePicture = serverData.profilePicture;
             }
+
+            // Keep subscription and claim state intact so no onboarding/subscribe redirect is ever triggered
+            if (currentUser?.isSubscribed) {
+                updatedProfile.isSubscribed = true;
+            }
+            if (currentUser?.isClaimed) {
+                updatedProfile.isClaimed = currentUser.isClaimed;
+            }
+
+            dispatch(updateUser(updatedProfile));
             onSave?.(tempFullName);
             toast.success("Profile updated successfully!");
             onClose();
         } catch (error: any) {
             console.error("Failed to update profile", error);
-            // Even if offline/local, still update local state
-            dispatch(updateUser({ name: tempFullName, bio: tempBio }));
-            onSave?.(tempFullName);
-            toast.success("Profile updated!");
-            onClose();
+            const errMsg = error?.response?.data?.message || error?.message || "Failed to update profile. Please try again.";
+            toast.error(errMsg);
         }
     };
 
@@ -146,7 +184,7 @@ export function EditProfileModal({
                                 title="Change picture"
                             />
                         </div>
-                        <span className="text-[#9D8FD0] text-xs mt-2">Click to change picture</span>
+                        <span className="text-[#9D8FD0] text-xs mt-2">Click to change picture (Max 5MB)</span>
                     </div>
 
                     {/* EMAIL Field */}
@@ -177,7 +215,7 @@ export function EditProfileModal({
                     <div className="w-full h-0 border-t border-[rgba(255,255,255,0.11)] mb-5" />
 
                     {/* FULL NAME Field */}
-                    <div className="w-full flex flex-col gap-1.5 mb-4">
+                    <div className="w-full flex flex-col gap-1.5 mb-6">
                         <label className="text-[10px] leading-[15px] font-bold text-[#8B7EC8] uppercase tracking-[1px]">
                             OWNER NAME
                         </label>
@@ -191,26 +229,13 @@ export function EditProfileModal({
                         />
                     </div>
 
-                    {/* BIO Field */}
-                    <div className="w-full flex flex-col gap-1.5 mb-6">
-                        <label className="text-[10px] leading-[15px] font-bold text-[#8B7EC8] uppercase tracking-[1px]">
-                            BIO
-                        </label>
-                        <textarea
-                            value={tempBio}
-                            onChange={(e) => setTempBio(e.target.value)}
-                            placeholder="Bar manager..."
-                            className="w-full h-24 p-3 bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] rounded-[12px] text-[13px] leading-[18px] text-white placeholder-[rgba(240,238,255,0.5)] focus:outline-none focus:border-[#9F4FFA] transition-colors resize-none"
-                        />
-                    </div>
-
-                    {/* Save Changes Button */}
+                    {/* Update Profile Button */}
                     <button
                         type="submit"
                         disabled={updateProfileMutation.isPending}
                         className="w-full h-[52px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] rounded-[14px] flex items-center justify-center text-white font-extrabold text-[14px] leading-[20px] hover:brightness-110 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
                     >
-                        {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                        {updateProfileMutation.isPending ? "Updating..." : "Update Profile"}
                     </button>
                 </form>
             </div>

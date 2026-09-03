@@ -102,7 +102,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Stats Container Row */}
-                    <div className="absolute left-[129px] top-[324px] w-[332.36px] h-[70.6px] flex flex-row items-center gap-[16px] z-10">
+                    <div className="absolute left-[129px] top-[324px] w-[332.36px] h-[70.6px] flex flex-row items-center justify-center gap-[16px] z-10">
                         {/* Stat Card 1: Venues Owned */}
                         <div className="w-[104.18px] h-[70.6px] bg-[rgba(124,58,237,0.04)] border border-[rgba(124,58,237,0.118)] rounded-[14px] p-[12px_16px] flex flex-col justify-center items-center">
                             <span className="font-extrabold text-[20px] leading-[28px] text-[#7C3AED] text-center">
@@ -124,14 +124,14 @@ export default function ProfilePage() {
                         </div>
 
                         {/* Stat Card 3: Total Reach */}
-                        <div className="w-[89.4px] h-[70.6px] bg-[rgba(34,211,238,0.04)] border border-[rgba(34,211,238,0.118)] rounded-[14px] p-[12px_16px] flex flex-col justify-center items-center">
+                        {/* <div className="w-[89.4px] h-[70.6px] bg-[rgba(34,211,238,0.04)] border border-[rgba(34,211,238,0.118)] rounded-[14px] p-[12px_16px] flex flex-col justify-center items-center">
                             <span className="font-extrabold text-[20px] leading-[28px] text-[#22D3EE] text-center">
                                 0
                             </span>
                             <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8] text-center whitespace-nowrap mt-0.5">
                                 Total Reach
                             </span>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* User Info Details Cards */}
@@ -224,7 +224,6 @@ export default function ProfilePage() {
                 onClose={() => setIsEditModalOpen(false)}
                 currentFullName={fullName}
                 currentEmail={email}
-                currentBio={bio}
                 currentAvatarUrl={avatarUrl}
                 onSave={updateFullName}
             />

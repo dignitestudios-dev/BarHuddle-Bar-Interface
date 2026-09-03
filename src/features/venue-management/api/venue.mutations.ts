@@ -14,54 +14,81 @@ export const useClaimVenueMutation = () => {
   });
 };
 
-export const useUpdateVenueMutation = (id: string) => {
+export const useUpdateVenueMutation = (defaultId?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: any) => venueService.updateVenue(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: venueKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: venueKeys.lists() });
+    mutationFn: (params: { id?: string; data: { name?: string; address?: string } } | any) => {
+      const targetId = params?.id || defaultId;
+      const payload = params?.data !== undefined ? params.data : params;
+      return venueService.updateVenue(targetId, payload);
+    },
+    onSuccess: (_, variables) => {
+      const targetId = variables?.id || defaultId;
+      if (targetId) queryClient.invalidateQueries({ queryKey: venueKeys.detail(targetId) });
+      queryClient.invalidateQueries({ queryKey: [...venueKeys.all, "owner-venues"] });
+      queryClient.invalidateQueries({ queryKey: venueKeys.claims() });
     },
   });
 };
 
-export const useAddGalleryImageMutation = (venueId: string) => {
+export const useAddGalleryImageMutation = (defaultId?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: FormData) => venueService.addGalleryImage(venueId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: venueKeys.detail(venueId) });
+    mutationFn: (params: { venueId?: string; formData: FormData } | FormData) => {
+      const isParamObj = params && !(params instanceof FormData) && "venueId" in params;
+      const targetId = isParamObj ? params.venueId : defaultId;
+      const formData = isParamObj ? params.formData : (params as FormData);
+      return venueService.addGalleryImage(targetId!, formData);
+    },
+    onSuccess: (_, variables) => {
+      const isParamObj = variables && !(variables instanceof FormData) && "venueId" in variables;
+      const targetId = isParamObj ? variables.venueId : defaultId;
+      if (targetId) {
+        queryClient.invalidateQueries({ queryKey: venueKeys.detail(targetId) });
+      }
     },
   });
 };
 
-export const useRemoveGalleryImageMutation = (venueId: string) => {
+export const useRemoveGalleryImageMutation = (defaultId?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (imageId: string) => venueService.removeGalleryImage(venueId, imageId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: venueKeys.detail(venueId) });
+    mutationFn: (params: { venueId?: string; image?: string; imageId?: string } | string) => {
+      if (typeof params === "string") {
+        return venueService.removeGalleryImage(defaultId!, params);
+      }
+      const targetId = params?.venueId || defaultId;
+      const imageValue = params?.image || params?.imageId || "";
+      return venueService.removeGalleryImage(targetId!, imageValue);
+    },
+    onSuccess: (_, variables) => {
+      const targetId = typeof variables === "string" ? defaultId : (variables?.venueId || defaultId);
+      if (targetId) {
+        queryClient.invalidateQueries({ queryKey: venueKeys.detail(targetId) });
+        queryClient.invalidateQueries({ queryKey: venueKeys.all });
+      }
     },
   });
 };
 
-export const useUpdateOperatingHoursMutation = (venueId: string) => {
+export const useUpdateOperatingHoursMutation = (defaultId?: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: any) => venueService.updateOperatingHours(venueId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: venueKeys.hours(venueId) });
+    mutationFn: (params: { venueId?: string; data: { hours: any[] } } | any) => {
+      const targetId = params?.venueId || defaultId;
+      const payload = params?.data !== undefined ? params.data : params;
+      return venueService.updateOperatingHours(targetId, payload);
     },
-  });
-};
-
-export const useCreateVenueStoryMutation = () => {
-  return useMutation({
-    mutationFn: (data: FormData) => venueService.createVenueStory(data),
-    // onSuccess invalidate specific story queries if needed
+    onSuccess: (_, variables) => {
+      const targetId = variables?.venueId || defaultId;
+      if (targetId) {
+        queryClient.invalidateQueries({ queryKey: venueKeys.hours(targetId) });
+        queryClient.invalidateQueries({ queryKey: venueKeys.detail(targetId) });
+      }
+    },
   });
 };

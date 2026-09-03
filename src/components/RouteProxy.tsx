@@ -5,16 +5,24 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-// Routes that don't require authentication
-const PUBLIC_ROUTES = [
+// Routes accessible to everyone (guests and authenticated users)
+const LEGAL_ROUTES = [
+    "/terms",
+    "/privacy",
+    "/terms-and-conditions",
+    "/privacy-policy",
+];
+
+// Authentication-only routes (login, signup, password resets)
+const AUTH_ROUTES = [
     "/auth/login",
     "/auth/register",
     "/auth/verify-email",
     "/auth/forgot-password",
     "/auth/create-new-password",
-    "/terms",
-    "/privacy",
 ];
+
+const PUBLIC_ROUTES = [...AUTH_ROUTES, ...LEGAL_ROUTES];
 
 export function RouteProxy({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -25,7 +33,13 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         // Wait a small tick to ensure Redux is rehydrated by AuthRehydrator
         const checkRoute = () => {
-            const isAuthRoute = PUBLIC_ROUTES.some(route => pathname?.startsWith(route));
+            // Legal pages are always publicly accessible without redirecting
+            if (LEGAL_ROUTES.some(route => pathname?.startsWith(route))) {
+                setIsChecking(false);
+                return;
+            }
+
+            const isAuthRoute = AUTH_ROUTES.some(route => pathname?.startsWith(route));
             const isAuthenticated = !!token;
 
             if (!isAuthenticated && !isAuthRoute) {
@@ -63,6 +77,10 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
                 if (isAuthRoute || pathname === "/auth/profile-setup") {
                     // Redirect logged-in user away from auth pages
                     router.replace(targetRoute);
+                } else if (pathname?.startsWith("/app")) {
+                    // Authenticated users already inside the app should stay in the app and never be redirected to onboarding
+                    setIsChecking(false);
+                    return;
                 } else if (
                     !(isClaimed === "approved" && user?.isSubscribed) &&
                     !pathname?.startsWith(targetRoute)

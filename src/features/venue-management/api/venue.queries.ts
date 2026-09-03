@@ -11,11 +11,16 @@ export const venueKeys = {
   hours: (id: string) => [...venueKeys.detail(id), "hours"] as const,
 };
 
-export const useMyVenuesQuery = (page: number = 1, limit: number = 10, search: string = "") => {
+export const useMyVenuesQuery = (
+  page: number = 1,
+  limit: number = 10,
+  search: string = "",
+  // isClaimed: boolean = false
+) => {
   return useQuery({
     queryKey: [...venueKeys.lists(), { page, limit, search }],
     queryFn: () => venueService.getMyVenues(page, limit, search),
-    enabled: !!search.trim(),
+    enabled: !!search?.trim(),
   });
 };
 

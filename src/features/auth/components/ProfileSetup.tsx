@@ -20,6 +20,8 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
 export function ProfileSetup() {
     const router = useRouter();
     const dispatch = useAppDispatch();
@@ -59,6 +61,22 @@ export function ProfileSetup() {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+
+            const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+            const ext = "." + file.name.split(".").pop()?.toLowerCase();
+            const validExts = [".jpg", ".jpeg", ".png", ".webp"];
+            if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+                toast.error("Only PNG, JPG, and WEBP images are supported.");
+                if (e.target) e.target.value = "";
+                return;
+            }
+
+            if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+                toast.error("Profile picture size cannot exceed 5MB. Please upload a smaller image.");
+                if (e.target) e.target.value = "";
+                return;
+            }
+
             setImageFile(file);
             setImagePreview(URL.createObjectURL(file));
         }
@@ -70,6 +88,10 @@ export function ProfileSetup() {
             formData.append("name", data.name);
             formData.append("bio", data.bio);
             if (imageFile) {
+                if (imageFile.size > MAX_PROFILE_IMAGE_SIZE) {
+                    toast.error("Profile picture size cannot exceed 5MB.");
+                    return;
+                }
                 formData.append("image", imageFile);
             }
 

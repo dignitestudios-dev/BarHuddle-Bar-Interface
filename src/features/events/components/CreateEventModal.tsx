@@ -139,9 +139,9 @@ export function CreateEventModal({
                     images: [],
                 });
 
-                // Load existing server-side banner URLs into dedicated state
+                // Load existing server-side banner URLs into dedicated state (max 5)
                 const rawImgs = eventToEdit.banners || eventToEdit.banner || eventToEdit.bannerUrl || eventToEdit.imageUrl;
-                const cleanedList = extractImageUrls(rawImgs);
+                const cleanedList = extractImageUrls(rawImgs).slice(0, MAX_IMAGES_COUNT);
                 setExistingBanners(cleanedList);
                 // Clear new-file previews
                 setImagePreviews([]);
@@ -211,16 +211,17 @@ export function CreateEventModal({
                 return;
             }
 
-            // 2. Enforce maximum 5 images limit
-            const availableSlots = MAX_IMAGES_COUNT - currentImages.length;
+            // 2. Enforce total 5 images limit (previous existing + newly added)
+            const totalCurrent = existingBanners.length + currentImages.length;
+            const availableSlots = Math.max(0, MAX_IMAGES_COUNT - totalCurrent);
             if (availableSlots <= 0) {
-                toast.error(`Maximum of ${MAX_IMAGES_COUNT} images allowed.`);
+                toast.error(`Maximum of ${MAX_IMAGES_COUNT} images allowed (combined previous and new).`);
                 if (fileInputRef.current) fileInputRef.current.value = "";
                 return;
             }
 
             if (validFiles.length > availableSlots) {
-                toast.warning(`Only ${availableSlots} more image(s) could be added (max ${MAX_IMAGES_COUNT} allowed).`);
+                toast.warning(`Only ${availableSlots} more image(s) could be added (max ${MAX_IMAGES_COUNT} total allowed).`);
             }
 
             const filesToAdd = validFiles.slice(0, availableSlots);
@@ -235,6 +236,12 @@ export function CreateEventModal({
     };
 
     const onSubmit = (data: CreateEventFormValues) => {
+        const totalImagesCount = existingBanners.length + (data.images || []).length;
+        if (totalImagesCount > MAX_IMAGES_COUNT) {
+            toast.error(`Total images (previous and new) cannot exceed ${MAX_IMAGES_COUNT}.`);
+            return;
+        }
+
         if (eventToEdit) {
             // Edit mode: pass existingBanners (kept URLs) + new files
             const eventId = String(eventToEdit._id || eventToEdit.id);
@@ -265,7 +272,13 @@ export function CreateEventModal({
     const isMaxImagesReached = currentImagesCount >= MAX_IMAGES_COUNT;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
+        <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]"
+            onClick={(e) => {
+                if (isLoading) return;
+                if (e.target === e.currentTarget) handleClose();
+            }}
+        >
             {/* Modal Container */}
             <div className="relative w-full max-w-[562px] bg-[#05033A] border border-[rgba(124,58,237,0.3)] shadow-[0px_4px_25px_rgba(0,0,0,0.5)] rounded-[24px] p-6 sm:p-7 flex flex-col gap-6 max-h-[90vh] overflow-y-auto scrollbar-none">
                 {/* Modal Header */}
@@ -277,8 +290,12 @@ export function CreateEventModal({
                     {/* Close Icon Button */}
                     <button
                         type="button"
-                        onClick={handleClose}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        disabled={isLoading}
+                        onClick={isLoading ? undefined : handleClose}
+                        className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center text-white/80 transition-all",
+                            isLoading ? "opacity-30 cursor-not-allowed" : "hover:text-white hover:bg-white/10 cursor-pointer"
+                        )}
                         aria-label="Close modal"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -447,7 +464,7 @@ export function CreateEventModal({
                                     <PopoverTrigger className="w-full text-left">
                                         <div
                                             className={cn(
-                                                "w-full h-12 px-4 rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex items-center justify-between text-[14px] leading-[19px] transition-colors cursor-pointer",
+                                                "w-full h-12 px-4 rounded-[24px] bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex items-center justify-between text-[14px] leading-[19px] transition-colors cursor-pointer font-['Manrope',sans-serif]",
                                                 !field.value ? "text-white/70" : "text-white"
                                             )}
                                         >
@@ -455,7 +472,7 @@ export function CreateEventModal({
                                             <CalendarIcon className="w-5 h-5 text-white/50" />
                                         </div>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white" align="start" style={{ zIndex: 9999 }}>
+                                    <PopoverContent className="w-auto p-0 bg-[#0A074A] border border-[rgba(124,58,237,0.25)] text-white font-['Manrope',sans-serif]" align="start" style={{ zIndex: 9999 }}>
                                         <Calendar
                                             mode="single"
                                             selected={field.value}
@@ -464,7 +481,7 @@ export function CreateEventModal({
                                                 field.onChange(date);
                                                 setIsCalendarOpen(false);
                                             }}
-                                            className="bg-[#0A074A] text-white"
+                                            className="bg-[#0A074A] text-white font-['Manrope',sans-serif]"
                                         />
                                     </PopoverContent>
                                 </Popover>

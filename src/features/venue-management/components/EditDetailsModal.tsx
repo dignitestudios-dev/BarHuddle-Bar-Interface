@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 
 export interface EditDetailsModalProps {
     isOpen: boolean;
@@ -143,8 +144,9 @@ export function EditDetailsModal({ isOpen, onClose, onSave }: EditDetailsModalPr
                                     className="relative w-[76px] h-[90px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                 >
                                     <img
-                                        src={imgUrl}
-                                        alt={`Uploaded ${idx + 1}`}
+                                        src={cleanImageUrl(imgUrl, DEFAULT_VENUE_IMAGE)}
+                                        alt=""
+                                        onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
                                         className="w-full h-full object-cover opacity-80"
                                     />
 

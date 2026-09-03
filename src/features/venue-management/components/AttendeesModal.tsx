@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { Attendee } from "./VenueAttendeesSection";
+import { handleImageError } from "@/utils/image";
 
 export interface AttendeesModalProps {
     isOpen: boolean;
@@ -64,8 +65,9 @@ export function AttendeesModal({
                             >
                                 {/* Attendee Image */}
                                 <img
-                                    src={person.avatarUrl}
-                                    alt={person.name}
+                                    src={person.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"}
+                                    alt=""
+                                    onError={(e) => handleImageError(e, "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80")}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
 

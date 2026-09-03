@@ -281,18 +281,23 @@ export function Events() {
             formData.append("endAt", endAt);
             formData.append("status", "published");
 
-            // Append remaining existing banner URLs under 'banner' key
-            const existingBanners: string[] = updatedEventData.existingBanners || [];
+            // Append remaining existing banner URLs under 'banner' key as strings (strictly capped to 5)
+            const MAX_IMAGES = 5;
+            const existingBanners: string[] = (updatedEventData.existingBanners || []).slice(0, MAX_IMAGES);
             existingBanners.forEach((url: string) => {
-                formData.append("banner", url);
+                if (typeof url === "string" && url.trim()) {
+                    formData.append("banner", String(url).trim());
+                }
             });
 
-            // Append newly uploaded File objects under 'banner' key
+            // Append newly uploaded File objects under 'banner' key (up to remaining slots)
+            const remainingSlots = Math.max(0, MAX_IMAGES - existingBanners.length);
             if (updatedEventData.images && Array.isArray(updatedEventData.images)) {
-                updatedEventData.images.forEach((file: any) => {
-                    if (file instanceof File) {
-                        formData.append("banner", file);
-                    }
+                const newFiles = updatedEventData.images
+                    .filter((file: any) => file instanceof File)
+                    .slice(0, remainingSlots);
+                newFiles.forEach((file: File) => {
+                    formData.append("banner", file);
                 });
             }
 

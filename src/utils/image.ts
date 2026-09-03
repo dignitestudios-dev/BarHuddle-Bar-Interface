@@ -113,12 +113,15 @@ export function extractImageUrls(rawInput: any): string[] {
   return unique;
 }
 
+export const DEFAULT_VENUE_IMAGE =
+  "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=80";
+
 /**
  * Returns a single clean image URL, resolving concatenated or duplicated URLs.
  * If rawInput contains multiple concatenated URLs, returns the primary valid image URL.
  * Falls back to the provided fallback URL if rawInput is empty or invalid.
  */
-export function cleanImageUrl(rawInput: any, fallback: string = ""): string {
+export function cleanImageUrl(rawInput: any, fallback: string = DEFAULT_VENUE_IMAGE): string {
   if (!rawInput) return fallback;
 
   if (typeof rawInput === "string") {
@@ -139,4 +142,101 @@ export function cleanImageUrl(rawInput: any, fallback: string = ""): string {
     }
   }
   return fallback;
+}
+
+/**
+ * Safe image onError event handler that swaps a broken or unreachable image src
+ * with a high-resolution dummy image so that browser alt text is never displayed.
+ */
+export function handleImageError(
+  event: React.SyntheticEvent<HTMLImageElement, Event>,
+  fallbackUrl: string = DEFAULT_VENUE_IMAGE
+) {
+  const target = event.currentTarget;
+  if (target && target.src !== fallbackUrl) {
+    target.onerror = null; // Prevent infinite fallback loop if offline
+    target.src = fallbackUrl;
+  }
+}
+
+/**
+ * Compresses an image client-side using an offscreen HTML5 Canvas.
+ * Automatically scales down excessively large dimensions and compresses
+ * the image so it safely remains below maxSizeBytes (default 4MB),
+ * allowing users to upload large images (e.g. 5MB - 30MB) without exceeding server limits.
+ */
+export async function compressImageIfNeeded(
+  file: File,
+  maxSizeBytes: number = 4 * 1024 * 1024,
+  maxWidthOrHeight: number = 1920
+): Promise<File> {
+  if (typeof window === "undefined" || !file || !file.type.startsWith("image/")) {
+    return file;
+  }
+
+  // If already under target size, no compression needed
+  if (file.size <= maxSizeBytes) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        let { width, height } = img;
+
+        if (width > maxWidthOrHeight || height > maxWidthOrHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidthOrHeight) / width);
+            width = maxWidthOrHeight;
+          } else {
+            width = Math.round((width * maxWidthOrHeight) / height);
+            height = maxWidthOrHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const tryQuality = (quality: number) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve(file);
+                return;
+              }
+
+              if (blob.size > maxSizeBytes && quality > 0.45) {
+                tryQuality(quality - 0.15);
+              } else {
+                const newFileName = file.name.replace(/\.[^.]+$/, ".jpg");
+                const compressedFile = new File([blob], newFileName, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              }
+            },
+            "image/jpeg",
+            quality
+          );
+        };
+
+        tryQuality(0.85);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
 }
