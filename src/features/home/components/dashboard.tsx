@@ -13,7 +13,7 @@ import {
     useGetOverviewQuery,
     useGetVisitorsGraphQuery,
     useGetCustomerBreakdownGraphQuery,
-    useGetSentimentAnalyticsQuery,
+    useGetVisitorSentimentDashboardQuery,
 } from "@/features/analytics/api/analytics.queries";
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 import { cleanImageUrl } from "@/utils/image";
@@ -38,11 +38,19 @@ export function Dashboard() {
         };
     }, [selectedVenueId]);
 
+    // Dedicated hardcoded monthly filter specifically for visitor-sentiment-dashboard in dashboard route
+    const sentimentParams = useMemo(() => {
+        return {
+            filter: "monthly",
+            ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+        };
+    }, [selectedVenueId]);
+
     // Replaced legacy /venue-owner/dashboard API with analytics APIs
     const { data: overviewResponse, isLoading: isLoadingOverview } = useGetOverviewQuery(filterParams);
     const { data: visitorsGraphResponse, isLoading: isLoadingVisitors } = useGetVisitorsGraphQuery(filterParams);
-    const { data: customerBreakdownResponse, isLoading: isLoadingCustomers } = useGetCustomerBreakdownGraphQuery(filterParams);
-    const { data: sentimentResponse, isLoading: isLoadingSentiment } = useGetSentimentAnalyticsQuery(filterParams);
+    const { data: customerBreakdownResponse, isLoading: isLoadingCustomers, isError: isErrorCustomers } = useGetCustomerBreakdownGraphQuery(filterParams);
+    const { data: sentimentResponse, isLoading: isLoadingSentiment, isError: isErrorSentiment } = useGetVisitorSentimentDashboardQuery(sentimentParams);
 
     const isLoading = isLoadingOverview && isLoadingVisitors;
 
@@ -119,7 +127,16 @@ export function Dashboard() {
             {
                 id: "avg_rating",
                 title: "Google Avg Rating",
-                value: (data.avgRating ?? (sentimentResponse?.data?.sentimentScore?.score ? (sentimentResponse.data.sentimentScore.score / 20).toFixed(1) : "0")).toString(),
+                value: (() => {
+                    if (data.avgRating !== undefined && data.avgRating !== null) return data.avgRating.toString();
+                    const sData = sentimentResponse?.data as any;
+                    if (sData?.score) return (sData.score / 20).toFixed(1);
+                    if (sData?.worthIt) {
+                        const pct = typeof sData.worthIt === "object" ? sData.worthIt.percentage : sData.worthIt;
+                        return (pct / 20).toFixed(1);
+                    }
+                    return "0";
+                })(),
                 trend: "+0%",
                 isPositive: true,
                 variant: "orange" as const,
@@ -157,7 +174,6 @@ export function Dashboard() {
                 name: label,
                 visitors: item.visitors ?? 0,
                 checkIns: item.checkIns ?? 0,
-                retention: 0,
                 new: item.new ?? 0,
                 repeat: item.repeat ?? 0,
                 lost: item.lost ?? 0,
@@ -212,23 +228,38 @@ export function Dashboard() {
         return undefined;
     }, [customerBreakdownResponse]);
 
-    // Sentiment Scores mapped from GET /venue-owner/analytics/sentiment
+    // Sentiment Scores mapped from GET /analytics/retention/visitor-sentiment-dashboard
     const sentimentItems = useMemo(() => {
-        const s = sentimentResponse?.data?.sentimentScore;
-        if (!s) return undefined;
+        const d = sentimentResponse?.data as any;
+        if (!d) return undefined;
+
+        const getPct = (val: any) => {
+            if (val === undefined || val === null) return undefined;
+            if (typeof val === "number") return Math.round(val);
+            if (typeof val.percentage === "number") return Math.round(val.percentage);
+            return undefined;
+        };
+
+        const worthItPct = getPct(d.worthIt);
+        const midPct = getPct(d.mid);
+        const notWorthItPct = getPct(d.notWorthIt);
+
+        if (worthItPct === undefined && midPct === undefined && notWorthItPct === undefined) {
+            return undefined;
+        }
 
         return [
             {
                 name: "Worth It",
-                percentage: Math.round(s.worthIt ?? 0),
+                percentage: worthItPct ?? 0,
                 color: "#E8FF57",
                 bgColor: "rgba(232, 255, 87, 0.03)",
                 borderColor: "rgba(232, 255, 87, 0.094)",
                 offsetClass: "w-full",
             },
             {
-                name: "Mid",
-                percentage: Math.round(s.mid ?? 0),
+                name: "Check It Out",
+                percentage: midPct ?? 0,
                 color: "#22D3EE",
                 bgColor: "rgba(34, 211, 238, 0.03)",
                 borderColor: "rgba(34, 211, 238, 0.094)",
@@ -236,7 +267,7 @@ export function Dashboard() {
             },
             {
                 name: "Not Worth It",
-                percentage: Math.round(s.notWorthIt ?? 0),
+                percentage: notWorthItPct ?? 0,
                 color: "#F472B6",
                 bgColor: "rgba(244, 114, 182, 0.03)",
                 borderColor: "rgba(244, 114, 182, 0.094)",
@@ -245,7 +276,16 @@ export function Dashboard() {
         ];
     }, [sentimentResponse]);
 
-    const overallSentimentScore = sentimentResponse?.data?.sentimentScore?.score;
+    const overallSentimentScore = useMemo(() => {
+        const d = sentimentResponse?.data as any;
+        if (!d) return undefined;
+        if (d.score !== undefined && d.score !== null) return Number(d.score);
+        if (d.sentimentScore?.score !== undefined) return Number(d.sentimentScore.score);
+        if (typeof d.sentimentScore === "number") return d.sentimentScore;
+        const w = typeof d.worthIt === "object" ? d.worthIt?.percentage : (typeof d.worthIt === "number" ? d.worthIt : undefined);
+        if (w !== undefined) return Math.round(w);
+        return undefined;
+    }, [sentimentResponse]);
 
     if (isLoading) {
         return (
@@ -347,11 +387,12 @@ export function Dashboard() {
                         <CustomerDonutChart
                             segments={customerSegments}
                             totalCustomers={totalCustomersFormatted}
+                            isError={isErrorCustomers}
                         />
                     </div>
                 </div>
 
-                {/* Bottom Row: Event Performance + Visitor Sentiments */}
+                {/* Bottom Row: Best Performance + Visitor Sentiments */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 max-w-[1200px] gap-6">
                     <div className="w-full min-w-0">
                         <EventPerformanceCard />
@@ -360,6 +401,7 @@ export function Dashboard() {
                         <VisitorSentimentsChart
                             overallScore={overallSentimentScore}
                             sentiments={sentimentItems}
+                            isError={isErrorSentiment}
                         />
                     </div>
                 </div>

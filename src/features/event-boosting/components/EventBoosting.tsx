@@ -103,7 +103,7 @@ export function EventBoosting() {
                     : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
             );
             const performanceVal = Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
-            const viewsVal = String(evt.views ?? evt.viewCount ?? item.views ?? evt.metrics?.views ?? "0");
+            const attendeesVal = String(evt.attendance ?? evt.attendees ?? item.attendance ?? item.attendees ?? evt.views ?? evt.viewCount ?? item.views ?? evt.metrics?.views ?? "0");
 
             const formattedDateTime = evt.startAt
                 ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -115,11 +115,15 @@ export function EventBoosting() {
                 venueName: evt.venue?.name || evt.venueName || "Venue",
                 dateTime: formattedDateTime,
                 imageUrl: cleanImageUrl(evt.banner || item.banner || evt.bannerUrl || evt.banners?.[0] || evt.imageUrl, DEFAULT_EVENT_IMAGE),
-                views: viewsVal,
+                views: attendeesVal,
+                attendees: attendeesVal,
                 ratio: ratioVal,
                 conversionRate: rateVal,
+                retentionRate: rateVal,
                 performancePercent: performanceVal,
                 isBoosted,
+                computedStatus: evt.computedStatus || item.computedStatus || evt.status || item.status,
+                status: evt.status || item.status,
             };
         });
 

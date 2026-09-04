@@ -28,7 +28,7 @@ export interface BoostTabProps {
 export function BoostTab({ filterParams }: BoostTabProps) {
     const { data: boostedOverviewResponse, isLoading: isLoadingOverview } =
         useGetBoostedOverviewQuery(filterParams);
-    const { data: organicVsBoostedResponse, isLoading: isLoadingChart } =
+    const { data: organicVsBoostedResponse, isLoading: isLoadingChart, isError: isErrorChart } =
         useGetOrganicVsBoostedQuery(filterParams);
 
     const isLoading = isLoadingOverview || isLoadingChart;
@@ -62,7 +62,7 @@ export function BoostTab({ filterParams }: BoostTabProps) {
             },
             {
                 id: "total-views",
-                title: "Total Views",
+                title: "Total Check-ins during Events",
                 value: viewsVal,
                 trend: "+0%",
                 isPositive: true,
@@ -140,6 +140,7 @@ export function BoostTab({ filterParams }: BoostTabProps) {
                 <TrafficByTimeChart
                     variant="organicVsBoosted"
                     groups={organicBoostedGroups}
+                    isError={isErrorChart}
                     className="max-w-full"
                 />
             </div>

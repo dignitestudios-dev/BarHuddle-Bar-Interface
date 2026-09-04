@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { format } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
-    useGetVisitorAnalyticsQuery,
     useGetNormalEventsQuery,
     useGetBoostedSentimentEventsQuery,
     useGetBoostedEventsQuery,
@@ -65,7 +64,6 @@ export function BoostHistoryTableCard({
     const { selectedVenueId } = useSelectedVenue();
     const venueParams = selectedVenueId ? { venueId: selectedVenueId } : undefined;
 
-    const { data: visitorAnalytics } = useGetVisitorAnalyticsQuery(venueParams);
     const { data: boostedEventVisitorsResponse } = useGetBoostedEventVisitorsQuery({ page: visitorsPage, limit: 10, ...venueParams });
     const { data: normalEventsResponse } = useGetNormalEventsQuery({ page: eventsPage, limit: 10, ...venueParams });
     const { data: boostedSentimentResponse } = useGetBoostedSentimentEventsQuery({ page: boostPage, limit: 10, ...venueParams });
@@ -105,16 +103,8 @@ export function BoostHistoryTableCard({
             });
         }
 
-        const byDay = visitorAnalytics?.data?.byDay;
-        if (!byDay || !Array.isArray(byDay) || byDay.length === 0) return [];
-        return byDay.map((item: any) => ({
-            date: item.date ? new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "Day",
-            checkIns: item.count || item.checkIns || 0,
-            visitors: item.visitors || item.count || 0,
-            avgStay: item.avgStay || "0m",
-            newCustomers: item.newCustomers || Math.round((item.count || 0) * 0.3),
-        }));
-    }, [boostedEventVisitorsResponse, visitorAnalytics]);
+        return [];
+    }, [boostedEventVisitorsResponse]);
 
     // Events tab data populated from GET /analytics/events/normal
     const eventsData: EventReportRow[] = React.useMemo(() => {

@@ -42,6 +42,7 @@ const createPromotionSchema = z.object({
     }, {
         message: "Start date must be today or in the future",
     }),
+    startTime: z.string().min(1, "Start time is required"),
     validTo: z.date({
         message: "Valid To date is required",
     }).refine((date) => {
@@ -49,6 +50,7 @@ const createPromotionSchema = z.object({
     }, {
         message: "End date must be in the future",
     }),
+    endTime: z.string().min(1, "End time is required"),
     images: z
         .array(z.any())
         .max(MAX_IMAGES_COUNT, `You can upload a maximum of ${MAX_IMAGES_COUNT} images`)
@@ -66,12 +68,19 @@ const createPromotionSchema = z.object({
 }).refine(
     (data) => {
         if (data.validFrom && data.validTo) {
-            return data.validTo >= data.validFrom;
+            const fromDay = new Date(data.validFrom.getFullYear(), data.validFrom.getMonth(), data.validFrom.getDate()).getTime();
+            const toDay = new Date(data.validTo.getFullYear(), data.validTo.getMonth(), data.validTo.getDate()).getTime();
+            if (toDay < fromDay) {
+                return false;
+            }
+            if (toDay === fromDay && data.startTime && data.endTime) {
+                return data.endTime > data.startTime;
+            }
         }
         return true;
     },
     {
-        message: "End date cannot be earlier than start date",
+        message: "End date and time must be after start date and time",
         path: ["validTo"],
     }
 );
@@ -122,7 +131,9 @@ export function CreatePromotionModal({
             title: "",
             description: "",
             validFrom: undefined,
+            startTime: "09:00",
             validTo: undefined,
+            endTime: "22:00",
             images: [],
         },
     });
@@ -131,7 +142,9 @@ export function CreatePromotionModal({
     const watchTitle = watch("title");
     const watchDescription = watch("description");
     const watchValidFrom = watch("validFrom");
+    const watchStartTime = watch("startTime");
     const watchValidTo = watch("validTo");
+    const watchEndTime = watch("endTime");
 
     // Pre-populate fields when in edit mode or when modal opens
     useEffect(() => {
@@ -140,11 +153,30 @@ export function CreatePromotionModal({
                 const from = promotionToEdit.startAt || promotionToEdit.startDate;
                 const to = promotionToEdit.endAt || promotionToEdit.endDate;
 
+                let startT = "09:00";
+                let endT = "22:00";
+
+                if (from) {
+                    const fromDate = new Date(from);
+                    if (!isNaN(fromDate.getTime())) {
+                        startT = format(fromDate, "HH:mm");
+                    }
+                }
+
+                if (to) {
+                    const toDate = new Date(to);
+                    if (!isNaN(toDate.getTime())) {
+                        endT = format(toDate, "HH:mm");
+                    }
+                }
+
                 reset({
                     title: promotionToEdit.title || promotionToEdit.name || "",
                     description: promotionToEdit.description || "",
                     validFrom: from ? new Date(from) : undefined,
+                    startTime: startT,
                     validTo: to ? new Date(to) : undefined,
+                    endTime: endT,
                     images: [],
                 });
 
@@ -160,7 +192,9 @@ export function CreatePromotionModal({
                     title: "",
                     description: "",
                     validFrom: undefined,
+                    startTime: "09:00",
                     validTo: undefined,
+                    endTime: "22:00",
                     images: [],
                 });
                 setExistingBanners([]);
@@ -275,8 +309,18 @@ export function CreatePromotionModal({
             return;
         }
 
-        const startAt = formValues.validFrom ? formValues.validFrom.toISOString() : new Date().toISOString();
-        const endAt = formValues.validTo ? formValues.validTo.toISOString() : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const formattedStartDate = formValues.validFrom instanceof Date 
+            ? formValues.validFrom.toLocaleDateString('en-CA') 
+            : formValues.validFrom;
+        const formattedEndDate = formValues.validTo instanceof Date 
+            ? formValues.validTo.toLocaleDateString('en-CA') 
+            : formValues.validTo;
+
+        const startTime = formValues.startTime || "00:00";
+        const endTime = formValues.endTime || "23:59";
+
+        const startAt = new Date(`${formattedStartDate}T${startTime}`).toISOString();
+        const endAt = new Date(`${formattedEndDate}T${endTime}`).toISOString();
 
         const payload: any = {
             title: formValues.title,
@@ -309,7 +353,7 @@ export function CreatePromotionModal({
     };
 
     const datePreviewText = watchValidFrom || watchValidTo
-        ? `${watchValidFrom ? format(watchValidFrom, "MMM d, yyyy") : "Start"} – ${watchValidTo ? format(watchValidTo, "MMM d, yyyy") : "End"}`
+        ? `${watchValidFrom ? format(watchValidFrom, "MMM d, yyyy") : "Start"}${watchStartTime ? ` (${watchStartTime})` : ""} – ${watchValidTo ? format(watchValidTo, "MMM d, yyyy") : "End"}${watchEndTime ? ` (${watchEndTime})` : ""}`
         : "Jun 1 – Jul 31";
 
     const isEditMode = Boolean(promotionToEdit);
@@ -525,12 +569,12 @@ export function CreatePromotionModal({
                             {errors.description && <span className="text-red-400 text-xs">{errors.description.message}</span>}
                         </div>
 
-                        {/* Row 4: Valid From & Valid To */}
+                        {/* Row 4: Valid From & Valid To with Separate Time Pickers */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                            {/* Valid From */}
+                            {/* Valid From Date */}
                             <div className="flex flex-col gap-1.5 w-full">
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
-                                    Valid From
+                                    Valid From Date
                                 </label>
                                 <Controller
                                     control={control}
@@ -566,10 +610,23 @@ export function CreatePromotionModal({
                                 {errors.validFrom && <span className="text-red-400 text-xs">{errors.validFrom.message}</span>}
                             </div>
 
-                            {/* Valid To */}
+                            {/* Start Time */}
                             <div className="flex flex-col gap-1.5 w-full">
                                 <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
-                                    Valid To
+                                    Start Time
+                                </label>
+                                <input
+                                    type="time"
+                                    {...register("startTime")}
+                                    className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors [color-scheme:dark]"
+                                />
+                                {errors.startTime && <span className="text-red-400 text-xs">{errors.startTime.message}</span>}
+                            </div>
+
+                            {/* Valid To Date */}
+                            <div className="flex flex-col gap-1.5 w-full">
+                                <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
+                                    Valid To Date
                                 </label>
                                 <Controller
                                     control={control}
@@ -603,6 +660,19 @@ export function CreatePromotionModal({
                                     )}
                                 />
                                 {errors.validTo && <span className="text-red-400 text-xs">{errors.validTo.message}</span>}
+                            </div>
+
+                            {/* End Time */}
+                            <div className="flex flex-col gap-1.5 w-full">
+                                <label className="font-bold text-[10px] leading-[15px] tracking-[1px] uppercase text-[#8B7EC8]">
+                                    End Time
+                                </label>
+                                <input
+                                    type="time"
+                                    {...register("endTime")}
+                                    className="w-full h-[46px] px-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.25)] text-white text-[13px] leading-[18px] focus:outline-none focus:border-[#B45FF2] transition-colors [color-scheme:dark]"
+                                />
+                                {errors.endTime && <span className="text-red-400 text-xs">{errors.endTime.message}</span>}
                             </div>
                         </div>
 

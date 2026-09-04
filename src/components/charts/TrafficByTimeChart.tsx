@@ -28,50 +28,15 @@ export interface TrafficByTimeChartProps {
     tagText?: string;
     subtitle?: string;
     groups?: OrganicBoostedGroup[];
+    isError?: boolean;
+    errorMessage?: string;
 }
 
-const DEFAULT_SLOTS: TimeSlotData[] = [
-    {
-        id: "morning",
-        label: "Morning",
-        value: 200,
-        color: "#22D3EE",
-        glowColor: "rgba(34, 211, 238, 0.4)",
-    },
-    {
-        id: "afternoon",
-        label: "Afternoon",
-        value: 415,
-        color: "#A855F7",
-        glowColor: "rgba(168, 85, 247, 0.4)",
-    },
-    {
-        id: "evening",
-        label: "Evening",
-        value: 720,
-        color: "#7C3AED",
-        glowColor: "rgba(124, 58, 237, 0.4)",
-    },
-    {
-        id: "late-night",
-        label: "Late Night",
-        value: 1000,
-        color: "#E8FF57",
-        glowColor: "rgba(232, 255, 87, 0.4)",
-    },
-];
-
-const DEFAULT_ORGANIC_BOOSTED_GROUPS: OrganicBoostedGroup[] = [
-    { id: "1", label: "Ladies Night", organicValue: 200, boostedValue: 260 },
-    { id: "2", label: "Ladies Night", organicValue: 620, boostedValue: 900 },
-    { id: "3", label: "Ladies Night", organicValue: 340, boostedValue: 500 },
-    { id: "4", label: "Ladies Night", organicValue: 100, boostedValue: 140 },
-    { id: "5", label: "Ladies Night", organicValue: 780, boostedValue: 470 },
-    { id: "6", label: "Ladies Night", organicValue: 180, boostedValue: 260 },
-    { id: "7", label: "Ladies Night", organicValue: 560, boostedValue: 820 },
-    { id: "8", label: "Ladies Night", organicValue: 270, boostedValue: 390 },
-    { id: "9", label: "Ladies Night", organicValue: 150, boostedValue: 560 },
-    { id: "10", label: "Ladies Night", organicValue: 180, boostedValue: 220 },
+const ZERO_SLOTS: TimeSlotData[] = [
+    { id: "morning", label: "Morning", value: 0, color: "#22D3EE", glowColor: "rgba(34, 211, 238, 0.4)" },
+    { id: "afternoon", label: "Afternoon", value: 0, color: "#A855F7", glowColor: "rgba(168, 85, 247, 0.4)" },
+    { id: "evening", label: "Evening", value: 0, color: "#7C3AED", glowColor: "rgba(124, 58, 237, 0.4)" },
+    { id: "late-night", label: "Late Night", value: 0, color: "#E8FF57", glowColor: "rgba(232, 255, 87, 0.4)" },
 ];
 
 function formatTickLabel(val: number): string {
@@ -114,13 +79,6 @@ export function calculateYAxisScale(dataMax: number): {
     return { yMax, ticks };
 }
 
-const ZERO_SLOTS: TimeSlotData[] = [
-    { id: "morning", label: "Morning", value: 0, color: "#22D3EE", glowColor: "rgba(34, 211, 238, 0.4)" },
-    { id: "afternoon", label: "Afternoon", value: 0, color: "#A855F7", glowColor: "rgba(168, 85, 247, 0.4)" },
-    { id: "evening", label: "Evening", value: 0, color: "#7C3AED", glowColor: "rgba(124, 58, 237, 0.4)" },
-    { id: "late-night", label: "Late Night", value: 0, color: "#E8FF57", glowColor: "rgba(232, 255, 87, 0.4)" },
-];
-
 export function TrafficByTimeChart({
     className = "",
     slots = ZERO_SLOTS,
@@ -129,6 +87,8 @@ export function TrafficByTimeChart({
     tagText,
     subtitle,
     groups = [],
+    isError,
+    errorMessage,
 }: TrafficByTimeChartProps) {
     const [activeSlot, setActiveSlot] = useState<string | null>(null);
 
@@ -202,7 +162,22 @@ export function TrafficByTimeChart({
                 )}
             </div>
 
-            {/* Chart Area: Grid, Y-Axis, and Bar Groups */}
+            {isError ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 py-16 relative z-10">
+                    <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#F87171]">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <span className="text-[#F87171] font-semibold text-[13px]">
+                        {errorMessage || "Unable to load traffic by time data"}
+                    </span>
+                    <span className="text-[#8B7EC8] text-[11px]">
+                        Please try again later
+                    </span>
+                </div>
+            ) : (
+            /* Chart Area: Grid, Y-Axis, and Bar Groups */
             <div className="relative w-full h-[270px] mt-2 z-10 flex flex-col justify-end">
                 {/* Y-Axis Grid Lines & Labels Container */}
                 <div className="absolute inset-0 left-0 right-0 h-[241px]">
@@ -345,6 +320,7 @@ export function TrafficByTimeChart({
                     </div>
                 )}
             </div>
+            )}
         </div>
     );
 }

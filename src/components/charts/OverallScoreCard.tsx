@@ -15,21 +15,25 @@ export interface OverallScoreCardProps {
     title?: string;
     bannerText?: string;
     items?: ScoreProgressItem[];
+    isError?: boolean;
+    errorMessage?: string;
 }
 
 const DEFAULT_SCORE_ITEMS: ScoreProgressItem[] = [
-    { label: "Worth It", percentage: 62, color: "#E8FF57" },
-    { label: "Mid", percentage: 25, color: "#22D3EE" },
-    { label: "Not Worth It", percentage: 13, color: "#F472B6" },
+    { label: "Worth It", percentage: 0, color: "#E8FF57" },
+    { label: "Check It Out", percentage: 0, color: "#22D3EE" },
+    { label: "Not Worth It", percentage: 0, color: "#F472B6" },
 ];
 
 export function OverallScoreCard({
     className = "",
-    score = 87,
+    score = 0,
     tagText = "SATISFACTION",
     title = "Overall Score",
-    bannerText = "Customers are happy · +3.2% vs last month",
+    bannerText = "No sentiment data available",
     items = DEFAULT_SCORE_ITEMS,
+    isError,
+    errorMessage,
 }: OverallScoreCardProps) {
     return (
         <div
@@ -57,70 +61,88 @@ export function OverallScoreCard({
                 </h3>
             </div>
 
-            {/* Circular Gauge Ring with Score */}
-            <div className="relative w-full h-[120px] flex items-center justify-center relative z-10 my-2">
-                <svg className="w-[120px] h-[120px]" viewBox="0 0 100 100">
-                    {/* Background Track Circle */}
-                    <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="transparent"
-                        stroke="rgba(124, 58, 237, 0.15)"
-                        strokeWidth="8"
-                    />
-                    {/* Progress Circle Arc */}
-                    <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="transparent"
-                        stroke="url(#overallScoreGradient)"
-                        strokeWidth="8"
-                        strokeDasharray="251.2"
-                        strokeDashoffset={251.2 * (1 - score / 100)}
-                        strokeLinecap="round"
-                        transform="rotate(-90 50 50)"
-                    />
-                    <defs>
-                        <linearGradient id="overallScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#E8FF57" />
-                            <stop offset="100%" stopColor="#22D3EE" />
-                        </linearGradient>
-                    </defs>
-                </svg>
-
-                {/* Score Number inside Donut */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="font-extrabold text-[28px] leading-[28px] text-white">
-                        {score}%
+            {isError ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 py-12 relative z-10">
+                    <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#F87171]">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <span className="text-[#F87171] font-semibold text-[13px]">
+                        {errorMessage || "Unable to load overall score"}
+                    </span>
+                    <span className="text-[#8B7EC8] text-[11px]">
+                        Please try again later
                     </span>
                 </div>
-            </div>
+            ) : (
+                <>
+                    {/* Circular Gauge Ring with Score */}
+                    <div className="relative w-full h-[120px] flex items-center justify-center relative z-10 my-2">
+                        <svg className="w-[120px] h-[120px]" viewBox="0 0 100 100">
+                            {/* Background Track Circle */}
+                            <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="transparent"
+                                stroke="rgba(124, 58, 237, 0.15)"
+                                strokeWidth="8"
+                            />
+                            {/* Progress Circle Arc */}
+                            <circle
+                                cx="50"
+                                cy="50"
+                                r="40"
+                                fill="transparent"
+                                stroke="url(#overallScoreGradient)"
+                                strokeWidth="8"
+                                strokeDasharray="251.2"
+                                strokeDashoffset={score > 0 ? 251.2 * (1 - Math.min(score, 100) / 100) : 251.2}
+                                strokeLinecap="round"
+                                transform="rotate(-90 50 50)"
+                            />
+                            <defs>
+                                <linearGradient id="overallScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#E8FF57" />
+                                    <stop offset="100%" stopColor="#22D3EE" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
 
-            {/* Middle Progress Bars */}
-            <div className="flex flex-col gap-3 w-full relative z-10 my-2">
-                {items.map((item) => (
-                    <div key={item.label} className="flex flex-col gap-1 w-full">
-                        <div className="flex items-center justify-between font-['Manrope'] text-[11px] leading-[16px]">
-                            <span className="font-normal text-[#8B7EC8]">{item.label}</span>
-                            <span className="font-extrabold" style={{ color: item.color }}>
-                                {item.percentage}%
+                        {/* Score Number inside Donut */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="font-extrabold text-[28px] leading-[28px] text-white">
+                                {score}%
                             </span>
                         </div>
-                        <div className="w-full h-[6px] bg-[rgba(124,58,237,0.12)] rounded-full overflow-hidden">
-                            <div
-                                className="h-full rounded-full transition-all duration-500"
-                                style={{
-                                    width: `${item.percentage}%`,
-                                    backgroundColor: item.color,
-                                    boxShadow: `0px 0px 6px ${item.color}`,
-                                }}
-                            />
-                        </div>
                     </div>
-                ))}
-            </div>
+
+                    {/* Middle Progress Bars */}
+                    <div className="flex flex-col gap-3 w-full relative z-10 my-2">
+                        {items.map((item) => (
+                            <div key={item.label} className="flex flex-col gap-1 w-full">
+                                <div className="flex items-center justify-between font-['Manrope'] text-[11px] leading-[16px]">
+                                    <span className="font-normal text-[#8B7EC8]">{item.label}</span>
+                                    <span className="font-extrabold" style={{ color: item.color }}>
+                                        {item.percentage}%
+                                    </span>
+                                </div>
+                                <div className="w-full h-[6px] bg-[rgba(124,58,237,0.12)] rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-500"
+                                        style={{
+                                            width: `${item.percentage}%`,
+                                            backgroundColor: item.color,
+                                            boxShadow: item.percentage > 0 ? `0px 0px 6px ${item.color}` : "none",
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
 
             {/* Bottom Status Banner Pill */}
             {/* <div className="w-full relative z-10 pt-2">

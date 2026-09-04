@@ -15,8 +15,10 @@ export interface EventAnalyticsCardProps {
     date: string;
     image: string;
     tag: EventTagConfig;
-    attendees: number | string;
-    engagement: number;
+    attendees?: number | string;
+    attendance?: number | string;
+    engagement?: number;
+    retentionRate?: number;
     className?: string;
 }
 
@@ -49,10 +51,15 @@ export function EventAnalyticsCard({
     image,
     tag,
     attendees,
-    engagement,
+    attendance,
+    engagement = 0,
+    retentionRate,
     className = "",
 }: EventAnalyticsCardProps) {
     const style = TAG_VARIANT_STYLES[tag.variant] || TAG_VARIANT_STYLES.top;
+    const displayAttendance = attendance !== undefined ? attendance : (attendees !== undefined ? attendees : 0);
+    const displayRate = retentionRate !== undefined ? retentionRate : engagement;
+    const numericRate = Math.min(100, Math.max(0, Number(displayRate) || 0));
 
     return (
         <div
@@ -107,21 +114,21 @@ export function EventAnalyticsCard({
 
                 {/* Bottom Stats Container */}
                 <div className="flex items-end gap-2 w-full pt-[10px] pb-[8px]">
-                    {/* Left Column: Attendees */}
-                    <div className="flex flex-col shrink-0 w-[43.4px]">
+                    {/* Left Column: Attendance */}
+                    <div className="flex flex-col shrink-0 min-w-[50px]">
                         <span className="font-extrabold text-[16px] leading-[16px] text-white">
-                            {attendees}
+                            {displayAttendance}
                         </span>
                         <span className="font-normal text-[9px] leading-[14px] text-[#8B7EC8]">
-                            Attendees
+                            Attendance
                         </span>
                     </div>
 
-                    {/* Right Column: Engagement Progress Bar */}
+                    {/* Right Column: Retention Rate Progress Bar */}
                     <div className="flex flex-col flex-1 gap-1">
                         <div className="flex items-center justify-between text-[9px] leading-[14px]">
-                            <span className="font-normal text-[#8B7EC8]">Engagement</span>
-                            <span className="font-bold text-[#E8FF57]">{engagement}%</span>
+                            <span className="font-normal text-[#8B7EC8]">Retention Rate</span>
+                            <span className="font-bold text-[#E8FF57]">{Math.round(numericRate)}%</span>
                         </div>
 
                         {/* Progress Bar Track */}
@@ -129,7 +136,7 @@ export function EventAnalyticsCard({
                             <div
                                 className="h-full rounded-full transition-all duration-500"
                                 style={{
-                                    width: `${engagement}%`,
+                                    width: `${numericRate}%`,
                                     background: "linear-gradient(90deg, #7C3AED 0%, #E8FF57 100%)",
                                 }}
                             />

@@ -10,11 +10,46 @@ export interface EventCardData {
     venueName: string;
     dateTime: string;
     imageUrl: string;
-    views: string;
+    views?: string;
+    attendees?: string;
     ratio: string;
     conversionRate: string;
+    retentionRate?: string;
     performancePercent: number;
     isBoosted?: boolean;
+    computedStatus?: "expired" | "active" | "upcoming" | string;
+    status?: string;
+}
+
+export function getEventStatusConfig(statusVal?: string) {
+    const s = (statusVal || "").toLowerCase().trim();
+    if (s === "active") {
+        return {
+            label: "Active",
+            badgeClass: "bg-[rgba(74,222,128,0.14)] border-[rgba(74,222,128,0.35)] text-[#4ADE80]",
+            dotClass: "bg-[#4ADE80] shadow-[0px_0px_6px_#4ADE80]",
+        };
+    }
+    if (s === "upcoming") {
+        return {
+            label: "Upcoming",
+            badgeClass: "bg-[rgba(232,255,87,0.14)] border-[rgba(232,255,87,0.35)] text-[#E8FF57]",
+            dotClass: "bg-[#E8FF57] shadow-[0px_0px_6px_#E8FF57]",
+        };
+    }
+    if (s === "expired") {
+        return {
+            label: "Expired",
+            badgeClass: "bg-[rgba(251,113,133,0.14)] border-[rgba(251,113,133,0.35)] text-[#FB7185]",
+            dotClass: "bg-[#FB7185] shadow-[0px_0px_6px_#FB7185]",
+        };
+    }
+    if (!s) return null;
+    return {
+        label: s.charAt(0).toUpperCase() + s.slice(1),
+        badgeClass: "bg-[rgba(139,126,200,0.14)] border-[rgba(139,126,200,0.3)] text-[#8B7EC8]",
+        dotClass: "bg-[#8B7EC8] shadow-[0px_0px_6px_#8B7EC8]",
+    };
 }
 
 export interface EventCardProps {
@@ -41,6 +76,8 @@ export function EventCard({
     const router = useRouter();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const menuRef = React.useRef<HTMLDivElement>(null);
+
+    const statusConfig = getEventStatusConfig(event.computedStatus || event.status);
 
     // Close menu on click outside
     React.useEffect(() => {
@@ -97,6 +134,16 @@ export function EventCard({
 
                 {/* Teal/Green Gradient Touch */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[rgba(74,222,128,0.2)] to-[rgba(34,211,238,0.12)] opacity-50 pointer-events-none" />
+
+                {/* Status Badge (Active / Upcoming / Expired) - not shown on boosted events or in boosting mode */}
+                {!isBoostingMode && !event.isBoosted && statusConfig && (
+                    <div
+                        className={`absolute top-3 left-3 px-2.5 py-1 rounded-full border flex items-center gap-1.5 backdrop-blur-md text-[10px] font-bold tracking-[0.2px] shadow-sm z-20 transition-all ${statusConfig.badgeClass}`}
+                    >
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotClass}`} />
+                        <span>{statusConfig.label}</span>
+                    </div>
+                )}
 
                 {/* Top Right Options Menu Button (3 Dots) & Dropdown */}
                 <div ref={menuRef} className="absolute top-3 right-3 z-30">
@@ -184,13 +231,13 @@ export function EventCard({
 
                 {/* 3 Metric Stat Cards Row */}
                 <div className="grid grid-cols-3 gap-2 w-full">
-                    {/* Stat 1: Views */}
+                    {/* Stat 1: Attendees */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[24px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#22D3EE]">
-                            {event.views}
+                            {event.attendees ?? event.views ?? "0"}
                         </span>
                         <span className="font-semibold text-[9px] leading-[14px] text-[#8B7EC8]">
-                            Views
+                            Attendees
                         </span>
                     </div>
 
@@ -204,13 +251,13 @@ export function EventCard({
                         </span>
                     </div>
 
-                    {/* Stat 3: Rate */}
+                    {/* Stat 3: Retention Rate */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[24px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#4ADE80]">
-                            {event.conversionRate}
+                            {event.retentionRate || event.conversionRate}
                         </span>
-                        <span className="font-semibold text-[9px] leading-[14px] text-[#8B7EC8]">
-                            Rate
+                        <span className="font-semibold text-[9px] leading-[14px] text-[#8B7EC8] text-center truncate w-full px-0.5">
+                            Retention Rate
                         </span>
                     </div>
                 </div>

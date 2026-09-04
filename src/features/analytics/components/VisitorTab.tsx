@@ -20,9 +20,9 @@ export interface VisitorTabProps {
 export function VisitorTab({ filterParams }: VisitorTabProps) {
     const { data: visitorsGraphResponse, isLoading: isLoadingVisitorsGraph } =
         useGetVisitorsGraphQuery(filterParams);
-    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay } =
+    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay, isError: isErrorTimeOfDay } =
         useGetTimeOfDayGraphQuery(filterParams);
-    const { data: customerBreakdownResponse, isLoading: isLoadingCustomerBreakdown } =
+    const { data: customerBreakdownResponse, isLoading: isLoadingCustomerBreakdown, isError: isErrorCustomerBreakdown } =
         useGetCustomerBreakdownGraphQuery(filterParams);
 
     const isLoading =
@@ -52,7 +52,6 @@ export function VisitorTab({ filterParams }: VisitorTabProps) {
                 name: label,
                 visitors: item.visitors ?? 0,
                 checkIns: item.checkIns ?? 0,
-                retention: item.retention ?? 0,
             };
         });
     }, [visitorsGraphResponse]);
@@ -162,6 +161,7 @@ export function VisitorTab({ filterParams }: VisitorTabProps) {
             <div className="max-w-[1200px] w-full flex flex-col xl:flex-row gap-6 items-stretch">
                 <TrafficByTimeChart
                     slots={timeSlotsData}
+                    isError={isErrorTimeOfDay}
                     className="flex-1 max-w-full"
                 />
                 <CustomerDonutChart
@@ -170,6 +170,7 @@ export function VisitorTab({ filterParams }: VisitorTabProps) {
                     showGradientBar={true}
                     segments={customerSegmentsData}
                     totalCustomers={totalCustomersCount}
+                    isError={isErrorCustomerBreakdown}
                     totalLabel="Total"
                     className="w-full xl:w-[288px] shrink-0"
                 />

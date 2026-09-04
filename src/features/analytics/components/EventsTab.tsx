@@ -25,7 +25,9 @@ export interface EventItemData {
     image: string;
     tag: EventTagConfig;
     attendees: number;
+    attendance: number;
     engagement: number;
+    retentionRate?: number;
 }
 
 export interface EventsTabProps {
@@ -39,7 +41,7 @@ export function EventsTab({ filterParams }: EventsTabProps) {
         useGetEventsAttendanceQuery(filterParams);
     const { data: bestPerformingResponse, isLoading: isLoadingBestPerforming } =
         useGetBestPerformingEventsQuery(filterParams);
-    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay } =
+    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay, isError: isErrorTimeOfDay } =
         useGetTimeOfDayGraphQuery(filterParams);
 
     const isLoading =
@@ -53,50 +55,86 @@ export function EventsTab({ filterParams }: EventsTabProps) {
 
     // Map top performance cards from best-performing events
     const eventsList: EventItemData[] = useMemo(() => {
-        if (!bestEventsData || !Array.isArray(bestEventsData) || bestEventsData.length === 0) {
+        const list = Array.isArray(bestEventsData)
+            ? bestEventsData
+            : Array.isArray((bestEventsData as any)?.events)
+            ? (bestEventsData as any).events
+            : [];
+
+        if (!list || list.length === 0) {
             return [];
         }
 
-        return bestEventsData.map((item: any, idx: number) => {
-            const rawDate = item.date || item.startAt;
+        return list.map((item: any, idx: number) => {
+            const rawDate = item.startAt || item.date || item.startDate;
             const isUpcoming = rawDate ? new Date(rawDate) > new Date() : false;
+
+            const attendanceCount = Number(item.attendance ?? item.attendees ?? item.attendeeCount ?? 0);
+            const retentionRate = Number(item.retentionRate ?? item.engagement ?? item.engagementPercentage ?? 0);
 
             let tagConfig: EventTagConfig = { label: "Top", icon: "⭐", variant: "top" };
             if (isUpcoming) {
                 tagConfig = { label: "Upcoming", variant: "upcoming" };
-            } else if (item.engagement >= 50) {
+            } else if (retentionRate >= 50) {
                 tagConfig = { label: "Top", icon: "⭐", variant: "top" };
-            } else if (item.attendees > 0) {
+            } else if (attendanceCount > 0) {
                 tagConfig = { label: "Growing", variant: "growing" };
             }
 
+            const rawBanner = Array.isArray(item.banner) && item.banner.length > 0
+                ? item.banner[0]
+                : Array.isArray(item.banners) && item.banners.length > 0
+                ? item.banners[0]
+                : item.banner || item.image || item.imageUrl;
+
             return {
-                id: item._id || item.id || `evt-${idx}`,
-                title: item.title || "Event",
+                id: String(item.eventId || item._id || item.id || `evt-${idx}`),
+                title: item.title || item.name || "Event",
                 date: rawDate
                     ? format(new Date(rawDate), "MMM dd")
                     : "TBD",
-                image: cleanImageUrl(item.banner || item.image, DEFAULT_EVENT_IMAGE),
+                image: cleanImageUrl(rawBanner, DEFAULT_EVENT_IMAGE),
                 tag: tagConfig,
-                attendees: item.attendees ?? 0,
-                engagement: item.engagement ?? 0,
+                attendees: attendanceCount,
+                attendance: attendanceCount,
+                engagement: retentionRate,
+                retentionRate: retentionRate,
             };
         });
     }, [bestEventsData]);
 
     // Map ranked events for the right sidebar card
     const rankedList: RankedEventItem[] = useMemo(() => {
-        if (!bestEventsData || !Array.isArray(bestEventsData) || bestEventsData.length === 0) {
+        const list = Array.isArray(bestEventsData)
+            ? bestEventsData
+            : Array.isArray((bestEventsData as any)?.events)
+            ? (bestEventsData as any).events
+            : [];
+
+        if (!list || list.length === 0) {
             return [];
         }
 
-        return bestEventsData.map((item: any, idx: number) => ({
-            id: item._id || item.id || `rank-${idx}`,
-            title: item.title || "Event",
-            attendees: `${item.attendees ?? 0} attendees`,
-            engagement: item.engagement ?? 0,
-            image: cleanImageUrl(item.banner || item.image, DEFAULT_EVENT_IMAGE),
-        }));
+        return list.map((item: any, idx: number) => {
+            const rawBanner = Array.isArray(item.banner) && item.banner.length > 0
+                ? item.banner[0]
+                : Array.isArray(item.banners) && item.banners.length > 0
+                ? item.banners[0]
+                : item.banner || item.image || item.imageUrl;
+
+            const attendanceCount = Number(item.attendance ?? item.attendees ?? item.attendeeCount ?? 0);
+            const retentionRate = Number(item.retentionRate ?? item.engagement ?? item.engagementPercentage ?? 0);
+
+            return {
+                id: String(item.eventId || item._id || item.id || `rank-${idx}`),
+                title: item.title || item.name || "Event",
+                attendees: `${attendanceCount} attendee${attendanceCount === 1 ? "" : "s"}`,
+                attendance: `${attendanceCount} attendee${attendanceCount === 1 ? "" : "s"}`,
+                engagement: retentionRate,
+                retentionRate: retentionRate,
+                image: cleanImageUrl(rawBanner, DEFAULT_EVENT_IMAGE),
+            };
+        });
     }, [bestEventsData]);
 
     // Attendance Trend mapping from GET /analytics/events/attendance
@@ -263,7 +301,9 @@ export function EventsTab({ filterParams }: EventsTabProps) {
                                 image={event.image}
                                 tag={event.tag}
                                 attendees={event.attendees}
+                                attendance={event.attendance}
                                 engagement={event.engagement}
+                                retentionRate={event.retentionRate}
                             />
                         ))}
                     </div>
@@ -288,6 +328,7 @@ export function EventsTab({ filterParams }: EventsTabProps) {
             <div className="max-w-[1200px] w-full flex flex-col xl:flex-row gap-6 items-stretch">
                 <TrafficByTimeChart
                     slots={timeSlotsData}
+                    isError={isErrorTimeOfDay}
                     className="flex-1 max-w-full"
                 />
             </div>

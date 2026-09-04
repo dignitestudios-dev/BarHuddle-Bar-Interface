@@ -11,7 +11,8 @@ import {
     useGetVisitorsGraphQuery,
     useGetRetentionDashboardQuery,
     useGetAvgDurationDashboardQuery,
-    useGetSentimentAnalyticsQuery,
+    useGetVisitorSentimentDashboardQuery,
+    useGetOverviewQuery,
 } from "../api/analytics.queries";
 import { AnalyticsFilterParams } from "../api/analytics.service";
 
@@ -33,10 +34,12 @@ export function RetentionTab({ filterParams }: RetentionTabProps) {
         useGetVisitorsGraphQuery(filterParams);
     const { data: retentionDashboardResponse, isLoading: isLoadingRetention } =
         useGetRetentionDashboardQuery(filterParams);
-    const { data: avgDurationResponse, isLoading: isLoadingDuration } =
+    const { data: avgDurationResponse, isLoading: isLoadingDuration, isError: isErrorDuration } =
         useGetAvgDurationDashboardQuery(filterParams);
-    const { data: sentimentAnalyticsResponse, isLoading: isLoadingSentiment } =
-        useGetSentimentAnalyticsQuery(filterParams);
+    const { data: sentimentResponse, isLoading: isLoadingSentiment, isError: isErrorSentiment } =
+        useGetVisitorSentimentDashboardQuery(filterParams);
+    const { data: overviewResponse } =
+        useGetOverviewQuery(filterParams);
 
     const isLoading =
         isLoadingVisitorsGraph ||
@@ -76,14 +79,28 @@ export function RetentionTab({ filterParams }: RetentionTabProps) {
         ];
     }, [retentionDashboardResponse]);
 
-    // Graph Data mapping from GET /analytics/overview/vistors-graph
+    // Graph Data mapping from GET /analytics/overview/vistors-graph & GET /analytics/retention/retention-dashboard
     const trendsChartData: TrendDataPoint[] | undefined = useMemo(() => {
         const raw = visitorsGraphResponse?.data;
         if (!raw || !Array.isArray(raw) || raw.length === 0) {
             return undefined;
         }
 
-        return raw.map((item) => {
+        const retData = retentionDashboardResponse?.data;
+        const totalNew = retData?.newCustomers ?? 0;
+        const totalRepeat = retData?.repeatCustomers ?? 0;
+        const totalLost = retData?.lostCustomers ?? 0;
+
+        const totalVisitorsInGraph = raw.reduce((sum, item) => sum + (item.visitors ?? 0), 0);
+
+        const hasExplicitRepeat = raw.some(
+            (item: any) => (item.repeat ?? item.repeatCustomers ?? 0) > 0
+        );
+        const hasExplicitNew = raw.some(
+            (item: any) => (item.new ?? item.newCustomers ?? 0) > 0
+        );
+
+        return raw.map((item: any, idx: number) => {
             let label = "Day";
             try {
                 const d = new Date(item.date);
@@ -94,106 +111,241 @@ export function RetentionTab({ filterParams }: RetentionTabProps) {
                 label = item.date;
             }
 
+            const visitors = item.visitors ?? 0;
+            const checkIns = item.checkIns ?? 0;
+            const retention = item.retention ?? 0;
+            const isLastPoint = idx === raw.length - 1;
+
+            // 1. New Customers
+            let pointNew = 0;
+            if (hasExplicitNew) {
+                pointNew = item.new ?? item.newCustomers ?? visitors;
+            } else if (totalVisitorsInGraph > 0 && totalNew > 0) {
+                pointNew = Math.round((visitors / totalVisitorsInGraph) * totalNew);
+                if (visitors > 0 && pointNew === 0) pointNew = 1;
+            } else if (totalVisitorsInGraph === 0 && totalNew > 0 && isLastPoint) {
+                pointNew = totalNew;
+            } else {
+                pointNew = item.new ?? item.newCustomers ?? visitors;
+            }
+
+            // 2. Repeat Customers
+            let pointRepeat = 0;
+            if (hasExplicitRepeat) {
+                pointRepeat = item.repeat ?? item.repeatCustomers ?? retention;
+            } else if (totalVisitorsInGraph > 0 && totalRepeat > 0) {
+                pointRepeat = Math.round((visitors / totalVisitorsInGraph) * totalRepeat);
+                if (visitors > 0 && pointRepeat === 0) pointRepeat = 1;
+            } else if (retention > 0) {
+                pointRepeat = retention;
+            } else if (totalVisitorsInGraph === 0 && totalRepeat > 0 && isLastPoint) {
+                pointRepeat = totalRepeat;
+            } else {
+                pointRepeat = item.repeat ?? item.repeatCustomers ?? retention ?? 0;
+            }
+
+            // 3. Lost Customers
+            let pointLost = 0;
+            if (item.lost !== undefined || item.lostCustomers !== undefined) {
+                pointLost = item.lost ?? item.lostCustomers ?? 0;
+            } else if (totalVisitorsInGraph > 0 && totalLost > 0) {
+                pointLost = Math.round((visitors / totalVisitorsInGraph) * totalLost);
+            } else if (totalVisitorsInGraph === 0 && totalLost > 0 && isLastPoint) {
+                pointLost = totalLost;
+            } else {
+                pointLost = 0;
+            }
+
             return {
                 name: label,
-                visitors: item.visitors ?? 0,
-                checkIns: item.checkIns ?? 0,
-                retention: item.retention ?? 0,
-                new: item.visitors ?? 0,
-                repeat: item.retention ?? 0,
-                lost: 0,
+                visitors,
+                checkIns,
+                retention: pointRepeat,
+                new: pointNew,
+                repeat: pointRepeat,
+                lost: pointLost,
             };
         });
-    }, [visitorsGraphResponse]);
+    }, [visitorsGraphResponse, retentionDashboardResponse]);
 
     // Avg Visit Duration mapping from GET /analytics/retention/avg-duration-dashboard
     const durationFormatted = useMemo(() => {
-        const overall = avgDurationResponse?.data?.overall;
-        if (!overall) return "0m";
+        const d = (avgDurationResponse as any)?.data?.overall !== undefined
+            ? (avgDurationResponse as any).data
+            : (avgDurationResponse as any)?.data?.data !== undefined
+            ? (avgDurationResponse as any).data.data
+            : (avgDurationResponse as any)?.data;
 
-        if (overall.hours > 0) {
-            return `${overall.hours}h ${overall.minutes}m`;
+        const overall = d?.overall as any;
+        if (overall) {
+            const hrs = overall.hours ?? 0;
+            const mins = overall.minutes ?? (overall.totalMinutes ? overall.totalMinutes % 60 : 0);
+            const totalMins = overall.totalMinutes ?? (hrs * 60 + mins);
+
+            if (hrs > 0 && mins > 0) {
+                return `${hrs}h ${mins}m`;
+            } else if (hrs > 0) {
+                return `${hrs}h`;
+            } else if (mins > 0) {
+                return `${mins}m`;
+            } else if (totalMins > 0) {
+                return `${totalMins}m`;
+            }
+            return "0m";
         }
-        return `${overall.minutes || overall.totalMinutes || 0}m`;
-    }, [avgDurationResponse]);
+
+        // Fallback to overview data if avgStay is available
+        const overviewStay = overviewResponse?.data?.avgStay;
+        if (overviewStay !== undefined && overviewStay !== null && overviewStay !== 0) {
+            return typeof overviewStay === "number" ? `${overviewStay}m` : `${overviewStay}`;
+        }
+        return "0m";
+    }, [avgDurationResponse, overviewResponse]);
+
+    const durationTrendText = useMemo(() => {
+        const growth = overviewResponse?.data?.avgStayGrowth;
+        if (growth) {
+            return `${growth} vs last period`;
+        }
+        return "+0m vs last period";
+    }, [overviewResponse]);
 
     const durationItems: DurationBarItem[] = useMemo(() => {
-        const d = avgDurationResponse?.data;
+        const d = (avgDurationResponse as any)?.data?.overall !== undefined
+            ? (avgDurationResponse as any).data
+            : (avgDurationResponse as any)?.data?.data !== undefined
+            ? (avgDurationResponse as any).data.data
+            : (avgDurationResponse as any)?.data;
+
+        const formatSlotDuration = (slot: any) => {
+            if (!slot) return "0m";
+            const hrs = slot.hours ?? 0;
+            const mins = slot.minutes ?? (slot.totalMinutes ? slot.totalMinutes % 60 : 0);
+            const total = slot.totalMinutes ?? (hrs * 60 + mins);
+            if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
+            if (hrs > 0) return `${hrs}h`;
+            if (mins > 0) return `${mins}m`;
+            if (total > 0) return `${total}m`;
+            return "0m";
+        };
+
         if (!d) {
             return [
-                { label: "Mon–Thu", percentage: 0, color: "#C4B5FD" },
-                { label: "Fri", percentage: 0, color: "#7C3AED" },
-                { label: "Sat", percentage: 0, color: "#E8FF57" },
+                { label: "Mon–Thu", percentage: 0, color: "#C4B5FD", durationText: "0m" },
+                { label: "Fri", percentage: 0, color: "#7C3AED", durationText: "0m" },
+                { label: "Sat", percentage: 0, color: "#E8FF57", durationText: "0m" },
             ];
         }
 
-        const monThuMin = d.monThu?.totalMinutes || (d.monThu?.hours || 0) * 60 + (d.monThu?.minutes || 0);
-        const friMin = d.fri?.totalMinutes || (d.fri?.hours || 0) * 60 + (d.fri?.minutes || 0);
-        const satMin = d.sat?.totalMinutes || (d.sat?.hours || 0) * 60 + (d.sat?.minutes || 0);
-        const sunMin = d.sun?.totalMinutes || (d.sun?.hours || 0) * 60 + (d.sun?.minutes || 0);
+        const getSlotMin = (slot: any) => {
+            if (!slot) return 0;
+            if (typeof slot === "number") return slot;
+            return slot.totalMinutes ?? ((slot.hours || 0) * 60 + (slot.minutes || 0));
+        };
 
-        const maxMinutes = Math.max(monThuMin, friMin, satMin, sunMin, 1);
+        const monThuMin = getSlotMin(d.monThu);
+        const friMin = getSlotMin(d.fri);
+        const satMin = getSlotMin(d.sat);
+        const sunMin = getSlotMin(d.sun);
+
+        const maxMinutes = Math.max(monThuMin, friMin, satMin, sunMin, 0);
 
         const calcPct = (min: number) => {
-            if (min === 0) return 0;
+            if (min === 0 || maxMinutes === 0) return 0;
             return Math.min(100, Math.round((min / maxMinutes) * 100));
         };
 
         const items: DurationBarItem[] = [
-            { label: "Mon–Thu", percentage: calcPct(monThuMin), color: "#C4B5FD" },
-            { label: "Fri", percentage: calcPct(friMin), color: "#7C3AED" },
-            { label: "Sat", percentage: calcPct(satMin), color: "#E8FF57" },
+            {
+                label: "Mon–Thu",
+                percentage: calcPct(monThuMin),
+                color: "#C4B5FD",
+                durationText: formatSlotDuration(d.monThu),
+            },
+            {
+                label: "Fri",
+                percentage: calcPct(friMin),
+                color: "#7C3AED",
+                durationText: formatSlotDuration(d.fri),
+            },
+            {
+                label: "Sat",
+                percentage: calcPct(satMin),
+                color: "#E8FF57",
+                durationText: formatSlotDuration(d.sat),
+            },
         ];
 
-        if (d.sun && sunMin > 0) {
-            items.push({ label: "Sun", percentage: calcPct(sunMin), color: "#22D3EE" });
+        if (d.sun !== undefined && d.sun !== null) {
+            items.push({
+                label: "Sun",
+                percentage: calcPct(sunMin),
+                color: "#22D3EE",
+                durationText: formatSlotDuration(d.sun),
+            });
         }
 
         return items;
     }, [avgDurationResponse]);
 
-    // Visitor Sentiment mapping from GET /venue-owner/analytics/sentiment
-    const sentimentOverallScore = useMemo(() => {
-        const score = sentimentAnalyticsResponse?.data?.sentimentScore?.score;
-        if (score !== undefined && score !== null) {
-            return Number(score);
-        }
-        return 0;
-    }, [sentimentAnalyticsResponse]);
+    // Sentiment Scores mapped from GET /analytics/retention/visitor-sentiment-dashboard
+    const sentimentItems = useMemo(() => {
+        const d = sentimentResponse?.data as any;
+        if (!d) return undefined;
 
-    const sentimentItems: SentimentItem[] = useMemo(() => {
-        const s = sentimentAnalyticsResponse?.data?.sentimentScore;
-        const worthItPct = Math.round(s?.worthIt ?? 0);
-        const midPct = Math.round(s?.mid ?? 0);
-        const notWorthItPct = Math.round(s?.notWorthIt ?? 0);
+        const getPct = (val: any) => {
+            if (val === undefined || val === null) return undefined;
+            if (typeof val === "number") return Math.round(val);
+            if (typeof val.percentage === "number") return Math.round(val.percentage);
+            return undefined;
+        };
+
+        const worthItPct = getPct(d.worthIt);
+        const midPct = getPct(d.mid);
+        const notWorthItPct = getPct(d.notWorthIt);
+
+        if (worthItPct === undefined && midPct === undefined && notWorthItPct === undefined) {
+            return undefined;
+        }
 
         return [
             {
                 name: "Worth It",
-                percentage: worthItPct,
+                percentage: worthItPct ?? 0,
                 color: "#E8FF57",
-                bgColor: "rgba(232, 255, 87, 0.04)",
-                borderColor: "rgba(232, 255, 87, 0.18)",
+                bgColor: "rgba(232, 255, 87, 0.03)",
+                borderColor: "rgba(232, 255, 87, 0.094)",
                 offsetClass: "w-full",
             },
             {
-                name: "Mid",
-                percentage: midPct,
+                name: "Check It Out",
+                percentage: midPct ?? 0,
                 color: "#22D3EE",
-                bgColor: "rgba(34, 211, 238, 0.04)",
-                borderColor: "rgba(34, 211, 238, 0.18)",
+                bgColor: "rgba(34, 211, 238, 0.03)",
+                borderColor: "rgba(34, 211, 238, 0.094)",
                 offsetClass: "w-full",
             },
             {
                 name: "Not Worth It",
-                percentage: notWorthItPct,
+                percentage: notWorthItPct ?? 0,
                 color: "#F472B6",
-                bgColor: "rgba(244, 114, 182, 0.04)",
-                borderColor: "rgba(244, 114, 182, 0.18)",
+                bgColor: "rgba(244, 114, 182, 0.03)",
+                borderColor: "rgba(244, 114, 182, 0.094)",
                 offsetClass: "w-full",
             },
         ];
-    }, [sentimentAnalyticsResponse]);
+    }, [sentimentResponse]);
+
+    const sentimentOverallScore = useMemo(() => {
+        const d = sentimentResponse?.data as any;
+        if (!d) return undefined;
+        if (d.score !== undefined && d.score !== null) return Number(d.score);
+        if (d.sentimentScore?.score !== undefined) return Number(d.sentimentScore.score);
+        if (typeof d.sentimentScore === "number") return d.sentimentScore;
+        const w = typeof d.worthIt === "object" ? d.worthIt?.percentage : (typeof d.worthIt === "number" ? d.worthIt : undefined);
+        if (w !== undefined) return Math.round(w);
+        return undefined;
+    }, [sentimentResponse]);
 
     if (isLoading) {
         return (
@@ -244,7 +396,8 @@ export function RetentionTab({ filterParams }: RetentionTabProps) {
                 <AvgVisitDurationCard
                     duration={durationFormatted}
                     items={durationItems}
-                    trendText="+0m vs last period"
+                    trendText={durationTrendText}
+                    isError={isErrorDuration}
                     className="w-full h-full"
                 />
                 <VisitorSentimentsChart
@@ -252,6 +405,7 @@ export function RetentionTab({ filterParams }: RetentionTabProps) {
                     tagText="DEMOGRAPHICS"
                     overallScore={sentimentOverallScore}
                     sentiments={sentimentItems}
+                    isError={isErrorSentiment}
                     className="w-full h-full"
                 />
             </div>
