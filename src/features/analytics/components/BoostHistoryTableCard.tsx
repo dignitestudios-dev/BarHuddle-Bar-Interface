@@ -299,7 +299,6 @@ export function BoostHistoryTableCard({
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2 pl-3">Event Name</th>
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2">Date</th>
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2">Attendance</th>
-                                    <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2">Sentiment</th>
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2 pr-3">Status</th>
                                 </>
                             )}
@@ -309,7 +308,6 @@ export function BoostHistoryTableCard({
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2 pl-3">Event Name</th>
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2">Date</th>
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2">Attendance / Reach</th>
-                                    <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2">Sentiment</th>
                                     <th className="font-extrabold text-[10px] uppercase tracking-[0.5px] text-[#8B7EC8] pb-2 pr-3">Status</th>
                                 </>
                             )}
@@ -341,7 +339,7 @@ export function BoostHistoryTableCard({
                         {selectedFilter === "Events" && (
                             eventsData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-sm font-medium text-white/50">
+                                    <td colSpan={4} className="py-8 text-center text-sm font-medium text-white/50">
                                         No event report records found
                                     </td>
                                 </tr>
@@ -351,7 +349,6 @@ export function BoostHistoryTableCard({
                                         <td className="font-bold text-[12px] text-white pl-3 max-w-[280px] truncate">{row.eventName}</td>
                                         <td className="font-normal text-[12px] text-[#C4B5FD]">{row.date}</td>
                                         <td className="font-semibold text-[12px] text-[#7C3AED]">{row.attendance}</td>
-                                        <td className="font-semibold text-[12px] text-[#4ADE80]">{row.sentiment}</td>
                                         <td className="pr-3">
                                             <span
                                                 className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize ${
@@ -373,7 +370,7 @@ export function BoostHistoryTableCard({
                         {selectedFilter === "Boost" && (
                             boostsData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-sm font-medium text-white/50">
+                                    <td colSpan={4} className="py-8 text-center text-sm font-medium text-white/50">
                                         No boosted event records found
                                     </td>
                                 </tr>
@@ -383,7 +380,6 @@ export function BoostHistoryTableCard({
                                         <td className="font-bold text-[12px] text-white pl-3 max-w-[280px] truncate">{row.eventName}</td>
                                         <td className="font-normal text-[12px] text-[#C4B5FD]">{row.boostDate}</td>
                                         <td className="font-semibold text-[12px] text-[#22D3EE]">{row.reach}</td>
-                                        <td className="font-semibold text-[12px] text-[#4ADE80]">{row.sentiment || row.engagement}</td>
                                         <td className="pr-3">
                                             <span
                                                 className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize ${

@@ -234,7 +234,9 @@ export function EventCard({
                     {/* Stat 1: Attendees */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[24px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#22D3EE]">
-                            {event.attendees ?? event.views ?? "0"}
+                            {rawEvent?.retention?.totalAttendees !== undefined && rawEvent?.retention?.totalAttendees !== null
+                                ? String(rawEvent.retention.totalAttendees)
+                                : event.attendees ?? event.views ?? "0"}
                         </span>
                         <span className="font-semibold text-[9px] leading-[14px] text-[#8B7EC8]">
                             Attendees
