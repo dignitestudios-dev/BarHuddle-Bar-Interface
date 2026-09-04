@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useGetSentimentAnalyticsQuery } from "@/features/analytics/api/analytics.queries";
+import { useGetVisitorSentimentDashboardQuery } from "@/features/analytics/api/analytics.queries";
 
 export interface SentimentItem {
     name: string;
@@ -18,20 +18,22 @@ export interface VisitorSentimentsChartProps {
     overallScore?: number;
     sentiments?: SentimentItem[];
     className?: string;
+    isError?: boolean;
+    errorMessage?: string;
 }
 
 const DEFAULT_SENTIMENTS: SentimentItem[] = [
     {
         name: "Worth It",
-        percentage: 62,
+        percentage: 0,
         color: "#E8FF57",
         bgColor: "rgba(232, 255, 87, 0.04)",
         borderColor: "rgba(232, 255, 87, 0.18)",
         offsetClass: "w-full",
     },
     {
-        name: "Mid",
-        percentage: 25,
+        name: "Check It Out",
+        percentage: 0,
         color: "#22D3EE",
         bgColor: "rgba(34, 211, 238, 0.04)",
         borderColor: "rgba(34, 211, 238, 0.18)",
@@ -39,7 +41,7 @@ const DEFAULT_SENTIMENTS: SentimentItem[] = [
     },
     {
         name: "Not Worth It",
-        percentage: 13,
+        percentage: 0,
         color: "#F472B6",
         bgColor: "rgba(244, 114, 182, 0.04)",
         borderColor: "rgba(244, 114, 182, 0.18)",
@@ -53,30 +55,50 @@ export function VisitorSentimentsChart({
     overallScore,
     sentiments,
     className = "",
+    isError,
+    errorMessage,
 }: VisitorSentimentsChartProps) {
-    const { data: apiSentimentData } = useGetSentimentAnalyticsQuery();
+    const { data: apiSentimentData, isError: internalIsError } = useGetVisitorSentimentDashboardQuery();
+
+    const hasExplicitData = (overallScore !== undefined && overallScore > 0) || (sentiments && sentiments.length > 0 && sentiments.some(s => s.percentage > 0));
+    const showError = isError || (internalIsError && !hasExplicitData);
 
     const finalScore = React.useMemo(() => {
         if (overallScore !== undefined) return overallScore;
-        return apiSentimentData?.data?.sentimentScore?.score ?? 87;
+        const d = apiSentimentData?.data as any;
+        if (d?.score !== undefined && d?.score !== null) return Number(d.score);
+        if (d?.sentimentScore?.score !== undefined) return Number(d.sentimentScore.score);
+        if (typeof d?.sentimentScore === "number") return d.sentimentScore;
+        const w = typeof d?.worthIt === "object" ? d?.worthIt?.percentage : (typeof d?.worthIt === "number" ? d?.worthIt : undefined);
+        if (w !== undefined) return Math.round(w);
+        return 0;
     }, [overallScore, apiSentimentData]);
 
     const finalSentiments = React.useMemo<SentimentItem[]>(() => {
         if (sentiments && sentiments.length > 0) return sentiments;
-        const s = apiSentimentData?.data?.sentimentScore;
-        if (s) {
+        const d = apiSentimentData?.data as any;
+        const getPct = (val: any) => {
+            if (val === undefined || val === null) return undefined;
+            if (typeof val === "number") return Math.round(val);
+            if (typeof val.percentage === "number") return Math.round(val.percentage);
+            return undefined;
+        };
+        const w = getPct(d?.worthIt);
+        const m = getPct(d?.mid);
+        const nw = getPct(d?.notWorthIt);
+        if (w !== undefined || m !== undefined || nw !== undefined) {
             return [
                 {
                     name: "Worth It",
-                    percentage: s.worthIt ?? 62,
+                    percentage: w ?? 0,
                     color: "#E8FF57",
                     bgColor: "rgba(232, 255, 87, 0.04)",
                     borderColor: "rgba(232, 255, 87, 0.18)",
                     offsetClass: "w-full",
                 },
                 {
-                    name: "Mid",
-                    percentage: s.mid ?? 25,
+                    name: "Check It Out",
+                    percentage: m ?? 0,
                     color: "#22D3EE",
                     bgColor: "rgba(34, 211, 238, 0.04)",
                     borderColor: "rgba(34, 211, 238, 0.18)",
@@ -84,7 +106,7 @@ export function VisitorSentimentsChart({
                 },
                 {
                     name: "Not Worth It",
-                    percentage: s.notWorthIt ?? 13,
+                    percentage: nw ?? 0,
                     color: "#F472B6",
                     bgColor: "rgba(244, 114, 182, 0.04)",
                     borderColor: "rgba(244, 114, 182, 0.18)",
@@ -97,9 +119,9 @@ export function VisitorSentimentsChart({
 
     // Calculate dynamic arc stroke lengths
     // Semi-circle length = Math.PI * radius
-    const worthItPct = finalSentiments.find((s) => s.name.toLowerCase().includes("worth") && !s.name.toLowerCase().includes("not"))?.percentage ?? 62;
-    const midPct = finalSentiments.find((s) => s.name.toLowerCase() === "mid")?.percentage ?? 25;
-    const notWorthItPct = finalSentiments.find((s) => s.name.toLowerCase().includes("not"))?.percentage ?? 13;
+    const worthItPct = finalSentiments.find((s) => s.name.toLowerCase().includes("worth") && !s.name.toLowerCase().includes("not"))?.percentage ?? 0;
+    const midPct = finalSentiments.find((s) => s.name.toLowerCase() === "mid" || s.name.toLowerCase().includes("check"))?.percentage ?? 0;
+    const notWorthItPct = finalSentiments.find((s) => s.name.toLowerCase().includes("not"))?.percentage ?? 0;
 
     const r1 = 100;
     const len1 = Math.PI * r1;
@@ -138,8 +160,22 @@ export function VisitorSentimentsChart({
                 </h3>
             </div>
 
-            {/* Center Concentric Semi-Circle Gauge & Right Legend Row */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10 my-4">
+            {showError ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 py-12 relative z-10">
+                    <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-[#F87171]">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <span className="text-[#F87171] font-semibold text-[13px]">
+                        {errorMessage || "Unable to load sentiment data"}
+                    </span>
+                    <span className="text-[#8B7EC8] text-[11px]">
+                        Please try again or check your filter settings
+                    </span>
+                </div>
+            ) : (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10 my-4">
                 {/* Concentric Gauge */}
                 <div className="relative w-[220px] h-[140px] flex items-center justify-center shrink-0">
                     <svg className="w-[220px] h-[140px]" viewBox="0 0 240 150" fill="none">
@@ -200,7 +236,7 @@ export function VisitorSentimentsChart({
                     </svg>
 
                     {/* Score Overlay Text */}
-                    <div className="absolute inset-0 top-7 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 top-24 flex flex-col items-center justify-center pointer-events-none">
                         <span className="font-extrabold text-[32px] leading-[32px] text-[#E8FF57] tracking-tight">
                             {finalScore}
                         </span>
@@ -258,6 +294,7 @@ export function VisitorSentimentsChart({
                     ))}
                 </div>
             </div>
+            )}
         </div>
     );
 }

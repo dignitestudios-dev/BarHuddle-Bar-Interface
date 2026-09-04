@@ -73,9 +73,30 @@ export function Promotions() {
 
             let dateRangeStr = "Active";
             if (startRaw && endRaw) {
-                dateRangeStr = `${new Date(startRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(endRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                const s = new Date(startRaw);
+                const e = new Date(endRaw);
+                if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
+                    if (s.toDateString() === e.toDateString()) {
+                        dateRangeStr = s.toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                        });
+                    } else {
+                        const sYear = s.getFullYear();
+                        const eYear = e.getFullYear();
+                        if (sYear === eYear) {
+                            dateRangeStr = `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+                        } else {
+                            dateRangeStr = `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+                        }
+                    }
+                }
             } else if (startRaw) {
-                dateRangeStr = new Date(startRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const s = new Date(startRaw);
+                if (!isNaN(s.getTime())) {
+                    dateRangeStr = s.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                }
             } else if (promo.dateRange) {
                 dateRangeStr = promo.dateRange;
             }
@@ -128,14 +149,28 @@ export function Promotions() {
             }
 
             // Tag & Category
-            const rawTag = promo.tagText || promo.discountText || promo.offerLabel || "";
-            const tag = (rawTag && rawTag.toLowerCase() !== "special") ? rawTag : "";
-            const rawCategory = promo.category || promo.venue?.name || "";
-            const categoryName = (rawCategory && rawCategory.toLowerCase() !== "special" && rawCategory.toLowerCase() !== "special offers") ? rawCategory : "Promotion";
+            const rawTag = promo.type || promo.tagText || promo.discountText || promo.offerLabel || "";
+            const tag = (rawTag && String(rawTag).toLowerCase() !== "special") ? String(rawTag) : "";
+            const venueName = promo.venue?.name || "";
+            const venueAddress = promo.venue?.address || "";
+            const rawCategory = promo.type || promo.category || venueName || "";
+            const categoryName = (rawCategory && String(rawCategory).toLowerCase() !== "special" && String(rawCategory).toLowerCase() !== "special offers") ? String(rawCategory) : "Promotion";
 
             // Metrics
             const viewsCount = String(promo.views ?? promo.viewCount ?? promo.metrics?.views ?? "0");
+            const visitsCount = promo.visitsDuringPromo !== undefined ? Number(promo.visitsDuringPromo) : undefined;
             const redeemedCount = String(promo.redeemedCount ?? promo.redemptions ?? promo.metrics?.redemptions ?? "0");
+
+            const avgMins = promo.averageRetentionTimeMinutes !== undefined
+                ? Number(promo.averageRetentionTimeMinutes)
+                : undefined;
+
+            const avgRetentionFormatted = avgMins !== undefined
+                ? avgMins >= 60
+                    ? `${Math.floor(avgMins / 60)}h ${avgMins % 60 ? `${avgMins % 60}m` : ""}`.trim()
+                    : `${avgMins}m`
+                : "0m";
+
             const redemptionRateStr = String(
                 promo.redemptionRate !== undefined
                     ? `${promo.redemptionRate}%`
@@ -147,8 +182,18 @@ export function Promotions() {
                 promo.performanceRate ?? promo.performancePercent ?? promo.metrics?.performancePercent ?? (promo.redemptionRate ?? 0)
             );
 
-            // Image: only show banner images, never coverImage
-            const img = cleanImageUrl(promo.banner || promo.bannerUrl || promo.banners?.[0] || promo.imageUrl, DEFAULT_PROMOTION_IMAGE);
+            // Images: handle array of banners or single string
+            const rawBanners = Array.isArray(promo.banner)
+                ? promo.banner
+                : promo.banners && Array.isArray(promo.banners)
+                ? promo.banners
+                : promo.banner
+                ? [promo.banner]
+                : [];
+            const bannerUrls = rawBanners
+                .map((b: any) => cleanImageUrl(b, ""))
+                .filter((url: string) => url && url !== DEFAULT_PROMOTION_IMAGE);
+            const primaryBanner = bannerUrls[0] || cleanImageUrl(promo.bannerUrl || promo.imageUrl, DEFAULT_PROMOTION_IMAGE);
 
             return {
                 id,
@@ -157,14 +202,20 @@ export function Promotions() {
                 tagText: tag,
                 tagVariant: promo.tagVariant || "purple",
                 status: promo.status || "active",
+                computedStatus: promo.computedStatus || promo.status,
                 category: categoryName,
+                venueName,
+                venueAddress,
                 dateRange: dateRangeStr,
                 activeDays: computedActiveDays,
                 views: viewsCount,
+                visitsDuringPromo: visitsCount,
                 redemptions: redeemedCount,
+                avgRetentionTime: avgRetentionFormatted,
                 rate: redemptionRateStr,
                 performancePercent: performancePercentNum,
-                imageUrl: img,
+                imageUrl: primaryBanner,
+                bannerImages: bannerUrls.length > 0 ? bannerUrls : [primaryBanner],
             };
         });
 
@@ -288,7 +339,7 @@ export function Promotions() {
 
     const analytics = (apiAnalyticsData as any)?.data;
 
-    const activePromotionsCount = promotionsList.filter((p) => p.status?.toLowerCase() === "active").length;
+    const activePromotionsCount = promotionsList.filter((p) => (p.computedStatus || p.status)?.toLowerCase() === "active").length;
     const totalViewsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.views) || 0), 0);
     const totalRedemptionsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.redemptions) || 0), 0);
     const avgRate = promotionsList.length > 0 

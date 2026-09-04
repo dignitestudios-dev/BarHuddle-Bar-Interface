@@ -10,7 +10,6 @@ import {
     Tooltip,
     CartesianGrid,
 } from "recharts";
-import { useGetVisitorAnalyticsQuery } from "@/features/analytics/api/analytics.queries";
 
 export interface TrendDataPoint {
     name: string;
@@ -29,7 +28,7 @@ export interface VisitorTrendsChartProps {
     variant?: "default" | "retention";
 }
 
-const CustomTooltip = ({ active, payload, label, isRetentionVariant }: any) => {
+const CustomTooltip = ({ active, payload, label, isRetentionVariant, showRetention }: any) => {
     if (active && payload && payload.length) {
         if (isRetentionVariant) {
             const newVal = payload.find((p: any) => p.dataKey === "new")?.value ?? 0;
@@ -93,7 +92,7 @@ const CustomTooltip = ({ active, payload, label, isRetentionVariant }: any) => {
                     </div>
                     <span className="text-xs font-extrabold text-white">{checkInsVal}</span>
                 </div>
-                {payload.some((p: any) => p.dataKey === "retention") && (
+                {showRetention && payload.some((p: any) => p.dataKey === "retention") && (
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-[#22D3EE] shrink-0" />
@@ -111,25 +110,11 @@ const CustomTooltip = ({ active, payload, label, isRetentionVariant }: any) => {
 export function VisitorTrendsChart({
     data,
     className = "",
-    showRetention = true,
+    showRetention = false,
     variant = "default",
 }: VisitorTrendsChartProps) {
-    const { data: apiVisitorData } = useGetVisitorAnalyticsQuery();
-
     const chartData = useMemo(() => {
         if (data && Array.isArray(data) && data.length > 0) return data;
-        const apiTrends = apiVisitorData?.data?.visitorTrends;
-        if (apiTrends && Array.isArray(apiTrends) && apiTrends.length > 0) {
-            return apiTrends.map((t: any) => ({
-                name: t.month || t.date || "Day",
-                visitors: t.visitors ?? t.count ?? 0,
-                checkIns: t.checkIns ?? t.count ?? 0,
-                retention: t.retention ?? 0,
-                new: t.new ?? 0,
-                repeat: t.repeat ?? t.retention ?? 0,
-                lost: t.lost ?? 0,
-            }));
-        }
         return [
             { name: "Day 1", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
             { name: "Day 2", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
@@ -137,7 +122,7 @@ export function VisitorTrendsChart({
             { name: "Day 4", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
             { name: "Day 5", visitors: 0, checkIns: 0, retention: 0, new: 0, repeat: 0, lost: 0 },
         ];
-    }, [data, apiVisitorData]);
+    }, [data]);
 
     const isRetentionVariant = variant === "retention";
 
@@ -334,7 +319,7 @@ export function VisitorTrendsChart({
                             allowDecimals={false}
                         />
 
-                        <Tooltip content={<CustomTooltip isRetentionVariant={isRetentionVariant} />} />
+                        <Tooltip content={<CustomTooltip isRetentionVariant={isRetentionVariant} showRetention={showRetention} />} />
 
                         {isRetentionVariant ? (
                             <>

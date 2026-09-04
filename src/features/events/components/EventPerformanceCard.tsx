@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useGetEventsQuery, useGetEventPerformanceQuery } from "@/features/events/api/events.queries";
+import { useGetBestPerformingEventsQuery } from "@/features/analytics/api/analytics.queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cleanImageUrl } from "@/utils/image";
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
@@ -22,26 +22,40 @@ export interface EventPerformanceCardProps {
 }
 
 function EventPerformanceRow({ event }: { event: any }) {
-    const eventId = String(event._id || event.id || "");
-    const hasDirectData = event.attendees !== undefined || event.engagement !== undefined;
-    const { data: perfResponse, isLoading: isPerfLoading } = useGetEventPerformanceQuery(eventId);
+    const attendees = Number(
+        event.attendance ??
+        event.attendees ??
+        event.attendeeCount ??
+        event.totalAttendees ??
+        event.views ??
+        0
+    );
 
-    const perf = perfResponse?.data || perfResponse || {};
-    const attendees = event.attendees ?? perf.attendees ?? perf.uniqueVisitors ?? perf.totalAttendees ?? event.views ?? 0;
-    const rawEngagement = event.engagement ?? perf.engagement ?? perf.performancePercent ?? perf.engagementRate ?? (perf.rate ? parseFloat(perf.rate) : 0);
-    const engagement = Math.min(100, Math.max(0, Number(rawEngagement) || 0));
-    const showLoading = isPerfLoading && !hasDirectData;
+    const rawRetention =
+        event.retentionRate ??
+        event.engagement ??
+        event.engagementPercentage ??
+        event.engagementRate ??
+        event.performancePercent ??
+        (event.rate ? parseFloat(event.rate) : 0);
+    const retentionRate = Math.min(100, Math.max(0, Number(rawRetention) || 0));
 
     const title = event.title || event.name || "Event";
-    const dateStr = event.startAt || event.date
-        ? new Date(event.startAt || event.date).toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-          })
+    const rawDate = event.startAt || event.date || event.startDate;
+    const dateStr = rawDate
+        ? new Date(rawDate).toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+        })
         : "Active Event";
 
-    const rawImg = event.banner || event.bannerUrl || event.banners?.[0] || event.imageUrl;
+    const rawImg =
+        Array.isArray(event.banner) && event.banner.length > 0
+            ? event.banner[0]
+            : Array.isArray(event.banners) && event.banners.length > 0
+                ? event.banners[0]
+                : event.banner || event.bannerUrl || event.image || event.imageUrl;
     const imageSrc = cleanImageUrl(rawImg);
 
     return (
@@ -82,32 +96,24 @@ function EventPerformanceRow({ event }: { event: any }) {
                 <div className="flex items-end justify-between gap-4 mt-2">
                     {/* Attendees Count */}
                     <div className="flex flex-col">
-                        {showLoading ? (
-                            <Skeleton className="h-5 w-12 rounded bg-purple-900/40" />
-                        ) : (
-                            <span className="font-extrabold text-[16px] leading-[20px] text-white">
-                                {Number(attendees).toLocaleString()}
-                            </span>
-                        )}
+                        <span className="font-extrabold text-[16px] leading-[20px] text-white">
+                            {attendees.toLocaleString()}
+                        </span>
                         <span className="font-normal text-[11px] leading-[16px] text-[#E8C7FF] capitalize">
                             Attendees
                         </span>
                     </div>
 
-                    {/* Engagement Bar */}
+                    {/* Retention Rate Bar */}
                     <div className="flex-1 flex flex-col gap-1 max-w-[260px]">
                         <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-normal text-[#E8C7FF]">Engagement</span>
-                            {showLoading ? (
-                                <Skeleton className="h-3 w-8 rounded bg-purple-900/40" />
-                            ) : (
-                                <span className="font-bold text-[#FDF88F]">{Math.round(engagement)}%</span>
-                            )}
+                            <span className="font-normal text-[#E8C7FF]">Retention Rate</span>
+                            <span className="font-bold text-[#FDF88F]">{Math.round(retentionRate)}%</span>
                         </div>
                         <div className="w-full h-[6px] bg-[#0B083C] rounded-full overflow-hidden">
                             <div
                                 className="h-full rounded-full bg-gradient-to-r from-[#C27AFF] to-[#FDF88F] transition-all duration-500"
-                                style={{ width: `${Math.round(engagement)}%` }}
+                                style={{ width: `${Math.round(retentionRate)}%` }}
                             />
                         </div>
                     </div>
@@ -123,23 +129,23 @@ export function EventPerformanceCard({
 }: EventPerformanceCardProps) {
     const router = useRouter();
     const { selectedVenueId } = useSelectedVenue();
-    const { data: apiEventsData, isLoading } = useGetEventsQuery({
-        page: 1,
-        limit: 10,
-        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
-    });
+    const { data: apiResponse, isLoading, isError } = useGetBestPerformingEventsQuery(
+        selectedVenueId ? { venueId: selectedVenueId, filter: "monthly" } : undefined
+    );
 
     const eventsList = React.useMemo(() => {
         if (events) return events;
-        const raw = Array.isArray(apiEventsData?.data)
-            ? apiEventsData.data
-            : Array.isArray(apiEventsData?.data?.events)
-                ? apiEventsData.data.events
-                : Array.isArray(apiEventsData)
-                    ? apiEventsData
-                    : [];
+        const raw = Array.isArray(apiResponse?.data)
+            ? apiResponse.data
+            : Array.isArray((apiResponse as any)?.events)
+                ? (apiResponse as any).events
+                : Array.isArray((apiResponse as any)?.data?.events)
+                    ? (apiResponse as any).data.events
+                    : Array.isArray(apiResponse)
+                        ? apiResponse
+                        : [];
         return raw;
-    }, [events, apiEventsData]);
+    }, [events, apiResponse]);
 
     return (
         <div
@@ -164,7 +170,7 @@ export function EventPerformanceCard({
                     </div>
 
                     <h3 className="font-extrabold text-[16px] leading-[24px] text-white">
-                        Event Performance
+                        Best Performance
                     </h3>
                 </div>
 
@@ -194,6 +200,16 @@ export function EventPerformanceCard({
                             </div>
                         </div>
                     ))
+                ) : isError ? (
+                    <div className="w-full h-full min-h-[220px] flex flex-col items-center justify-center gap-2 text-center p-6 border border-dashed border-red-500/20 rounded-[18px] bg-[rgba(10,6,45,0.4)]">
+                        <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-1">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <span className="text-sm font-semibold text-red-400">Unable to load best performance data</span>
+                        <span className="text-xs text-[#9D8FD0]">Please try again later.</span>
+                    </div>
                 ) : eventsList.length === 0 ? (
                     <div className="w-full h-full min-h-[220px] flex flex-col items-center justify-center gap-2 text-center p-6 border border-dashed border-[rgba(124,58,237,0.2)] rounded-[18px] bg-[rgba(10,6,45,0.4)]">
                         <div className="w-10 h-10 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-400 mb-1">
@@ -201,13 +217,13 @@ export function EventPerformanceCard({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                         </div>
-                        <span className="text-sm font-semibold text-white/70">No event performance data available</span>
+                        <span className="text-sm font-semibold text-white/70">No best performance data available</span>
                         <span className="text-xs text-[#9D8FD0]">Events created will show performance metrics here.</span>
                     </div>
                 ) : (
                     eventsList.map((event: any, idx: number) => (
                         <EventPerformanceRow
-                            key={event._id || event.id || idx}
+                            key={event._id || event.id || event.eventId || idx}
                             event={event}
                         />
                     ))
@@ -217,4 +233,5 @@ export function EventPerformanceCard({
     );
 }
 
+export { EventPerformanceCard as BestPerformanceCard };
 export default EventPerformanceCard;

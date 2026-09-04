@@ -6,8 +6,10 @@ import { cleanImageUrl } from "@/utils/image";
 export interface RankedEventItem {
     id: string;
     title: string;
-    attendees: string | number;
-    engagement: number;
+    attendees?: string | number;
+    attendance?: string | number;
+    engagement?: number;
+    retentionRate?: number;
     image: string;
 }
 
@@ -107,18 +109,18 @@ export function TopPerformingEventsCard({
                                     {item.title}
                                 </span>
                                 <span className="font-normal text-[11px] leading-[15px] text-[#8B7EC8] truncate">
-                                    {item.attendees}
+                                    {item.attendance || item.attendees}
                                 </span>
                             </div>
                         </div>
 
-                        {/* Right: Engagement Percentage */}
+                        {/* Right: Retention Rate Percentage */}
                         <div className="flex flex-col items-end shrink-0">
                             <span className="font-extrabold text-[14px] leading-[16px] text-[#E8FF57]">
-                                {item.engagement}%
+                                {Math.round(item.retentionRate !== undefined ? item.retentionRate : (item.engagement ?? 0))}%
                             </span>
                             <span className="font-normal text-[9px] leading-[12px] text-[#8B7EC8]">
-                                engagement
+                                Retention Rate
                             </span>
                         </div>
                     </div>

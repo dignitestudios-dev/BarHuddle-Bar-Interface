@@ -17,6 +17,13 @@ export interface OverviewDashboardData {
   lostCustomers: number;
   eventAttendance: number;
   avgRating: number;
+  totalCheckInsGrowth?: string;
+  totalVisitorsGrowth?: string;
+  avgStayGrowth?: string;
+  newCustomersGrowth?: string;
+  repeatCustomersGrowth?: string;
+  lostCustomersGrowth?: string;
+  eventAttendanceGrowth?: string;
 }
 
 export interface VisitorsGraphItem {
@@ -71,15 +78,22 @@ export interface AvgDurationDashboardData {
 }
 
 export interface SentimentCategory {
-  count: number;
-  percentage: number;
+  count?: number;
+  percentage?: number;
 }
 
 export interface VisitorSentimentDashboardData {
-  totalResponses: number;
-  worthIt: SentimentCategory;
-  mid: SentimentCategory;
-  notWorthIt: SentimentCategory;
+  totalResponses?: number;
+  score?: number;
+  sentimentScore?: {
+    score?: number;
+    worthIt?: number;
+    mid?: number;
+    notWorthIt?: number;
+  } | number;
+  worthIt?: SentimentCategory | number;
+  mid?: SentimentCategory | number;
+  notWorthIt?: SentimentCategory | number;
 }
 
 export interface EventsOverviewData {
@@ -97,13 +111,20 @@ export interface EventAttendanceItem {
 export interface BestPerformingEventItem {
   _id?: string;
   id?: string;
+  eventId?: string;
   title?: string;
   date?: string;
   startAt?: string;
+  endAt?: string;
   image?: string;
-  banner?: string;
+  banner?: string | string[];
+  banners?: string[];
+  attendance?: number;
   attendees?: number;
   engagement?: number;
+  engagementPercentage?: number;
+  retentionRate?: number;
+  venue?: string;
 }
 
 export interface PerformanceSummaryData {
@@ -349,11 +370,25 @@ export const analyticService = {
   getBestPerformingEvents: async (
     params?: AnalyticsFilterParams
   ): Promise<AnalyticsApiResponse<BestPerformingEventItem[]>> => {
-    const response = await axiosInstance.get<AnalyticsApiResponse<BestPerformingEventItem[]>>(
-      "/analytics/events/best-performing",
-      { params }
-    );
-    return response.data;
+    try {
+      const response = await axiosInstance.get<AnalyticsApiResponse<BestPerformingEventItem[]>>(
+        "/analytics/events/best-performing",
+        { params }
+      );
+      return response.data;
+    } catch (e: any) {
+      if (e?.response?.status === 404) {
+        const response = await axiosInstance.get<AnalyticsApiResponse<BestPerformingEventItem[]>>(
+          "/analytics/events/best-performing",
+          { params }
+        );
+        return response.data;
+      }
+      throw e;
+    }
+  },
+  getBestPerformance: async (params?: AnalyticsFilterParams) => {
+    return analyticService.getBestPerformingEvents(params);
   },
 
   getPerformanceSummary: async (
@@ -423,33 +458,6 @@ export const analyticService = {
       "/analytics/events/boosted-sentiment",
       { params }
     );
-    return response.data;
-  },
-
-  getSentimentAnalytics: async (
-    params?: AnalyticsFilterParams
-  ): Promise<AnalyticsApiResponse<VenueOwnerSentimentData>> => {
-    const response = await axiosInstance.get<AnalyticsApiResponse<VenueOwnerSentimentData>>(
-      "/venue-owner/analytics/sentiment",
-      { params }
-    );
-    return response.data;
-  },
-
-  getDashboard: async (params?: { venueId?: string }) => {
-    const response = await axiosInstance.get("/venue-owner/dashboard", { params });
-    return response.data;
-  },
-  getVisitorAnalytics: async (params?: { venueId?: string }) => {
-    const response = await axiosInstance.get("/venue-owner/analytics/visitors", { params });
-    return response.data;
-  },
-  getRetentionAnalytics: async (params?: { venueId?: string }) => {
-    const response = await axiosInstance.get("/venue-owner/analytics/retention", { params });
-    return response.data;
-  },
-  getEventsAnalytics: async (params?: { venueId?: string }) => {
-    const response = await axiosInstance.get("/venue-owner/analytics/events", { params });
     return response.data;
   },
 };

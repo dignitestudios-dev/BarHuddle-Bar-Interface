@@ -96,6 +96,8 @@ export const useGetBestPerformingEventsQuery = (params?: AnalyticsFilterParams) 
   });
 };
 
+export const useGetBestPerformanceQuery = useGetBestPerformingEventsQuery;
+
 export const useGetPerformanceSummaryQuery = (params?: AnalyticsFilterParams) => {
   return useQuery({
     queryKey: analyticsKeys.performanceSummary(params),
@@ -145,37 +147,3 @@ export const useGetBoostedSentimentEventsQuery = (params?: { page?: number; limi
   });
 };
 
-export const useGetDashboardQuery = (params?: { venueId?: string }) => {
-  return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'dashboard', params],
-    queryFn: () => analyticService.getDashboard(params),
-  });
-};
-
-export const useGetVisitorAnalyticsQuery = (params?: { venueId?: string }) => {
-  return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'visitors', params],
-    queryFn: () => analyticService.getVisitorAnalytics(params),
-  });
-};
-
-export const useGetRetentionAnalyticsQuery = (params?: { venueId?: string }) => {
-  return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'retention', params],
-    queryFn: () => analyticService.getRetentionAnalytics(params),
-  });
-};
-
-export const useGetSentimentAnalyticsQuery = (params?: AnalyticsFilterParams) => {
-  return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'sentiment', params],
-    queryFn: () => analyticService.getSentimentAnalytics(params),
-  });
-};
-
-export const useGetEventsAnalyticsQuery = (params?: { venueId?: string }) => {
-  return useQuery({
-    queryKey: [...analyticsKeys.lists(), 'events', params],
-    queryFn: () => analyticService.getEventsAnalytics(params),
-  });
-};

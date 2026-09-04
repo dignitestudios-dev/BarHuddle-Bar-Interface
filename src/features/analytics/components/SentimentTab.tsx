@@ -7,7 +7,7 @@ import { TopInsightsCard, InsightItem } from "@/components/charts/TopInsightsCar
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     useGetPerformanceSummaryQuery,
-    useGetSentimentAnalyticsQuery,
+    useGetVisitorSentimentDashboardQuery,
 } from "../api/analytics.queries";
 import { AnalyticsFilterParams } from "../api/analytics.service";
 
@@ -16,43 +16,91 @@ export interface SentimentTabProps {
 }
 
 export function SentimentTab({ filterParams }: SentimentTabProps) {
-    const { data: performanceResponse, isLoading: isLoadingPerformance } =
+    const { data: performanceResponse, isLoading: isLoadingPerformance, isError: isErrorPerformance } =
         useGetPerformanceSummaryQuery(filterParams);
-    const { data: sentimentResponse, isLoading: isLoadingSentiment } =
-        useGetSentimentAnalyticsQuery(filterParams);
+    const { data: visitorSentimentResponse, isLoading: isLoadingSentiment, isError: isErrorSentiment } =
+        useGetVisitorSentimentDashboardQuery(filterParams);
 
     const isLoading = isLoadingPerformance || isLoadingSentiment;
 
     const perfData = performanceResponse?.data;
-    const sentimentData = sentimentResponse?.data;
+    const vsData = visitorSentimentResponse?.data as any;
 
-    // Score from GET /venue-owner/analytics/sentiment
+    // Score from GET /analytics/retention/visitor-sentiment-dashboard
     const overallScore = useMemo(() => {
-        const score = sentimentData?.sentimentScore?.score;
-        if (score !== undefined && score !== null) {
-            return Number(score);
+        if (vsData?.score !== undefined && vsData?.score !== null && Number(vsData.score) > 0) {
+            return Number(vsData.score);
+        }
+        if (vsData?.sentimentScore?.score !== undefined && vsData?.sentimentScore?.score !== null && Number(vsData.sentimentScore.score) > 0) {
+            return Number(vsData.sentimentScore.score);
+        }
+        if (typeof vsData?.sentimentScore === "number" && vsData.sentimentScore > 0) {
+            return Number(vsData.sentimentScore);
+        }
+        const worthItPct = typeof vsData?.worthIt === "object" ? vsData?.worthIt?.percentage : (typeof vsData?.worthIt === "number" ? vsData?.worthIt : undefined);
+        if (worthItPct !== undefined && worthItPct > 0) {
+            return Math.round(worthItPct);
         }
         return 0;
-    }, [sentimentData]);
+    }, [vsData]);
 
     const sentimentItems: SentimentItem[] = useMemo(() => {
-        const s = sentimentData?.sentimentScore;
-        const worthItPct = Math.round(s?.worthIt ?? 0);
-        const midPct = Math.round(s?.mid ?? 0);
-        const notWorthItPct = Math.round(s?.notWorthIt ?? 0);
+        const getPct = (val: any) => {
+            if (val === undefined || val === null) return undefined;
+            if (typeof val === "number") return Math.round(val);
+            if (typeof val.percentage === "number") return Math.round(val.percentage);
+            return undefined;
+        };
+
+        const vsWorthIt = getPct(vsData?.worthIt);
+        const vsMid = getPct(vsData?.mid);
+        const vsNotWorthIt = getPct(vsData?.notWorthIt);
+
+        if (
+            vsWorthIt !== undefined ||
+            vsMid !== undefined ||
+            vsNotWorthIt !== undefined
+        ) {
+            return [
+                {
+                    name: "Worth It",
+                    percentage: vsWorthIt ?? 0,
+                    color: "#E8FF57",
+                    bgColor: "rgba(232, 255, 87, 0.04)",
+                    borderColor: "rgba(232, 255, 87, 0.18)",
+                    offsetClass: "w-full",
+                },
+                {
+                    name: "Check It Out",
+                    percentage: vsMid ?? 0,
+                    color: "#22D3EE",
+                    bgColor: "rgba(34, 211, 238, 0.04)",
+                    borderColor: "rgba(34, 211, 238, 0.18)",
+                    offsetClass: "w-full",
+                },
+                {
+                    name: "Not Worth It",
+                    percentage: vsNotWorthIt ?? 0,
+                    color: "#F472B6",
+                    bgColor: "rgba(244, 114, 182, 0.04)",
+                    borderColor: "rgba(244, 114, 182, 0.18)",
+                    offsetClass: "w-full",
+                },
+            ];
+        }
 
         return [
             {
                 name: "Worth It",
-                percentage: worthItPct,
+                percentage: 0,
                 color: "#E8FF57",
                 bgColor: "rgba(232, 255, 87, 0.04)",
                 borderColor: "rgba(232, 255, 87, 0.18)",
                 offsetClass: "w-full",
             },
             {
-                name: "Mid",
-                percentage: midPct,
+                name: "Check It Out",
+                percentage: 0,
                 color: "#22D3EE",
                 bgColor: "rgba(34, 211, 238, 0.04)",
                 borderColor: "rgba(34, 211, 238, 0.18)",
@@ -60,44 +108,35 @@ export function SentimentTab({ filterParams }: SentimentTabProps) {
             },
             {
                 name: "Not Worth It",
-                percentage: notWorthItPct,
+                percentage: 0,
                 color: "#F472B6",
                 bgColor: "rgba(244, 114, 182, 0.04)",
                 borderColor: "rgba(244, 114, 182, 0.18)",
                 offsetClass: "w-full",
             },
         ];
-    }, [sentimentData]);
+    }, [vsData]);
 
     const scoreProgressItems: ScoreProgressItem[] = useMemo(() => {
-        const s = sentimentData?.sentimentScore;
-        return [
-            {
-                label: "Worth It",
-                percentage: Math.round(s?.worthIt ?? 0),
-                color: "#E8FF57",
-            },
-            {
-                label: "Mid",
-                percentage: Math.round(s?.mid ?? 0),
-                color: "#22D3EE",
-            },
-            {
-                label: "Not Worth It",
-                percentage: Math.round(s?.notWorthIt ?? 0),
-                color: "#F472B6",
-            },
-        ];
-    }, [sentimentData]);
+        return sentimentItems.map((item) => ({
+            label: item.name,
+            percentage: item.percentage,
+            color: item.color,
+        }));
+    }, [sentimentItems]);
 
     // Top Insights items mapping from GET /analytics/performance-summary
     const insightsList: InsightItem[] = useMemo(() => {
+        if (!perfData) return [];
         const bestEvt = perfData?.bestPerformingEvent;
         const peakHrs = perfData?.peakHours;
         const peakDy = perfData?.peakDay;
         const topSeg = perfData?.topSegment;
         const bestDy = perfData?.bestDay;
         const satisf = perfData?.satisfaction;
+
+        const hasAnyInsight = bestEvt || peakHrs || peakDy || topSeg || bestDy || satisf;
+        if (!hasAnyInsight) return [];
 
         return [
             {
@@ -199,6 +238,7 @@ export function SentimentTab({ filterParams }: SentimentTabProps) {
                     tagText="CUSTOMER SENTIMENT"
                     overallScore={overallScore}
                     sentiments={sentimentItems}
+                    isError={isErrorSentiment}
                     className="w-full h-full"
                 />
 
@@ -208,6 +248,7 @@ export function SentimentTab({ filterParams }: SentimentTabProps) {
                     items={scoreProgressItems}
                     tagText="SATISFACTION"
                     title="Overall Score"
+                    isError={isErrorSentiment}
                     bannerText={
                         overallScore > 0
                             ? "Live sentiment score recorded"
@@ -221,6 +262,7 @@ export function SentimentTab({ filterParams }: SentimentTabProps) {
                     items={insightsList}
                     tagText="AI INSIGHTS"
                     title="Top Insights"
+                    isError={isErrorPerformance}
                     className="w-full h-full"
                 />
             </div>

@@ -12,6 +12,7 @@ import {
     useGetVisitorsGraphQuery,
     useGetTimeOfDayGraphQuery,
     useGetCustomerBreakdownGraphQuery,
+    useGetVisitorSentimentDashboardQuery,
 } from "../api/analytics.queries";
 import { AnalyticsFilterParams } from "../api/analytics.service";
 
@@ -33,10 +34,12 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
         useGetOverviewQuery(filterParams);
     const { data: visitorsGraphResponse, isLoading: isLoadingVisitorsGraph } =
         useGetVisitorsGraphQuery(filterParams);
-    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay } =
+    const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay, isError: isErrorTimeOfDay } =
         useGetTimeOfDayGraphQuery(filterParams);
-    const { data: customerBreakdownResponse, isLoading: isLoadingCustomerBreakdown } =
+    const { data: customerBreakdownResponse, isLoading: isLoadingCustomerBreakdown, isError: isErrorCustomerBreakdown } =
         useGetCustomerBreakdownGraphQuery(filterParams);
+    const { data: sentimentResponse } =
+        useGetVisitorSentimentDashboardQuery(filterParams);
 
     const isLoading =
         isLoadingOverview ||
@@ -53,68 +56,77 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
                 id: "total-check-ins",
                 title: "Total Check-Ins",
                 value: o?.totalCheckIns !== undefined ? o.totalCheckIns.toLocaleString() : "0",
-                trend: "+0%",
-                isPositive: true,
+                trend: o?.totalCheckInsGrowth || "+0%",
+                isPositive: !String(o?.totalCheckInsGrowth || "").startsWith("-"),
                 variant: "purple",
             },
             {
                 id: "total-visitors",
                 title: "Total Visitors",
                 value: o?.totalVisitors !== undefined ? o.totalVisitors.toLocaleString() : "0",
-                trend: "+0%",
-                isPositive: true,
+                trend: o?.totalVisitorsGrowth || "+0%",
+                isPositive: !String(o?.totalVisitorsGrowth || "").startsWith("-"),
                 variant: "purple",
             },
             {
                 id: "avg-stay-duration",
                 title: "Avg Stay Duration",
-                value: o?.avgStay !== undefined ? `${o.avgStay}m` : "0m",
-                trend: "+0%",
-                isPositive: true,
+                value: typeof o?.avgStay === "number" ? `${o.avgStay} mins` : (o?.avgStay || "0 mins"),
+                trend: o?.avgStayGrowth || "+0%",
+                isPositive: !String(o?.avgStayGrowth || "").startsWith("-"),
                 variant: "yellow",
             },
             {
                 id: "new-customers",
                 title: "New Customers",
                 value: o?.newCustomers !== undefined ? o.newCustomers.toLocaleString() : "0",
-                trend: "+0%",
-                isPositive: true,
+                trend: o?.newCustomersGrowth || "+0%",
+                isPositive: !String(o?.newCustomersGrowth || "").startsWith("-"),
                 variant: "green",
             },
             {
                 id: "repeat-customers",
                 title: "Repeat Customers",
                 value: o?.repeatCustomers !== undefined ? o.repeatCustomers.toLocaleString() : "0",
-                trend: "+0%",
-                isPositive: true,
+                trend: o?.repeatCustomersGrowth || "+0%",
+                isPositive: !String(o?.repeatCustomersGrowth || "").startsWith("-"),
                 variant: "purple",
             },
             {
                 id: "lost-customers",
                 title: "Lost Customers",
                 value: o?.lostCustomers !== undefined ? o.lostCustomers.toLocaleString() : "0",
-                trend: "0%",
-                isPositive: false,
+                trend: o?.lostCustomersGrowth || "+0%",
+                isPositive: !String(o?.lostCustomersGrowth || "").startsWith("-"),
                 variant: "coral",
             },
             {
                 id: "event-attendance",
                 title: "Event Attendance",
                 value: o?.eventAttendance !== undefined ? o.eventAttendance.toLocaleString() : "0",
-                trend: "+0%",
-                isPositive: true,
+                trend: o?.eventAttendanceGrowth || "+0%",
+                isPositive: !String(o?.eventAttendanceGrowth || "").startsWith("-"),
                 variant: "pink",
             },
             {
                 id: "avg-rating",
                 title: "Google Avg Rating",
-                value: o?.avgRating !== undefined ? `${o.avgRating}★` : "0★",
-                trend: "+0.0",
+                value: (() => {
+                    if (o?.avgRating !== undefined && o?.avgRating !== null) return o.avgRating.toString();
+                    const sData = sentimentResponse?.data as any;
+                    if (sData?.score) return (sData.score / 20).toFixed(1);
+                    if (sData?.worthIt) {
+                        const pct = typeof sData.worthIt === "object" ? sData.worthIt.percentage : sData.worthIt;
+                        return (pct / 20).toFixed(1);
+                    }
+                    return "0";
+                })(),
+                trend: "+0%",
                 isPositive: true,
                 variant: "orange",
             },
         ];
-    }, [overviewResponse]);
+    }, [overviewResponse, sentimentResponse]);
 
     // Graph Data mapping from GET /analytics/overview/vistors-graph
     const trendsChartData: TrendDataPoint[] | undefined = useMemo(() => {
@@ -138,7 +150,6 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
                 name: label,
                 visitors: item.visitors ?? 0,
                 checkIns: item.checkIns ?? 0,
-                retention: item.retention ?? 0,
             };
         });
     }, [visitorsGraphResponse]);
@@ -267,12 +278,14 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
             <div className="max-w-[1200px] w-full flex flex-col xl:flex-row gap-6 items-stretch">
                 <TrafficByTimeChart
                     slots={timeSlotsData}
+                    isError={isErrorTimeOfDay}
                     className="flex-1 max-w-full"
                 />
                 <CustomerDonutChart
                     title="Visitor Breakdown"
                     segments={customerSegmentsData}
                     totalCustomers={totalCustomersCount}
+                    isError={isErrorCustomerBreakdown}
                     className="w-full xl:w-[288px] shrink-0"
                 />
             </div>
