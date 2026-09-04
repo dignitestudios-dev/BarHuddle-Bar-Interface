@@ -17,11 +17,14 @@ export interface PromotionData {
     dateRange: string;
     activeDays: string[]; // ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     views: string;
+    totalViews?: number | string;
     visitsDuringPromo?: number;
     redemptions: string;
     avgRetentionTime?: string;
+    averageTimeBetweenViewsMinutes?: number | string;
     rate: string;
     performancePercent: number;
+    performanceRate?: number;
     imageUrl: string;
     bannerImages?: string[];
 }
@@ -59,6 +62,7 @@ export function getPromotionStatusConfig(statusVal?: string) {
 
 export interface PromotionCardProps {
     promotion: PromotionData;
+    rawPromotion?: any;
     onEdit?: (promo: PromotionData) => void;
     onDuplicate?: (promo: PromotionData) => void;
     onDelete?: (promo: PromotionData) => void;
@@ -70,6 +74,7 @@ const ALL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function PromotionCard({
     promotion,
+    rawPromotion,
     onEdit,
     onDuplicate,
     onDelete,
@@ -86,6 +91,29 @@ export function PromotionCard({
     const activeImageUrl = banners[currentImgIndex] || promotion.imageUrl;
 
     const statusConfig = getPromotionStatusConfig(promotion.computedStatus || promotion.status);
+
+    // Extract totalViews, averageTimeBetweenViewsMinutes, performanceRate
+    const displayViews = rawPromotion?.totalViews !== undefined && rawPromotion?.totalViews !== null
+        ? String(rawPromotion.totalViews)
+        : promotion.totalViews !== undefined && promotion.totalViews !== null
+        ? String(promotion.totalViews)
+        : promotion.views ?? "0";
+
+    const rawAvgMins = rawPromotion?.averageTimeBetweenViewsMinutes !== undefined && rawPromotion?.averageTimeBetweenViewsMinutes !== null
+        ? rawPromotion.averageTimeBetweenViewsMinutes
+        : promotion.averageTimeBetweenViewsMinutes;
+
+    const displayAvgClick = rawAvgMins !== undefined && rawAvgMins !== null
+        ? Number(rawAvgMins) >= 60
+            ? `${Math.floor(Number(rawAvgMins) / 60)}h ${Number(rawAvgMins) % 60 ? `${Number(rawAvgMins) % 60}m` : ""}`.trim()
+            : `${Number(rawAvgMins)}m`
+        : promotion.avgRetentionTime || (promotion.redemptions ? `${promotion.redemptions}m` : "0m");
+
+    const displayPerformanceRate = rawPromotion?.performanceRate !== undefined && rawPromotion?.performanceRate !== null
+        ? Number(rawPromotion.performanceRate)
+        : promotion.performanceRate !== undefined && promotion.performanceRate !== null
+        ? Number(promotion.performanceRate)
+        : promotion.performancePercent ?? 0;
 
     return (
         <div
@@ -242,46 +270,42 @@ export function PromotionCard({
                 </div>
 
                 {/* Metric Stat Cards Row */}
-                <div className={`grid ${promotion.visitsDuringPromo !== undefined ? "grid-cols-2 gap-1.5" : "grid-cols-3 gap-2"} w-full`}>
-                    {/* Views */}
+                <div className="grid grid-cols-2 gap-2 w-full">
+                    {/* Views (totalViews) */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[16px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[13px] leading-[18px] text-[#22D3EE]">
-                            {promotion.views}
+                            {displayViews}
                         </span>
                         <span className="font-semibold text-[9px] leading-[13px] text-[#8B7EC8]">
                             Views
                         </span>
                     </div>
 
-                    
-
-                    {/* Avg Retention Time */}
+                    {/* Avg Click (averageTimeBetweenViewsMinutes) */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[16px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[13px] leading-[18px] text-[#4ADE80]">
-                            {promotion.avgRetentionTime || (promotion.redemptions ? `${promotion.redemptions}m` : "0m")}
+                            {displayAvgClick}
                         </span>
                         <span className="font-semibold text-[9px] leading-[13px] text-[#8B7EC8] text-center truncate w-full px-0.5">
-                            Avg Stay
+                            Avg Click
                         </span>
                     </div>
-
-               
                 </div>
 
-                {/* Performance Progress Bar Row */}
+                {/* Performance Progress Bar Row (performanceRate) */}
                 <div className="flex flex-col gap-1 w-full">
                     <div className="flex items-center justify-between w-full">
                         <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8]">
                             Performance
                         </span>
                         <span className="font-extrabold text-[10px] leading-[15px] text-[#4ADE80]">
-                            {promotion.performancePercent}%
+                            {displayPerformanceRate}%
                         </span>
                     </div>
                     <div className="w-full h-[6px] rounded-full bg-[rgba(124,58,237,0.12)] overflow-hidden">
                         <div
                             className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] to-[#4ADE80] shadow-[0px_0px_6px_rgba(74,222,128,0.44)] transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.max(0, promotion.performancePercent))}%` }}
+                            style={{ width: `${Math.min(100, Math.max(0, displayPerformanceRate))}%` }}
                         />
                     </div>
                 </div>

@@ -157,11 +157,16 @@ export function Promotions() {
             const categoryName = (rawCategory && String(rawCategory).toLowerCase() !== "special" && String(rawCategory).toLowerCase() !== "special offers") ? String(rawCategory) : "Promotion";
 
             // Metrics
-            const viewsCount = String(promo.views ?? promo.viewCount ?? promo.metrics?.views ?? "0");
+            const totalViewsVal = promo.totalViews !== undefined
+                ? promo.totalViews
+                : (promo.views ?? promo.viewCount ?? promo.metrics?.views ?? 0);
+            const viewsCount = String(totalViewsVal);
             const visitsCount = promo.visitsDuringPromo !== undefined ? Number(promo.visitsDuringPromo) : undefined;
             const redeemedCount = String(promo.redeemedCount ?? promo.redemptions ?? promo.metrics?.redemptions ?? "0");
 
-            const avgMins = promo.averageRetentionTimeMinutes !== undefined
+            const avgMins = promo.averageTimeBetweenViewsMinutes !== undefined
+                ? Number(promo.averageTimeBetweenViewsMinutes)
+                : promo.averageRetentionTimeMinutes !== undefined
                 ? Number(promo.averageRetentionTimeMinutes)
                 : undefined;
 
@@ -171,16 +176,10 @@ export function Promotions() {
                     : `${avgMins}m`
                 : "0m";
 
-            const redemptionRateStr = String(
-                promo.redemptionRate !== undefined
-                    ? `${promo.redemptionRate}%`
-                    : promo.rate !== undefined
-                    ? `${promo.rate}%`
-                    : promo.metrics?.rate || "0%"
-            );
             const performancePercentNum = Number(
                 promo.performanceRate ?? promo.performancePercent ?? promo.metrics?.performancePercent ?? (promo.redemptionRate ?? 0)
             );
+            const redemptionRateStr = `${performancePercentNum}%`;
 
             // Images: handle array of banners or single string
             const rawBanners = Array.isArray(promo.banner)
@@ -209,11 +208,14 @@ export function Promotions() {
                 dateRange: dateRangeStr,
                 activeDays: computedActiveDays,
                 views: viewsCount,
+                totalViews: totalViewsVal,
                 visitsDuringPromo: visitsCount,
                 redemptions: redeemedCount,
                 avgRetentionTime: avgRetentionFormatted,
+                averageTimeBetweenViewsMinutes: promo.averageTimeBetweenViewsMinutes,
                 rate: redemptionRateStr,
                 performancePercent: performancePercentNum,
+                performanceRate: performancePercentNum,
                 imageUrl: primaryBanner,
                 bannerImages: bannerUrls.length > 0 ? bannerUrls : [primaryBanner],
             };
@@ -507,6 +509,7 @@ export function Promotions() {
                         <PromotionCard
                             key={promo.id}
                             promotion={promo}
+                            rawPromotion={rawPromosMap.get(String(promo.id))}
                             onEdit={handleEditClick}
                             onDelete={handleDeleteClick}
                         />
