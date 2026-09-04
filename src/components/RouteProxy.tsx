@@ -77,8 +77,8 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
                 if (isAuthRoute || pathname === "/auth/profile-setup") {
                     // Redirect logged-in user away from auth pages
                     router.replace(targetRoute);
-                } else if (pathname?.startsWith("/app")) {
-                    // Authenticated users already inside the app should stay in the app and never be redirected to onboarding
+                } else if (pathname?.startsWith("/app") || pathname?.startsWith("/venue-management")) {
+                    // Authenticated users already inside the app or browsing venue-management should stay on the page
                     setIsChecking(false);
                     return;
                 } else if (

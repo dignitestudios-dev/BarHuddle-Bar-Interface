@@ -29,6 +29,11 @@ export interface AuthResponse {
   };
 }
 
+export interface CheckEmailPayload {
+  email: string;
+  role?: string;
+}
+
 export interface CheckEmailResponse {
   success: boolean;
   message: string;
@@ -48,8 +53,16 @@ export interface AuthLoginResponse {
   };
 }
 
-export async function checkEmail(email: string): Promise<CheckEmailResponse> {
-  const { data } = await axiosInstance.post<CheckEmailResponse>("/auth/check-email", { email });
+export async function checkEmail(
+  emailOrPayload: string | CheckEmailPayload,
+  role: string = "bar_owner"
+): Promise<CheckEmailResponse> {
+  const payload =
+    typeof emailOrPayload === "string"
+      ? { email: emailOrPayload, role }
+      : { role: "bar_owner", ...emailOrPayload };
+
+  const { data } = await axiosInstance.post<CheckEmailResponse>("/auth/check-email", payload);
   return data;
 }
 

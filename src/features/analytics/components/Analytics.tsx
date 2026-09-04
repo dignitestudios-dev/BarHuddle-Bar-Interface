@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { format } from "date-fns";
 import { AnalyticsPageHeader, DateFilterOption } from "./AnalyticsPageHeader";
 import { AnalyticsTabs, AnalyticsTab } from "./AnalyticsTabs";
@@ -15,12 +16,35 @@ import { AnalyticsFilterParams } from "../api/analytics.service";
 
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
+const VALID_TABS: Record<string, AnalyticsTab> = {
+    overview: "Overview",
+    visitor: "Visitor",
+    visitors: "Visitor",
+    retention: "Retention",
+    events: "Events",
+    sentiment: "Sentiment",
+    boost: "Boost",
+    reports: "Reports",
+};
+
 export function Analytics() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
     const { selectedVenueId } = useSelectedVenue();
     const [dateFilter, setDateFilter] = useState<DateFilterOption>("Weekly");
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-    const [activeTab, setActiveTab] = useState<AnalyticsTab>("Overview");
+
+    const rawTab = searchParams?.get("tab")?.toLowerCase() || "";
+    const activeTab: AnalyticsTab = VALID_TABS[rawTab] || "Overview";
+
+    const handleTabChange = (tab: AnalyticsTab) => {
+        const params = new URLSearchParams(searchParams?.toString() || "");
+        params.set("tab", tab.toLowerCase());
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     const filterParams: AnalyticsFilterParams = useMemo(() => {
         const base: AnalyticsFilterParams = {};
@@ -95,7 +119,7 @@ export function Analytics() {
             {/* Selection Tabs Row */}
             <AnalyticsTabs
                 activeTab={activeTab}
-                onTabChange={setActiveTab}
+                onTabChange={handleTabChange}
             />
 
             {/* Active Tab View */}

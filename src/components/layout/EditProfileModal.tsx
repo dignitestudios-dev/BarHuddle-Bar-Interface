@@ -13,7 +13,6 @@ export interface EditProfileModalProps {
     onClose: () => void;
     currentFullName: string;
     currentEmail: string;
-    currentBio?: string;
     currentAvatarUrl?: string;
     onSave?: (newFullName: string) => void;
 }

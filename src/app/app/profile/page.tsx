@@ -1,33 +1,37 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useProfile } from "@/context/ProfileContext";
 import { EditProfileModal } from "@/components/layout/EditProfileModal";
 import { useGetEventsQuery } from "@/features/events/api/events.queries";
-import { useMyVenuesQuery } from "@/features/venue-management/api/venue.queries";
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 
 export default function ProfilePage() {
-    const { fullName, email, initials, avatarUrl, bio, updateFullName } = useProfile();
+    const { fullName, email, initials, avatarUrl, updateFullName } = useProfile();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    const { selectedVenueId } = useSelectedVenue();
+    // Fetch all events for the owner without filtering by venueId
     const { data: apiEventsData } = useGetEventsQuery({
         page: 1,
-        limit: 10,
-        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
+        limit: 100,
     });
-    const { data: myVenuesData } = useMyVenuesQuery(1, 10);
 
-    const eventsCount = Array.isArray(apiEventsData?.data)
-        ? apiEventsData.data.length
-        : Array.isArray(apiEventsData?.data?.events)
-            ? apiEventsData.data.events.length
-            : Array.isArray(apiEventsData)
-                ? apiEventsData.length
-                : 0;
+    // Get all owner venues without venueId filtering
+    const { venues } = useSelectedVenue();
 
-    const venuesCount = Array.isArray(myVenuesData) ? myVenuesData.length : 1;
+    const eventsCount = useMemo(() => {
+        if (typeof apiEventsData?.total === "number") return apiEventsData.total;
+        if (typeof apiEventsData?.totalEvents === "number") return apiEventsData.totalEvents;
+        if (typeof apiEventsData?.pagination?.total === "number") return apiEventsData.pagination.total;
+        if (typeof apiEventsData?.data?.total === "number") return apiEventsData.data.total;
+        if (Array.isArray(apiEventsData?.data?.events)) return apiEventsData.data.events.length;
+        if (Array.isArray(apiEventsData?.data)) return apiEventsData.data.length;
+        if (Array.isArray(apiEventsData?.events)) return apiEventsData.events.length;
+        if (Array.isArray(apiEventsData)) return apiEventsData.length;
+        return 0;
+    }, [apiEventsData]);
+
+    const venuesCount = venues.length;
 
     return (
         <div className="w-full flex flex-col p-6 sm:p-8 font-['Manrope',sans-serif] min-h-screen">

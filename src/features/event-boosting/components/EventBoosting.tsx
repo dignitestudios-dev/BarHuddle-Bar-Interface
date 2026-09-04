@@ -232,6 +232,7 @@ export function EventBoosting() {
         } catch (error: any) {
             console.error("Failed to update event", error);
             toast.error(error?.response?.data?.message || "Failed to update event");
+            throw error;
         }
     };
 

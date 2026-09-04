@@ -31,7 +31,7 @@ export function VenueHeader({
     };
 
     const handleClaimSubmitted = () => {
-        onOpenSubscription?.();
+        setIsClaimModalOpen(false);
     };
 
     return (

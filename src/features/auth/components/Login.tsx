@@ -72,7 +72,10 @@ export function Login() {
 
     const onEmailSubmit = async (data: EmailFormValues) => {
         try {
-            const response = await checkEmailMutation.mutateAsync(data.email);
+            const response = await checkEmailMutation.mutateAsync({
+                email: data.email,
+                role: "bar_owner",
+            });
             const exists = Boolean(response?.data?.exists ?? (response as any)?.exists);
             setIsExistingUser(exists);
             setEmailValue(data.email);

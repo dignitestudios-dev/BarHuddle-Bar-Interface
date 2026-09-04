@@ -255,6 +255,7 @@ export function Events() {
         } catch (error: any) {
             console.error("Failed to create event", error);
             toast.error(error?.response?.data?.message || "Failed to create event");
+            throw error;
         }
     };
 
@@ -307,6 +308,7 @@ export function Events() {
         } catch (error: any) {
             console.error("Failed to update event", error);
             toast.error(error?.response?.data?.message || "Failed to update event");
+            throw error;
         }
     };
 

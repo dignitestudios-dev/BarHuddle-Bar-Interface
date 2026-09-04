@@ -31,6 +31,7 @@ export function VenueManagement() {
         data: fetchedVenueDetails,
         isLoading: isLoadingVenueDetails,
         isFetching: isFetchingVenueDetails,
+        refetch: refetchVenueDetails,
     } = useVenueDetailsQuery(selectedVenueId || "");
 
     const handleViewDetails = (v: any) => {
@@ -86,7 +87,13 @@ export function VenueManagement() {
 
     const isFirstLogin = pathname === "/venue-management";
 
-    const { data: venues, isLoading, isError, isFetching } = useMyVenuesQuery(
+    const {
+        data: venues,
+        isLoading,
+        isError,
+        isFetching,
+        refetch: refetchVenues,
+    } = useMyVenuesQuery(
         page,
         limit,
         search,
@@ -305,16 +312,17 @@ export function VenueManagement() {
             <ClaimFormModal
                 isOpen={isClaimModalOpen}
                 venue={venueToClaim}
-                onClose={() => setIsClaimModalOpen(false)}
+                onClose={() => {
+                    setIsClaimModalOpen(false);
+                    setVenueToClaim(null);
+                }}
                 onSubmitted={() => {
-                    // Navigate to pending screen if claim is pending
-                    if (user?.isClaimed === "pending" || !user?.isClaimed) {
-                        router.push("/auth/pending-approval");
-                    } else if (user?.isClaimed === "approved") {
-                        router.push("/app/dashboard");
-                    } else {
-                        router.push("/auth/pending-approval");
+                    refetchVenues();
+                    if (selectedVenueId) {
+                        refetchVenueDetails();
                     }
+                    setIsClaimModalOpen(false);
+                    setVenueToClaim(null);
                 }}
             />
         </div>
