@@ -69,7 +69,7 @@ export function EventsTab({ filterParams }: EventsTabProps) {
             const rawDate = item.startAt || item.date || item.startDate;
             const isUpcoming = rawDate ? new Date(rawDate) > new Date() : false;
 
-            const attendanceCount = Number(item.attendance ?? item.attendees ?? item.attendeeCount ?? 0);
+            const attendanceCount = Number(item.retention?.totalAttendees ?? item.attendance ?? item.attendees ?? item.attendeeCount ?? 0);
             const retentionRate = Number(item.retentionRate ?? item.engagement ?? item.engagementPercentage ?? 0);
 
             let tagConfig: EventTagConfig = { label: "Top", icon: "⭐", variant: "top" };
@@ -122,7 +122,7 @@ export function EventsTab({ filterParams }: EventsTabProps) {
                 ? item.banners[0]
                 : item.banner || item.image || item.imageUrl;
 
-            const attendanceCount = Number(item.attendance ?? item.attendees ?? item.attendeeCount ?? 0);
+            const attendanceCount = Number(item.retention?.totalAttendees ?? item.attendance ?? item.attendees ?? item.attendeeCount ?? 0);
             const retentionRate = Number(item.retentionRate ?? item.engagement ?? item.engagementPercentage ?? 0);
 
             return {

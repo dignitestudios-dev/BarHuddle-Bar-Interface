@@ -82,13 +82,13 @@ export function BoostingStatCardsRow({
                 iconColor: "text-[#22D3EE]",
                 iconBgShadow: "shadow-[0px_0px_12px_rgba(34,211,238,0.2)]",
             },
-            {
-                id: "avg-engagement",
-                value: avgEngagementVal,
-                label: "Avg Engagement",
-                iconColor: "text-[#4ADE80]",
-                iconBgShadow: "shadow-[0px_0px_12px_rgba(74,222,128,0.2)]",
-            },
+            // {
+            //     id: "avg-engagement",
+            //     value: avgEngagementVal,
+            //     label: "Avg Engagement",
+            //     iconColor: "text-[#4ADE80]",
+            //     iconBgShadow: "shadow-[0px_0px_12px_rgba(74,222,128,0.2)]",
+            // },
         ];
     }, [cards, apiBoostsData, apiEventsData]);
 

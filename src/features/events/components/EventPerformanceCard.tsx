@@ -23,6 +23,7 @@ export interface EventPerformanceCardProps {
 
 function EventPerformanceRow({ event }: { event: any }) {
     const attendees = Number(
+        event.retention?.totalAttendees ??
         event.attendance ??
         event.attendees ??
         event.attendeeCount ??

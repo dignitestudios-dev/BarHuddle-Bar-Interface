@@ -103,7 +103,19 @@ export function EventBoosting() {
                     : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
             );
             const performanceVal = Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
-            const attendeesVal = String(evt.attendance ?? evt.attendees ?? item.attendance ?? item.attendees ?? evt.views ?? evt.viewCount ?? item.views ?? evt.metrics?.views ?? "0");
+            const attendeesVal = String(
+                evt.retention?.totalAttendees ??
+                item.retention?.totalAttendees ??
+                evt.attendance ??
+                evt.attendees ??
+                item.attendance ??
+                item.attendees ??
+                evt.views ??
+                evt.viewCount ??
+                item.views ??
+                evt.metrics?.views ??
+                "0"
+            );
 
             const formattedDateTime = evt.startAt
                 ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })

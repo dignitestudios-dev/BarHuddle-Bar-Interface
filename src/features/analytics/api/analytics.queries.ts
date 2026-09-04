@@ -69,9 +69,13 @@ export const useGetAvgDurationDashboardQuery = (params?: AnalyticsFilterParams) 
 };
 
 export const useGetVisitorSentimentDashboardQuery = (params?: AnalyticsFilterParams) => {
+  const finalParams: AnalyticsFilterParams = {
+    ...params,
+    filter: params?.filter || "weekly",
+  };
   return useQuery({
-    queryKey: analyticsKeys.visitorSentimentDashboard(params),
-    queryFn: () => analyticService.getVisitorSentimentDashboard(params),
+    queryKey: analyticsKeys.visitorSentimentDashboard(finalParams),
+    queryFn: () => analyticService.getVisitorSentimentDashboard(finalParams),
   });
 };
 

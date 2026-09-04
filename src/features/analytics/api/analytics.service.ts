@@ -124,6 +124,12 @@ export interface BestPerformingEventItem {
   engagement?: number;
   engagementPercentage?: number;
   retentionRate?: number;
+  retention?: {
+    totalAttendees?: number;
+    returningVisitors?: number;
+    newVisitors?: number;
+    retentionRate?: number;
+  };
   venue?: string;
 }
 
@@ -340,9 +346,13 @@ export const analyticService = {
   getVisitorSentimentDashboard: async (
     params?: AnalyticsFilterParams
   ): Promise<AnalyticsApiResponse<VisitorSentimentDashboardData>> => {
+    const finalParams: AnalyticsFilterParams = {
+      ...params,
+      filter: params?.filter || "weekly",
+    };
     const response = await axiosInstance.get<AnalyticsApiResponse<VisitorSentimentDashboardData>>(
       "/analytics/retention/visitor-sentiment-dashboard",
-      { params }
+      { params: finalParams }
     );
     return response.data;
   },
