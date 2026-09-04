@@ -90,35 +90,42 @@ export function EditVenueModal({
                     </button>
                 </div>
 
+                {/* Informational Banner */}
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-[rgba(124,58,237,0.15)] border border-[rgba(124,58,237,0.3)] text-xs text-[#C4B5FD]">
+                    <svg className="w-4 h-4 text-[#E8FF57] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Venue Name and Address are synchronized with Google and cannot be edited.</span>
+                </div>
+
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={(e) => { e.preventDefault(); onClose(); }} className="flex flex-col gap-4">
                     {/* Venue Name */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold uppercase tracking-wider text-[#A855F7]">
-                            Venue Name
+                            Venue Name (Google Verified)
                         </label>
                         <input
                             type="text"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g. Foods Inn / The Rooftop Lounge"
-                            className="w-full h-12 px-4 rounded-xl bg-[#140E50]/80 border border-[rgba(124,58,237,0.3)] text-white placeholder:text-[#9D8FD0]/50 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all text-sm"
-                            required
+                            readOnly
+                            disabled
+                            placeholder="Venue Name"
+                            className="w-full h-12 px-4 rounded-xl bg-[#140E50]/50 border border-[rgba(124,58,237,0.2)] text-white/70 text-sm cursor-not-allowed opacity-75"
                         />
                     </div>
 
                     {/* Venue Address */}
                     <div className="flex flex-col gap-1.5">
                         <label className="text-xs font-bold uppercase tracking-wider text-[#A855F7]">
-                            Address
+                            Address (Google Verified)
                         </label>
                         <textarea
                             value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            placeholder="Enter full street address, city, state, zip..."
+                            readOnly
+                            disabled
                             rows={3}
-                            className="w-full p-3.5 rounded-xl bg-[#140E50]/80 border border-[rgba(124,58,237,0.3)] text-white placeholder:text-[#9D8FD0]/50 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all text-sm resize-none"
-                            required
+                            className="w-full p-3.5 rounded-xl bg-[#140E50]/50 border border-[rgba(124,58,237,0.2)] text-white/70 text-sm resize-none cursor-not-allowed opacity-75"
                         />
                     </div>
 
@@ -127,16 +134,9 @@ export function EditVenueModal({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#B7AADC] hover:text-white hover:bg-white/5 transition-all"
+                            className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-white/10 hover:bg-white/15 text-white transition-all"
                         >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={updateVenueMutation.isPending}
-                            className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-110 active:scale-95 text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)] disabled:opacity-50 disabled:pointer-events-none transition-all"
-                        >
-                            {updateVenueMutation.isPending ? "Saving..." : "Save Changes"}
+                            Close
                         </button>
                     </div>
                 </form>

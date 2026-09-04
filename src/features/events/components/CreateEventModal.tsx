@@ -76,8 +76,8 @@ export type CreateEventFormValues = z.infer<typeof createEventSchema>;
 export interface CreateEventModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreate?: (eventData: any) => void;
-    onUpdate?: (id: string, eventData: any) => void;
+    onCreate?: (eventData: any) => Promise<any> | void;
+    onUpdate?: (id: string, eventData: any) => Promise<any> | void;
     eventToEdit?: any | null;
     venueId?: string;
     isLoading?: boolean;
@@ -235,34 +235,54 @@ export function CreateEventModal({
         }
     };
 
-    const onSubmit = (data: CreateEventFormValues) => {
+    const resetForm = () => {
+        // Revoke any new-file blob URLs to prevent memory leaks
+        imagePreviews.forEach((url) => {
+            if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+        });
+        setImagePreviews([]);
+        setExistingBanners([]);
+        reset({
+            title: "",
+            date: undefined,
+            startTime: "",
+            endTime: "",
+            description: "",
+            images: [],
+        });
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const onSubmit = async (data: CreateEventFormValues) => {
         const totalImagesCount = existingBanners.length + (data.images || []).length;
         if (totalImagesCount > MAX_IMAGES_COUNT) {
             toast.error(`Total images (previous and new) cannot exceed ${MAX_IMAGES_COUNT}.`);
             return;
         }
 
-        if (eventToEdit) {
-            // Edit mode: pass existingBanners (kept URLs) + new files
-            const eventId = String(eventToEdit._id || eventToEdit.id);
-            onUpdate?.(eventId, { ...data, existingBanners });
-        } else {
-            // Create mode: attach venueId if present
-            const createData: any = { ...data };
-            if (venueId) {
-                createData.venueId = venueId;
+        try {
+            if (eventToEdit) {
+                // Edit mode: pass existingBanners (kept URLs) + new files
+                const eventId = String(eventToEdit._id || eventToEdit.id);
+                await onUpdate?.(eventId, { ...data, existingBanners });
+            } else {
+                // Create mode: attach venueId if present
+                const createData: any = { ...data };
+                if (venueId) {
+                    createData.venueId = venueId;
+                }
+                await onCreate?.(createData);
             }
-            onCreate?.(createData);
+            // Empty all fields only when getting success response
+            resetForm();
+        } catch (error) {
+            // Keep fields intact on error so user can correct and retry
+            console.error("Failed to submit event form:", error);
         }
-        reset();
     };
 
     const handleClose = () => {
-        // Revoke any new-file blob URLs to prevent memory leaks
-        imagePreviews.forEach((url) => {
-            if (url.startsWith("blob:")) URL.revokeObjectURL(url);
-        });
-        reset();
+        resetForm();
         onClose();
     };
 

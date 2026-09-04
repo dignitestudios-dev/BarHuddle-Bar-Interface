@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSelectedVenue, SelectedVenueData } from "@/store/slices/venue.slice";
-import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
+import { useGetOwnerVenuesQuery, useMyClaimsQuery } from "@/features/venue-management/api/venue.queries";
 import { cleanImageUrl } from "@/utils/image";
 
 export interface OwnerVenueItem {
@@ -20,61 +20,78 @@ export function useSelectedVenue() {
   const dispatch = useAppDispatch();
   const { selectedVenueId, selectedVenueName, selectedVenue } = useAppSelector((state) => state.venue);
   const { user } = useAppSelector((state) => state.auth);
-  const { data: ownerVenuesData, isLoading } = useGetOwnerVenuesQuery();
+  const { data: ownerVenuesData, isLoading: isLoadingOwnerVenues } = useGetOwnerVenuesQuery();
+  const { data: rawClaims, isLoading: isLoadingClaims } = useMyClaimsQuery();
 
-  // Normalize list of owner venues from API or user context
+  // Normalize list of owner venues from API (venues & approved claims) or user context
   const venues: OwnerVenueItem[] = useMemo(() => {
-    const raw = ownerVenuesData as any;
-    if (!raw && !user) return [];
+    const list: OwnerVenueItem[] = [];
+    const seen = new Set<string>();
 
-    const list = Array.isArray(raw?.data)
+    const addVenue = (item: any) => {
+      if (!item) return;
+      const v = item?.venue || item;
+      const id = String(v?._id || v?.id || item?._id || item?.id || "");
+      const name = String(v?.name || v?.title || item?.name || item?.title || "");
+      if (!id && !name) return;
+      const key = id || name;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const address = v?.address || item?.address || "";
+      const coverImage = cleanImageUrl(v?.coverImage || item?.coverImage || (v?.images && v.images[0]) || "");
+      const category = v?.category || item?.category || "";
+      const rating = v?.rating ?? item?.rating;
+      const isClaimed = v?.isClaimed ?? item?.isClaimed ?? true;
+
+      list.push({
+        id: key,
+        name: name || "Unnamed Venue",
+        address,
+        coverImage,
+        category,
+        rating,
+        isClaimed,
+      });
+    };
+
+    // 1. From /venue-owner/venues
+    const raw = ownerVenuesData as any;
+    const rawList = Array.isArray(raw?.data)
       ? raw.data
       : Array.isArray(raw?.venues)
       ? raw.venues
       : Array.isArray(raw)
       ? raw
-      : raw?.data && typeof raw.data === "object"
-      ? [raw.data]
       : raw && typeof raw === "object" && (raw.name || raw._id || raw.id)
       ? [raw]
       : [];
+    rawList.forEach(addVenue);
 
-    const mapped: OwnerVenueItem[] = list
-      .map((item: any) => {
-        const id = String(item?.venue?._id || item?.venue?.id || item?._id || item?.id || "");
-        const name = String(item?.venue?.name || item?.venue?.title || item?.name || item?.title || "");
-        const address = item?.venue?.address || item?.address || "";
-        const coverImage = cleanImageUrl(item?.venue?.coverImage || item?.coverImage || "");
-        const category = item?.venue?.category || item?.category || "";
-        const rating = item?.venue?.rating ?? item?.rating;
-        const isClaimed = item?.venue?.isClaimed ?? item?.isClaimed ?? true;
-        if (!id && !name) return null;
-        return {
-          id: id || name,
-          name: name || "Unnamed Venue",
-          address,
-          coverImage,
-          category,
-          rating,
-          isClaimed,
-        };
-      })
-      .filter((v: any): v is OwnerVenueItem => v !== null);
-
-    // If no venues returned from API list, check if user object has claimed venue
-    if (mapped.length === 0) {
-      const fallbackId = (user as any)?.venueId || (user as any)?.claimedVenueId || (user as any)?.venue?._id || (user as any)?.venue?.id || "";
-      const fallbackName = (user as any)?.venue?.name || (user as any)?.venueName || (user as any)?.claimedVenue?.name || (user as any)?.venue?.title || "";
-      if (fallbackId || fallbackName) {
-        mapped.push({
-          id: String(fallbackId || "default-venue"),
-          name: fallbackName || "My Venue",
-        });
-      }
+    // 2. From /venue-owner/claims
+    const claimsArr = Array.isArray(rawClaims) ? rawClaims : (rawClaims as any)?.data || [];
+    if (Array.isArray(claimsArr)) {
+      claimsArr.forEach((c: any) => {
+        if (c.status === "approved" && c.venue) {
+          addVenue(c.venue);
+        } else if (c.venueId && typeof c.venueId === "object") {
+          addVenue(c.venueId);
+        }
+      });
     }
 
-    return mapped;
-  }, [ownerVenuesData, user]);
+    // 3. Fallback to user profile venue in Redux
+    if (user?.venue) {
+      addVenue(user.venue);
+    } else if ((user as any)?.venueId || (user as any)?.venueName) {
+      addVenue({
+        id: (user as any)?.venueId,
+        name: (user as any)?.venueName,
+      });
+    }
+
+    return list;
+  }, [ownerVenuesData, rawClaims, user]);
 
   // Current active venue matching selectedVenueId, or fallback to first
   const activeVenue = useMemo<OwnerVenueItem | null>(() => {
@@ -133,6 +150,6 @@ export function useSelectedVenue() {
     selectedVenue: activeVenue || selectedVenue,
     venues,
     selectVenue,
-    isLoading,
+    isLoading: isLoadingOwnerVenues || isLoadingClaims,
   };
 }

@@ -15,7 +15,6 @@ import { toast } from "sonner";
 
 const profileSchema = z.object({
     name: z.string().min(1, "Owner name is required").max(50, "Name cannot exceed 50 characters"),
-    bio: z.string().min(1, "Bio is required").max(500, "Bio cannot exceed 500 characters"),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -42,7 +41,6 @@ export function ProfileSetup() {
         resolver: zodResolver(profileSchema),
         defaultValues: {
             name: user?.name || "",
-            bio: user?.bio || "",
         },
     });
 
@@ -50,7 +48,6 @@ export function ProfileSetup() {
         if (user) {
             reset({
                 name: user.name || "",
-                bio: user.bio || "",
             });
             if (user.profileImage) {
                 setImagePreview(user.profileImage);
@@ -86,7 +83,6 @@ export function ProfileSetup() {
         try {
             const formData = new FormData();
             formData.append("name", data.name);
-            formData.append("bio", data.bio);
             if (imageFile) {
                 if (imageFile.size > MAX_PROFILE_IMAGE_SIZE) {
                     toast.error("Profile picture size cannot exceed 5MB.");
@@ -192,32 +188,6 @@ export function ProfileSetup() {
                             error={errors.name?.message}
                             {...field}
                         />
-                    )}
-                />
-
-                {/* Bio Field */}
-                <Controller
-                    name="bio"
-                    control={control}
-                    render={({ field }) => (
-                        <div className="flex flex-col gap-2 w-full">
-                            <label className="font-semibold text-[14px] leading-[19px] text-white">
-                                Bio
-                            </label>
-                            <textarea
-                                rows={4}
-                                placeholder="Tell us a bit about yourself or your venue role..."
-                                className={`w-full px-5 py-3.5 rounded-[24px] bg-[rgba(124,58,237,0.12)] border text-white placeholder-white/50 text-[14px] leading-[22px] focus:outline-none focus:border-[rgba(124,58,237,0.6)] focus:ring-1 focus:ring-[rgba(124,58,237,0.6)] transition-all resize-none ${
-                                    errors.bio ? "border-red-500" : "border-[rgba(124,58,237,0.25)]"
-                                }`}
-                                {...field}
-                            />
-                            {errors.bio ? (
-                                <span className="text-xs text-red-400">
-                                    {errors.bio.message}
-                                </span>
-                            ) : null}
-                        </div>
                     )}
                 />
 

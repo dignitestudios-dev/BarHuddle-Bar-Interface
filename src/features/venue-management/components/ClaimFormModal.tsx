@@ -124,9 +124,12 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
             }
 
             toast.success("Ownership documents submitted successfully!");
-            // Keep the modal open and transition to the relevant submitted/under-review UI
-            setIsSubmitted(true);
-            onSubmitted?.();
+            onClose();
+            try {
+                onSubmitted?.();
+            } catch (cbErr) {
+                console.error("Error in onSubmitted callback:", cbErr);
+            }
         } catch (error: any) {
             console.error("Failed to claim venue:", error);
             const backendMsg = error?.response?.data?.message || error?.message || "";

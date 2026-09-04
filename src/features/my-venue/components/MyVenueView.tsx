@@ -8,13 +8,14 @@ import {
     useVenueDetailsQuery,
     useOperatingHoursQuery,
 } from "@/features/venue-management/api/venue.queries";
-import { EditVenueModal } from "./EditVenueModal";
 import { OperatingHoursModal } from "./OperatingHoursModal";
 import { UploadGalleryModal } from "./UploadGalleryModal";
 import { DeleteGalleryConfirmModal } from "./DeleteGalleryConfirmModal";
 import { VenueSwitcherDropdown } from "./VenueSwitcherDropdown";
+import { MyVenueSkeleton } from "./MyVenueSkeleton";
 import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 import { useAppSelector } from "@/store";
+import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 import { toast } from "sonner";
 
 const DAYS_MAP = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -63,6 +64,7 @@ export function MyVenueView() {
 
     const {
         data: rawClaims,
+        isLoading: isLoadingClaims,
     } = useMyClaimsQuery();
 
     // Consolidate list of claimed venues from owner venues API, claims API, and user.venue
@@ -108,16 +110,45 @@ export function MyVenueView() {
         return list;
     }, [rawOwnerVenues, rawClaims, user]);
 
-    // Active selected venue
-    const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
+    // Active selected venue synced with top navbar
+    const {
+        selectedVenueId: navbarVenueId,
+        selectVenue,
+    } = useSelectedVenue();
 
-    useEffect(() => {
-        if (!selectedVenueId && venuesList.length > 0) {
-            setSelectedVenueId(venuesList[0]._id || venuesList[0].id);
+    const activeVenueId = useMemo(() => {
+        if (navbarVenueId) {
+            const found = venuesList.find((v) => (v._id || v.id) === navbarVenueId);
+            if (found) return navbarVenueId;
         }
-    }, [venuesList, selectedVenueId]);
+        return venuesList.length > 0 ? (venuesList[0]._id || venuesList[0].id) : (navbarVenueId || "");
+    }, [navbarVenueId, venuesList]);
 
-    const activeVenueId = selectedVenueId || (venuesList.length > 0 ? (venuesList[0]._id || venuesList[0].id) : "");
+    // When dropdown inside MyVenueView is used, update the global selected venue
+    const handleSelectVenue = (venueId: string) => {
+        const v = venuesList.find((item) => (item._id || item.id) === venueId);
+        if (v) {
+            selectVenue({
+                id: v._id || v.id,
+                name: v.name || v.title,
+                address: v.address,
+                coverImage: v.coverImage || (v.images && v.images[0]),
+            });
+        }
+    };
+
+    // If navbar has no venue selected but we have venuesList, initialize navbar with first venue
+    useEffect(() => {
+        if (!navbarVenueId && venuesList.length > 0) {
+            const first = venuesList[0];
+            selectVenue({
+                id: first._id || first.id,
+                name: first.name || first.title,
+                address: first.address,
+                coverImage: first.coverImage || (first.images && first.images[0]),
+            });
+        }
+    }, [navbarVenueId, venuesList, selectVenue]);
 
     // Query active venue full details
     const {
@@ -176,7 +207,6 @@ export function MyVenueView() {
     }, [activeVenue]);
 
     // Modal states
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isHoursModalOpen, setIsHoursModalOpen] = useState(false);
     const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<{ id: string; url: string } | null>(null);
@@ -186,17 +216,12 @@ export function MyVenueView() {
     const [activeSection, setActiveSection] = useState<"overview" | "hours" | "gallery">("overview");
 
     // Loading State
-    if (isLoadingVenues && venuesList.length === 0) {
-        return (
-            <div className="w-full min-h-[70vh] flex flex-col items-center justify-center gap-4 text-white font-['Manrope',sans-serif]">
-                <div className="w-12 h-12 rounded-full border-2 border-[#7C3AED] border-t-transparent animate-spin" />
-                <span className="text-[#9D8FD0] text-sm font-semibold">Loading your claimed venues...</span>
-            </div>
-        );
+    if (((isLoadingVenues || isLoadingClaims) && venuesList.length === 0) || (isLoadingDetails && !activeVenue)) {
+        return <MyVenueSkeleton />;
     }
 
     // Empty State: No Claimed Venues
-    if (venuesList.length === 0 && !isLoadingVenues) {
+    if (venuesList.length === 0 && !isLoadingVenues && !isLoadingClaims) {
         return (
             <div className="w-full max-w-[900px] mx-auto min-h-[70vh] flex flex-col items-center justify-center p-6 text-center font-['Manrope',sans-serif] animate-in fade-in duration-300">
                 <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[rgba(124,58,237,0.25)] to-[rgba(232,255,87,0.1)] border border-[rgba(124,58,237,0.4)] flex items-center justify-center text-[#E8FF57] shadow-xl mb-6">
@@ -260,20 +285,9 @@ export function MyVenueView() {
                         <VenueSwitcherDropdown
                             venues={venuesList}
                             activeVenueId={activeVenueId}
-                            onSelectVenue={setSelectedVenueId}
+                            onSelectVenue={handleSelectVenue}
                         />
                     )}
-
-                    {/* Edit Details Button */}
-                    <button
-                        onClick={() => setIsEditModalOpen(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[rgba(124,58,237,0.15)] hover:bg-[rgba(124,58,237,0.25)] border border-[rgba(124,58,237,0.3)] text-white font-semibold text-xs sm:text-sm transition-all shadow-sm"
-                    >
-                        <svg className="w-4 h-4 text-[#C4B5FD]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                        <span>Edit Details</span>
-                    </button>
                 </div>
             </div>
 
@@ -401,19 +415,22 @@ export function MyVenueView() {
                                     <span className="w-2.5 h-2.5 rounded-full bg-[#A855F7]" />
                                     Establishment Profile
                                 </h3>
-                                <button
-                                    onClick={() => setIsEditModalOpen(true)}
-                                    className="text-xs font-bold text-[#E8FF57] hover:underline"
-                                >
-                                    Edit Info
-                                </button>
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#C4B5FD] bg-[rgba(124,58,237,0.15)] border border-[rgba(124,58,237,0.3)] px-2.5 py-1 rounded-full">
+                                    <svg className="w-3 h-3 text-[#E8FF57]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                    Google Verified
+                                </span>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-[#140E50]/60 border border-[rgba(124,58,237,0.2)]">
-                                    <span className="text-[10px] uppercase font-bold text-[#8B7EC8] tracking-wider">
-                                        Venue Name
-                                    </span>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] uppercase font-bold text-[#8B7EC8] tracking-wider">
+                                            Venue Name
+                                        </span>
+                                        <span className="text-[10px] text-[#9D8FD0] bg-white/5 border border-white/10 px-2 py-0.5 rounded-md font-medium">From Google</span>
+                                    </div>
                                     <span className="text-sm font-bold text-white truncate">
                                         {activeVenue?.name || "N/A"}
                                     </span>
@@ -450,9 +467,12 @@ export function MyVenueView() {
 
                             {/* Full Address */}
                             <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-[#140E50]/60 border border-[rgba(124,58,237,0.2)]">
-                                <span className="text-[10px] uppercase font-bold text-[#8B7EC8] tracking-wider">
-                                    Official Address
-                                </span>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase font-bold text-[#8B7EC8] tracking-wider">
+                                        Official Address
+                                    </span>
+                                    <span className="text-[10px] text-[#9D8FD0] bg-white/5 border border-white/10 px-2 py-0.5 rounded-md font-medium">From Google</span>
+                                </div>
                                 <p className="text-sm font-medium text-white leading-relaxed">
                                     {activeVenue?.address}
                                 </p>
@@ -503,18 +523,6 @@ export function MyVenueView() {
                                     </div>
                                     <span className="text-[#A855F7] group-hover:translate-x-0.5 transition-transform">➔</span>
                                 </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditModalOpen(true)}
-                                    className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-[rgba(124,58,237,0.4)] transition-all text-xs font-semibold text-white group"
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <span className="text-[#E8FF57]">✏️</span>
-                                        <span>Edit Venue Details</span>
-                                    </div>
-                                    <span className="text-[#A855F7] group-hover:translate-x-0.5 transition-transform">➔</span>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -529,9 +537,20 @@ export function MyVenueView() {
                 >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[rgba(124,58,237,0.2)]">
                         <div>
-                            <h3 className="text-xl font-extrabold text-white">Weekly Operating Schedule</h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-xl font-extrabold text-white">Weekly Operating Schedule</h3>
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-white/90 border border-white/15">
+                                    <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24">
+                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                    </svg>
+                                    From Google
+                                </span>
+                            </div>
                             <p className="text-xs text-[#8B7EC8]">
-                                Hours displayed on customer discovery apps
+                                Sourced from Google &amp; displayed on customer discovery apps
                             </p>
                         </div>
                         <button
@@ -542,47 +561,64 @@ export function MyVenueView() {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
-                        {DAYS_MAP.map((dayName, dayIndex) => {
-                            const match = operatingHours.find((h: any) => Number(h.day) === dayIndex);
-                            const isClosed = match?.isClosed ?? false;
-                            const openTime = match?.open || "18:00";
-                            const closeTime = match?.close || "02:00";
-
-                            return (
+                    {isLoadingHours && operatingHours.length === 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+                            {DAYS_MAP.map((dayName, idx) => (
                                 <div
-                                    key={dayIndex}
-                                    className={`p-4 rounded-2xl border flex flex-col gap-2 transition-all ${
-                                        isClosed
-                                            ? "bg-white/[0.02] border-white/10 opacity-70"
-                                            : "bg-[#140E50]/80 border-[rgba(124,58,237,0.3)] shadow-sm"
-                                    }`}
+                                    key={idx}
+                                    className="p-4 rounded-2xl border bg-[#140E50]/60 border-[rgba(124,58,237,0.2)] flex flex-col gap-2.5 animate-pulse"
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className="font-bold text-sm text-white">{dayName}</span>
-                                        <span
-                                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider ${
-                                                isClosed
-                                                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                                                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                            }`}
-                                        >
-                                            {isClosed ? "CLOSED" : "OPEN"}
-                                        </span>
+                                        <span className="font-bold text-sm text-white/50">{dayName}</span>
+                                        <div className="h-4 w-12 rounded-full bg-purple-900/40" />
                                     </div>
-                                    <div className="text-xs text-[#C4B5FD] font-mono mt-1">
-                                        {isClosed ? (
-                                            <span className="text-[#8B7EC8] italic">Closed all day</span>
-                                        ) : (
-                                            <span>
-                                                {openTime} - {closeTime}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <div className="h-3.5 w-28 rounded bg-purple-900/30 mt-1" />
                                 </div>
-                            );
-                        })}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+                            {DAYS_MAP.map((dayName, dayIndex) => {
+                                const match = operatingHours.find((h: any) => Number(h.day) === dayIndex);
+                                const isClosed = match?.isClosed ?? false;
+                                const openTime = match?.open || "18:00";
+                                const closeTime = match?.close || "02:00";
+
+                                return (
+                                    <div
+                                        key={dayIndex}
+                                        className={`p-4 rounded-2xl border flex flex-col gap-2 transition-all ${
+                                            isClosed
+                                                ? "bg-white/[0.02] border-white/10 opacity-70"
+                                                : "bg-[#140E50]/80 border-[rgba(124,58,237,0.3)] shadow-sm"
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-bold text-sm text-white">{dayName}</span>
+                                            <span
+                                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider ${
+                                                    isClosed
+                                                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                                        : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                                }`}
+                                            >
+                                                {isClosed ? "CLOSED" : "OPEN"}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-[#C4B5FD] font-mono mt-1">
+                                            {isClosed ? (
+                                                <span className="text-[#8B7EC8] italic">Closed all day</span>
+                                            ) : (
+                                                <span>
+                                                    {openTime} - {closeTime}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -719,18 +755,6 @@ export function MyVenueView() {
             )}
 
             {/* Modals */}
-            <EditVenueModal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                venueId={activeVenueId}
-                initialName={activeVenue?.name || ""}
-                initialAddress={activeVenue?.address || ""}
-                onSuccess={() => {
-                    refetchDetails();
-                    refetchOwnerVenues();
-                }}
-            />
-
             <OperatingHoursModal
                 isOpen={isHoursModalOpen}
                 onClose={() => setIsHoursModalOpen(false)}

@@ -13,6 +13,7 @@ import {
   updatePassword,
   deleteVenueOwnerAccount,
   updateFcmToken,
+  CheckEmailPayload,
   LoginPayload,
   GoogleLoginPayload,
   VerifyOtpPayload,
@@ -60,7 +61,7 @@ export function useResetPasswordMutation() {
 
 export function useCheckEmailMutation() {
   return useMutation({
-    mutationFn: (email: string) => checkEmail(email),
+    mutationFn: (payload: string | CheckEmailPayload) => checkEmail(payload),
   });
 }
 
