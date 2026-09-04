@@ -65,8 +65,8 @@ export function EventBoosting() {
             const evt = item.event && typeof item.event === "object"
                 ? item.event
                 : item.eventId && typeof item.eventId === "object"
-                ? item.eventId
-                : item;
+                    ? item.eventId
+                    : item;
             const targetId = String(evt._id || evt.id || item.eventId || item._id || item.id);
             if (!map.has(targetId)) map.set(targetId, evt);
             if (evt._id) map.set(String(evt._id), evt);
@@ -79,8 +79,8 @@ export function EventBoosting() {
             const evt = item.event && typeof item.event === "object"
                 ? item.event
                 : item.eventId && typeof item.eventId === "object"
-                ? item.eventId
-                : item;
+                    ? item.eventId
+                    : item;
 
             const eventId = String(evt._id || evt.id || (typeof item.eventId === "string" ? item.eventId : "") || item._id || item.id);
             const isBoosted = Boolean(
@@ -99,8 +99,8 @@ export function EventBoosting() {
                 evt.retentionRate !== undefined
                     ? `${evt.retentionRate}%`
                     : evt.retention?.retentionRate !== undefined
-                    ? `${evt.retention.retentionRate}%`
-                    : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
+                        ? `${evt.retention.retentionRate}%`
+                        : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
             );
             const performanceVal = Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
             const attendeesVal = String(
@@ -202,17 +202,17 @@ export function EventBoosting() {
 
     const handleUpdateEvent = async (id: string, updatedEventData: any) => {
         try {
-            const formattedDate = updatedEventData.date instanceof Date 
-                ? updatedEventData.date.toLocaleDateString('en-CA') 
+            const formattedDate = updatedEventData.date instanceof Date
+                ? updatedEventData.date.toLocaleDateString('en-CA')
                 : updatedEventData.date;
 
             const startAt = new Date(`${formattedDate}T${updatedEventData.startTime}`).toISOString();
             const endDate = new Date(`${formattedDate}T${updatedEventData.endTime}`);
-            
+
             if (updatedEventData.endTime < updatedEventData.startTime) {
                 endDate.setDate(endDate.getDate() + 1);
             }
-            
+
             const endAt = endDate.toISOString();
 
             const formData = new FormData();

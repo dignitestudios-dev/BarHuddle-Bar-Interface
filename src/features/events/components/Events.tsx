@@ -68,12 +68,12 @@ export function Events() {
 
     // Map regular events from API
     const { regularEvents, rawEventsMap } = useMemo(() => {
-        const rawEvents = Array.isArray(apiEventsData?.data) 
-            ? apiEventsData.data 
-            : Array.isArray(apiEventsData?.events) 
-                ? apiEventsData.events 
-                : Array.isArray(apiEventsData) 
-                    ? apiEventsData 
+        const rawEvents = Array.isArray(apiEventsData?.data)
+            ? apiEventsData.data
+            : Array.isArray(apiEventsData?.events)
+                ? apiEventsData.events
+                : Array.isArray(apiEventsData)
+                    ? apiEventsData
                     : [];
 
         const map = new Map<string, any>();
@@ -88,8 +88,8 @@ export function Events() {
                 evt.retentionRate !== undefined
                     ? `${evt.retentionRate}%`
                     : evt.retention?.retentionRate !== undefined
-                    ? `${evt.retention.retentionRate}%`
-                    : evt.conversionRate || evt.metrics?.conversionRate || "0%"
+                        ? `${evt.retention.retentionRate}%`
+                        : evt.conversionRate || evt.metrics?.conversionRate || "0%"
             );
             const performanceVal = Number(evt.organicPerformance ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
             const attendeesVal = String(
@@ -105,11 +105,19 @@ export function Events() {
                 "0"
             );
 
+            const isPast = evt.endAt ? new Date(evt.endAt) < new Date() : (evt.startAt ? new Date(evt.startAt) < new Date() : false);
+            const isUpcoming = evt.startAt ? new Date(evt.startAt) > new Date() : false;
+            const resolvedStatus = evt.computedStatus || (
+                (evt.status === "expired" || evt.status === "ended" || isPast)
+                    ? "expired"
+                    : (isUpcoming ? "upcoming" : (evt.status || "active"))
+            );
+
             return {
                 id,
                 title: evt.name || evt.title || "Unnamed Event",
                 venueName: evt.venue?.name || evt.venueName || "Venue",
-                dateTime: evt.startAt 
+                dateTime: evt.startAt
                     ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                     : "TBD",
                 imageUrl: cleanImageUrl(evt.banner || evt.bannerUrl || evt.banners?.[0] || evt.imageUrl, DEFAULT_EVENT_IMAGE),
@@ -119,8 +127,8 @@ export function Events() {
                 conversionRate: rateVal,
                 retentionRate: rateVal,
                 performancePercent: performanceVal,
-                isBoosted: Boolean(evt.isBoosted === true || (evt.activeBoosts && evt.activeBoosts > 0) || evt.boostStatus === "active"),
-                computedStatus: evt.computedStatus || evt.status,
+                isBoosted: Boolean(evt.isBoosted === true || evt.isBoosted === "true" || (evt.activeBoosts && evt.activeBoosts > 0) || evt.boostStatus === "active"),
+                computedStatus: resolvedStatus,
                 status: evt.status,
             };
         });
@@ -140,8 +148,8 @@ export function Events() {
             const evt = item.event && typeof item.event === "object"
                 ? item.event
                 : item.eventId && typeof item.eventId === "object"
-                ? item.eventId
-                : item;
+                    ? item.eventId
+                    : item;
 
             const targetId = String(evt._id || evt.id || item.eventId || item._id || item.id);
             if (!map.has(targetId)) {
@@ -175,8 +183,8 @@ export function Events() {
                 const evt = item.event && typeof item.event === "object"
                     ? item.event
                     : item.eventId && typeof item.eventId === "object"
-                    ? item.eventId
-                    : item;
+                        ? item.eventId
+                        : item;
 
                 const isItemBoosted = item.isBoosted === true || evt.isBoosted === true || item.status === "active" || (evt.activeBoosts && evt.activeBoosts > 0);
                 if (!isItemBoosted && item.status !== undefined && item.status !== "active") return null;
@@ -188,8 +196,8 @@ export function Events() {
                     evt.retentionRate !== undefined
                         ? `${evt.retentionRate}%`
                         : evt.retention?.retentionRate !== undefined
-                        ? `${evt.retention.retentionRate}%`
-                        : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
+                            ? `${evt.retention.retentionRate}%`
+                            : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
                 );
                 const performanceVal = Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
                 const attendeesVal = String(
@@ -210,7 +218,7 @@ export function Events() {
                     id: eventRealId,
                     title: evt.name || evt.title || item.title || "Boosted Event",
                     venueName: evt.venue?.name || evt.venueName || "Venue",
-                    dateTime: evt.startAt 
+                    dateTime: evt.startAt
                         ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
                         : "TBD",
                     imageUrl: cleanImageUrl(evt.banner || item.banner || evt.bannerUrl || evt.imageUrl, DEFAULT_EVENT_IMAGE),
@@ -233,33 +241,26 @@ export function Events() {
         if (activeTab === "events") {
             return regularEvents.filter((evt) => !evt.isBoosted);
         } else {
-            const boostedFromRegular = regularEvents.filter((evt) => evt.isBoosted);
-            const combinedMap = new Map<string | number, EventCardData>();
-            [...boostedFromRegular, ...boostedEventsFromApi].forEach((item) => {
-                if (item.isBoosted === true) {
-                    combinedMap.set(item.id, item);
-                }
-            });
-            return Array.from(combinedMap.values());
+            return regularEvents.filter((evt) => evt.isBoosted);
         }
-    }, [activeTab, regularEvents, boostedEventsFromApi]);
+    }, [activeTab, regularEvents]);
 
-    const isCurrentTabLoading = activeTab === "events" ? isLoadingEvents : (isLoadingBoosted || isLoadingEvents);
+    const isCurrentTabLoading = isLoadingEvents;
 
     const handleCreateEvent = async (newEventData: any) => {
         try {
             const venueId = newEventData.venueId || primaryVenueId;
-            const formattedDate = newEventData.date instanceof Date 
-                ? newEventData.date.toLocaleDateString('en-CA') 
+            const formattedDate = newEventData.date instanceof Date
+                ? newEventData.date.toLocaleDateString('en-CA')
                 : newEventData.date;
 
             const startAt = new Date(`${formattedDate}T${newEventData.startTime}`).toISOString();
             const endDate = new Date(`${formattedDate}T${newEventData.endTime}`);
-            
+
             if (newEventData.endTime < newEventData.startTime) {
                 endDate.setDate(endDate.getDate() + 1);
             }
-            
+
             const endAt = endDate.toISOString();
 
             const formData = new FormData();
@@ -292,17 +293,17 @@ export function Events() {
 
     const handleUpdateEvent = async (id: string, updatedEventData: any) => {
         try {
-            const formattedDate = updatedEventData.date instanceof Date 
-                ? updatedEventData.date.toLocaleDateString('en-CA') 
+            const formattedDate = updatedEventData.date instanceof Date
+                ? updatedEventData.date.toLocaleDateString('en-CA')
                 : updatedEventData.date;
 
             const startAt = new Date(`${formattedDate}T${updatedEventData.startTime}`).toISOString();
             const endDate = new Date(`${formattedDate}T${updatedEventData.endTime}`);
-            
+
             if (updatedEventData.endTime < updatedEventData.startTime) {
                 endDate.setDate(endDate.getDate() + 1);
             }
-            
+
             const endAt = endDate.toISOString();
 
             const formData = new FormData();
