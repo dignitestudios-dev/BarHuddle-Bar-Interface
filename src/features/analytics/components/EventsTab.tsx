@@ -58,8 +58,8 @@ export function EventsTab({ filterParams }: EventsTabProps) {
         const list = Array.isArray(bestEventsData)
             ? bestEventsData
             : Array.isArray((bestEventsData as any)?.events)
-            ? (bestEventsData as any).events
-            : [];
+                ? (bestEventsData as any).events
+                : [];
 
         if (!list || list.length === 0) {
             return [];
@@ -84,8 +84,8 @@ export function EventsTab({ filterParams }: EventsTabProps) {
             const rawBanner = Array.isArray(item.banner) && item.banner.length > 0
                 ? item.banner[0]
                 : Array.isArray(item.banners) && item.banners.length > 0
-                ? item.banners[0]
-                : item.banner || item.image || item.imageUrl;
+                    ? item.banners[0]
+                    : item.banner || item.image || item.imageUrl;
 
             return {
                 id: String(item.eventId || item._id || item.id || `evt-${idx}`),
@@ -108,8 +108,8 @@ export function EventsTab({ filterParams }: EventsTabProps) {
         const list = Array.isArray(bestEventsData)
             ? bestEventsData
             : Array.isArray((bestEventsData as any)?.events)
-            ? (bestEventsData as any).events
-            : [];
+                ? (bestEventsData as any).events
+                : [];
 
         if (!list || list.length === 0) {
             return [];
@@ -119,8 +119,8 @@ export function EventsTab({ filterParams }: EventsTabProps) {
             const rawBanner = Array.isArray(item.banner) && item.banner.length > 0
                 ? item.banner[0]
                 : Array.isArray(item.banners) && item.banners.length > 0
-                ? item.banners[0]
-                : item.banner || item.image || item.imageUrl;
+                    ? item.banners[0]
+                    : item.banner || item.image || item.imageUrl;
 
             const attendanceCount = Number(item.retention?.totalAttendees ?? item.attendance ?? item.attendees ?? item.attendeeCount ?? 0);
             const retentionRate = Number(item.retentionRate ?? item.engagement ?? item.engagementPercentage ?? 0);

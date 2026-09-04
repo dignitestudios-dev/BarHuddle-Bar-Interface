@@ -135,8 +135,8 @@ export function EventCard({
                 {/* Teal/Green Gradient Touch */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[rgba(74,222,128,0.2)] to-[rgba(34,211,238,0.12)] opacity-50 pointer-events-none" />
 
-                {/* Status Badge (Active / Upcoming / Expired) - not shown on boosted events or in boosting mode */}
-                {!isBoostingMode && !event.isBoosted && statusConfig && (
+                {/* Status Badge (Active / Upcoming / Expired) */}
+                {!isBoostingMode && statusConfig && (
                     <div
                         className={`absolute top-3 left-3 px-2.5 py-1 rounded-full border flex items-center gap-1.5 backdrop-blur-md text-[10px] font-bold tracking-[0.2px] shadow-sm z-20 transition-all ${statusConfig.badgeClass}`}
                     >
@@ -264,24 +264,26 @@ export function EventCard({
                     </div>
                 </div>
 
-                {/* Organic Performance Progress Bar Row */}
-                <div className="flex flex-col gap-1.5 w-full">
-                    <div className="flex items-center justify-between w-full">
-                        <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8]">
-                            Organic Performance
-                        </span>
-                        <span className="font-extrabold text-[10px] leading-[15px] text-[#F472B6]">
-                            {event.performancePercent}%
-                        </span>
+                {/* Organic Performance Progress Bar Row - hidden on boosted events */}
+                {!event.isBoosted && (
+                    <div className="flex flex-col gap-1.5 w-full">
+                        <div className="flex items-center justify-between w-full">
+                            <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8]">
+                                Organic Performance
+                            </span>
+                            <span className="font-extrabold text-[10px] leading-[15px] text-[#F472B6]">
+                                {event.performancePercent}%
+                            </span>
+                        </div>
+                        {/* Progress Track */}
+                        <div className="w-full h-[6px] rounded-full bg-[rgba(124,58,237,0.12)] overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] to-[#4ADE80] shadow-[0px_0px_6px_rgba(74,222,128,0.44)] transition-all duration-500"
+                                style={{ width: `${Math.min(100, Math.max(0, event.performancePercent))}%` }}
+                            />
+                        </div>
                     </div>
-                    {/* Progress Track */}
-                    <div className="w-full h-[6px] rounded-full bg-[rgba(124,58,237,0.12)] overflow-hidden">
-                        <div
-                            className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] to-[#4ADE80] shadow-[0px_0px_6px_rgba(74,222,128,0.44)] transition-all duration-500"
-                            style={{ width: `${Math.min(100, Math.max(0, event.performancePercent))}%` }}
-                        />
-                    </div>
-                </div>
+                )}
 
                 {/* Action CTA Button */}
                 {isBoostingMode ? (
