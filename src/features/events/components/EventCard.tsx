@@ -106,6 +106,22 @@ export function EventCard({
     };
 
     const isBoostingMode = variant === "boosting";
+    const rawAttendees =
+        rawEvent?.retention?.totalAttendees ??
+        event.attendees ??
+        event.views ??
+        rawEvent?.attendance ??
+        rawEvent?.attendees ??
+        rawEvent?.totalAttendees ??
+        0;
+    const attendeesCount = Number(parseInt(String(rawAttendees), 10) || 0);
+    const hasAttendees = attendeesCount > 0;
+
+    const rawOrganic = Math.max(0, Math.min(100, Number(event.performancePercent ?? 0)));
+    const organicPercent = hasAttendees ? rawOrganic : 0;
+    const boostedPercent = hasAttendees ? 100 - rawOrganic : 0;
+    const performancePercent = event.isBoosted ? boostedPercent : organicPercent;
+    const performanceLabel = event.isBoosted ? "Boosted Performance" : "Organic Performance";
 
     return (
         <div
@@ -113,7 +129,7 @@ export function EventCard({
         >
             {/* Top Image Section (176px) */}
             <div className="relative w-full h-[176px] bg-[#3C0366] overflow-hidden shrink-0">
-                {/* Actively Boosted Top Banner */}
+                {/* Actively Boosted Top Banner - shown in Event Boosting */}
                 {isBoostingMode && event.isBoosted && (
                     <div className="absolute top-0 inset-x-0 h-7 bg-gradient-to-r from-[#7C3AED] via-[#9F4FFA] to-[#7C3AED] flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold tracking-[1.2px] uppercase text-[#E8FF57] z-20 shadow-md">
                         <span>⚡</span>
@@ -264,26 +280,32 @@ export function EventCard({
                     </div>
                 </div>
 
-                {/* Organic Performance Progress Bar Row - hidden on boosted events */}
-                {!event.isBoosted && (
-                    <div className="flex flex-col gap-1.5 w-full">
-                        <div className="flex items-center justify-between w-full">
-                            <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8]">
-                                Organic Performance
-                            </span>
-                            <span className="font-extrabold text-[10px] leading-[15px] text-[#F472B6]">
-                                {event.performancePercent}%
-                            </span>
-                        </div>
-                        {/* Progress Track */}
-                        <div className="w-full h-[6px] rounded-full bg-[rgba(124,58,237,0.12)] overflow-hidden">
-                            <div
-                                className="h-full rounded-full bg-gradient-to-r from-[#7C3AED] to-[#4ADE80] shadow-[0px_0px_6px_rgba(74,222,128,0.44)] transition-all duration-500"
-                                style={{ width: `${Math.min(100, Math.max(0, event.performancePercent))}%` }}
-                            />
-                        </div>
+                {/* Performance Progress Bar Row (Organic or Boosted) */}
+                <div className="flex flex-col gap-1.5 w-full">
+                    <div className="flex items-center justify-between w-full">
+                        <span className="font-semibold text-[10px] leading-[15px] text-[#8B7EC8]">
+                            {performanceLabel}
+                        </span>
+                        <span
+                            className={`font-extrabold text-[10px] leading-[15px] ${
+                                event.isBoosted ? "text-[#E8FF57]" : "text-[#F472B6]"
+                            }`}
+                        >
+                            {performancePercent}%
+                        </span>
                     </div>
-                )}
+                    {/* Progress Track */}
+                    <div className="w-full h-[6px] rounded-full bg-[rgba(124,58,237,0.12)] overflow-hidden">
+                        <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                                event.isBoosted
+                                    ? "bg-gradient-to-r from-[#7C3AED] via-[#A855F7] to-[#E8FF57] shadow-[0px_0px_6px_rgba(232,255,87,0.44)]"
+                                    : "bg-gradient-to-r from-[#7C3AED] to-[#4ADE80] shadow-[0px_0px_6px_rgba(74,222,128,0.44)]"
+                            }`}
+                            style={{ width: `${performancePercent}%` }}
+                        />
+                    </div>
+                </div>
 
                 {/* Action CTA Button */}
                 {isBoostingMode ? (

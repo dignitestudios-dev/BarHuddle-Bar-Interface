@@ -98,7 +98,7 @@ export function VenueSwitcherDropdown({
             {/* Dropdown Menu Panel */}
             {isOpen && (
                 <div
-                    className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-72 sm:w-80 rounded-2xl p-2 flex flex-col gap-1 shadow-[0px_20px_50px_rgba(0,0,0,0.85)] border border-[rgba(124,58,237,0.35)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50"
+                    className="absolute right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-32px)] rounded-2xl p-2 flex flex-col gap-1 shadow-[0px_20px_50px_rgba(0,0,0,0.85)] border border-[rgba(124,58,237,0.35)] backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150 z-50"
                     style={{ background: "rgba(11, 5, 34, 0.96)" }}
                 >
                     {/* Header Label */}
@@ -112,7 +112,7 @@ export function VenueSwitcherDropdown({
                     </div>
 
                     {/* Venue Items List */}
-                    <div className="flex flex-col gap-1 max-h-60 overflow-y-auto custom-scrollbar py-1">
+                    <div className="flex flex-col gap-1 max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar py-1 pr-1">
                         {venues.map((venue) => {
                             const vId = venue._id || venue.id || "";
                             const isSelected = vId === activeVenueId;

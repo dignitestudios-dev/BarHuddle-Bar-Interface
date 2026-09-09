@@ -16,6 +16,7 @@ export interface VenueDetailViewProps {
     venue?: VenueCardData;
     onBack?: () => void;
     onClaim?: (venue: VenueCardData) => void;
+    onClaimSubmitted?: () => void;
     className?: string;
 }
 
@@ -37,6 +38,7 @@ export function VenueDetailView({
     venue = DEFAULT_VENUE,
     onBack,
     onClaim,
+    onClaimSubmitted,
     className = "",
 }: VenueDetailViewProps) {
     const [activeStory, setActiveStory] = useState<VisitorStory | null>(null);
@@ -73,6 +75,7 @@ export function VenueDetailView({
                 venue={venue}
                 onBack={onBack}
                 onClaim={onClaim}
+                onClaimSubmitted={onClaimSubmitted}
                 onOpenSubscription={() => setShowSubscriptionScreen(true)}
             />
 

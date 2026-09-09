@@ -48,6 +48,7 @@ export default function VenueDetailPage({
             <VenueDetailView
                 venue={venue}
                 onBack={() => router.push("/app/venue-management")}
+                onClaimSubmitted={() => router.push("/app/venue-management")}
             />
         </main>
     );

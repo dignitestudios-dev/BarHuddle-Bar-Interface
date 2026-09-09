@@ -39,7 +39,7 @@ function EventPerformanceRow({ event }: { event: any }) {
         event.engagementRate ??
         event.performancePercent ??
         (event.rate ? parseFloat(event.rate) : 0);
-    const retentionRate = Math.min(100, Math.max(0, Number(rawRetention) || 0));
+    const retentionRate = attendees > 0 ? Math.min(100, Math.max(0, Number(rawRetention) || 0)) : 0;
 
     const title = event.title || event.name || "Event";
     const rawDate = event.startAt || event.date || event.startDate;

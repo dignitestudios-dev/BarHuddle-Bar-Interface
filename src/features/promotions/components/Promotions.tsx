@@ -24,12 +24,6 @@ export function Promotions() {
     const [deletingPromotion, setDeletingPromotion] = useState<{ id: string; title: string } | null>(null);
     const user = useAppSelector((state) => state.auth.user);
     const { selectedVenueId } = useSelectedVenue();
-    const { data: apiPromotionsData, isLoading } = useGetPromotionsQuery({
-        page: 1,
-        limit: 10,
-        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
-    });
-    const { data: apiAnalyticsData, isLoading: isAnalyticsLoading } = useGetPromotionAnalyticsQuery(selectedVenueId);
     const { data: ownerVenuesData } = useGetOwnerVenuesQuery();
 
     const primaryVenueId = React.useMemo(() => {
@@ -42,8 +36,17 @@ export function Promotions() {
                     ? ownerVenuesData
                     : [];
         const first = rawVenues[0];
-        return first?.venue?._id || first?.venue?.id || first?._id || first?.id || (user as any)?.venueId || (user as any)?.claimedVenueId || "";
+        return first?.venue?._id || first?.venue?.id || first?._id || first?.id || (user as any)?.venueId || (user as any)?.claimedVenueId || (user as any)?.venue?._id || (user as any)?.venue?.id || "";
     }, [selectedVenueId, ownerVenuesData, user]);
+
+    const effectiveVenueId = selectedVenueId || primaryVenueId;
+
+    const { data: apiPromotionsData, isLoading } = useGetPromotionsQuery({
+        page: 1,
+        limit: 10,
+        ...(effectiveVenueId ? { venueId: effectiveVenueId } : {}),
+    });
+    const { data: apiAnalyticsData, isLoading: isAnalyticsLoading } = useGetPromotionAnalyticsQuery(effectiveVenueId);
 
     const createPromotionMutation = useCreatePromotionMutation();
     const updatePromotionMutation = useUpdatePromotionMutation();
@@ -339,71 +342,83 @@ export function Promotions() {
         setDeletingPromotion({ id: String(promo.id), title: promo.title });
     };
 
-    const analytics = (apiAnalyticsData as any)?.data;
+    const analytics = (apiAnalyticsData as any)?.data ?? apiAnalyticsData;
 
     const activePromotionsCount = promotionsList.filter((p) => (p.computedStatus || p.status)?.toLowerCase() === "active").length;
     const totalViewsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.views) || 0), 0);
     const totalRedemptionsCount = promotionsList.reduce((acc, p) => acc + (parseInt(p.redemptions) || 0), 0);
-    const avgRate = promotionsList.length > 0 
-        ? `${(promotionsList.reduce((acc, p) => acc + (parseFloat(p.rate) || 0), 0) / promotionsList.length).toFixed(1)}%`
-        : "0%";
 
-    const activePromoCard = analytics?.cards?.find((c: any) => c.id === "active_promotions");
-    const totalViewsCard = analytics?.cards?.find((c: any) => c.id === "total_views");
-    const totalRedemptionsCard = analytics?.cards?.find((c: any) => c.id === "total_redemptions");
-    const avgRedemptionRateCard = analytics?.cards?.find((c: any) => c.id === "avg_redemption_rate");
+    const totalPromotionsVal = analytics?.totalPromotions !== undefined && analytics?.totalPromotions !== null
+        ? Number(analytics.totalPromotions).toLocaleString()
+        : promotionsList.length.toString();
+
+    const totalActivePromotionsVal = analytics?.totalActivePromotions !== undefined && analytics?.totalActivePromotions !== null
+        ? Number(analytics.totalActivePromotions).toLocaleString()
+        : analytics?.activePromotions !== undefined && analytics?.activePromotions !== null
+        ? Number(analytics.activePromotions).toLocaleString()
+        : activePromotionsCount.toString();
+
+    const totalViewsVal = analytics?.totalViews !== undefined && analytics?.totalViews !== null
+        ? Number(analytics.totalViews).toLocaleString()
+        : totalViewsCount.toLocaleString();
+
+    const totalCustomersVisitedVal = analytics?.totalCustomersVisited !== undefined && analytics?.totalCustomersVisited !== null
+        ? Number(analytics.totalCustomersVisited).toLocaleString()
+        : analytics?.totalRedemptions !== undefined && analytics?.totalRedemptions !== null
+        ? Number(analytics.totalRedemptions).toLocaleString()
+        : totalRedemptionsCount.toLocaleString();
 
     const statsData = [
         {
-            id: "active-promotions",
-            title: activePromoCard?.label || "Active Promotions",
-            value: activePromoCard?.formattedValue || (analytics?.activePromotions !== undefined ? String(analytics.activePromotions) : activePromotionsCount.toString()),
-            trend: activePromoCard?.subText || analytics?.activePromotionsSubText || "+0 this week",
+            id: "total-promotions",
+            title: "Total Promotions",
+            value: totalPromotionsVal,
+            trend: "+0 this month",
             isPositive: true,
             variant: "purple" as const,
             icon: (
                 <svg className="w-4 h-4 text-[#9F4FFA]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+            ),
+        },
+        {
+            id: "active-promotions",
+            title: "Active Promotions",
+            value: totalActivePromotionsVal,
+            trend: "+0 this week",
+            isPositive: true,
+            variant: "yellow" as const,
+            icon: (
+                <svg className="w-4 h-4 text-[#E8FF57]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
             ),
         },
         {
             id: "total-views",
-            title: totalViewsCard?.label || "Total Views",
-            value: totalViewsCard?.formattedValue || (analytics?.totalViews !== undefined ? Number(analytics.totalViews).toLocaleString() : totalViewsCount.toLocaleString()),
-            trend: totalViewsCard?.subText || analytics?.totalViewsSubText || "+0% this month",
+            title: "Total Views",
+            value: totalViewsVal,
+            trend: "+0% this month",
             isPositive: true,
-            variant: "purple" as const,
+            variant: "cyan" as const,
             icon: (
-                <svg className="w-4 h-4 text-[#9F4FFA]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-[#38BDF8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
             ),
         },
         {
-            id: "total-redemptions",
-            title: totalRedemptionsCard?.label || "Total Redemptions",
-            value: totalRedemptionsCard?.formattedValue || (analytics?.totalRedemptions !== undefined ? Number(analytics.totalRedemptions).toLocaleString() : totalRedemptionsCount.toLocaleString()),
-            trend: totalRedemptionsCard?.subText || analytics?.totalRedemptionsSubText || "+0% this month",
-            isPositive: true,
-            variant: "yellow" as const,
-            icon: (
-                <svg className="w-4 h-4 text-[#E8FF57]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
-                </svg>
-            ),
-        },
-        {
-            id: "avg-redemption-rate",
-            title: avgRedemptionRateCard?.label || "Avg Redemption Rate",
-            value: avgRedemptionRateCard?.formattedValue || analytics?.avgRedemptionRateFormatted || (analytics?.avgRedemptionRate !== undefined ? `${analytics.avgRedemptionRate}%` : avgRate),
-            trend: avgRedemptionRateCard?.subText || analytics?.avgRedemptionRateSubText || "+0% vs last mo.",
+            id: "customers-visited",
+            title: "Customers Visited",
+            value: totalCustomersVisitedVal,
+            trend: "+0% this month",
             isPositive: true,
             variant: "green" as const,
             icon: (
                 <svg className="w-4 h-4 text-[#4ADE80]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
             ),
         },
@@ -462,9 +477,9 @@ export function Promotions() {
 
             {/* Stats Cards Grid (Rendered using loop) */}
             <div className="max-w-[1200px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-                {isAnalyticsLoading && isLoading ? (
+                {isAnalyticsLoading && !apiAnalyticsData ? (
                     Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton key={i} className="h-[120px] w-full rounded-[24px] bg-purple-900/20" />
+                        <Skeleton key={i} className="h-[134px] w-full rounded-[24px] bg-purple-900/20" />
                     ))
                 ) : (
                     statsData.map((stat) => (

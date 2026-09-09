@@ -256,7 +256,7 @@ export function MyVenueView() {
     const categoryName = activeVenue?.category ? activeVenue.category.toUpperCase() : "BAR";
 
     return (
-        <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-8 font-['Manrope',sans-serif] pb-24 animate-in fade-in duration-300">
+        <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-8 font-['Manrope',sans-serif] px-4 sm:px-6 py-4 pb-24 animate-in fade-in duration-300">
             {/* Ambient Background Glows */}
             <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#7C3AED] opacity-[0.15] blur-[120px] pointer-events-none" />
             <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#E8FF57] opacity-[0.05] blur-[120px] pointer-events-none" />

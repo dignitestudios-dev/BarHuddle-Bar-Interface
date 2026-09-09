@@ -30,12 +30,12 @@ export function EventBoosting() {
     const { selectedVenueId } = useSelectedVenue();
     const { data: apiBoostsData, isLoading: isLoadingBoosts } = useGetBoostsQuery({
         page: 1,
-        limit: 10,
+        limit: 50,
         ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
     });
     const { data: apiEventsData, isLoading: isLoadingEvents } = useGetEventsQuery({
         page: 1,
-        limit: 10,
+        limit: 50,
         ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
     });
     const createBoostMutation = useCreateBoostMutation();
@@ -57,7 +57,37 @@ export function EventBoosting() {
                     ? apiEventsData
                     : [];
 
-        const listToUse = rawBoostsList.length > 0 ? rawBoostsList : rawEventsList;
+        // Identify which event IDs are actively boosted from the boosts API
+        const boostedEventIds = new Set<string>();
+        rawBoostsList.forEach((item: any) => {
+            const evt = item.event && typeof item.event === "object"
+                ? item.event
+                : item.eventId && typeof item.eventId === "object"
+                    ? item.eventId
+                    : item;
+
+            const isBoostActive = Boolean(
+                item.isBoosted === true ||
+                evt.isBoosted === true ||
+                item.status === "active" ||
+                item.boostDetails?.status === "active" ||
+                evt.boostStatus === "active" ||
+                (evt.activeBoosts && evt.activeBoosts > 0) ||
+                (item.activeBoosts && item.activeBoosts > 0)
+            );
+
+            if (isBoostActive) {
+                if (evt._id) boostedEventIds.add(String(evt._id));
+                if (evt.id) boostedEventIds.add(String(evt.id));
+                if (item.eventId) {
+                    const idStr = typeof item.eventId === "object" ? String(item.eventId._id || item.eventId.id) : String(item.eventId);
+                    if (idStr) boostedEventIds.add(idStr);
+                }
+                if (item._id) boostedEventIds.add(String(item._id));
+                if (item.id) boostedEventIds.add(String(item.id));
+            }
+        });
+
         const map = new Map<string, any>();
 
         // Index all raw events from both sources
@@ -75,7 +105,32 @@ export function EventBoosting() {
             if (item.id) map.set(String(item.id), evt);
         });
 
-        const mapped = listToUse.map((item: any) => {
+        // Show all events: start with rawEventsList and supplement with any unique event from rawBoostsList
+        const seenIds = new Set<string>();
+        const allEvents: any[] = [];
+
+        rawEventsList.forEach((evt: any) => {
+            const id = String(evt._id || evt.id);
+            if (id && !seenIds.has(id)) {
+                seenIds.add(id);
+                allEvents.push(evt);
+            }
+        });
+
+        rawBoostsList.forEach((item: any) => {
+            const evt = item.event && typeof item.event === "object"
+                ? item.event
+                : item.eventId && typeof item.eventId === "object"
+                    ? item.eventId
+                    : item;
+            const id = String(evt._id || evt.id || (typeof item.eventId === "string" ? item.eventId : "") || item._id || item.id);
+            if (id && !seenIds.has(id)) {
+                seenIds.add(id);
+                allEvents.push(item);
+            }
+        });
+
+        const mapped = allEvents.map((item: any) => {
             const evt = item.event && typeof item.event === "object"
                 ? item.event
                 : item.eventId && typeof item.eventId === "object"
@@ -84,11 +139,13 @@ export function EventBoosting() {
 
             const eventId = String(evt._id || evt.id || (typeof item.eventId === "string" ? item.eventId : "") || item._id || item.id);
             const isBoosted = Boolean(
+                boostedEventIds.has(eventId) ||
                 item.isBoosted === true ||
+                item.isBoosted === "true" ||
                 evt.isBoosted === true ||
+                evt.isBoosted === "true" ||
                 (evt.activeBoosts && evt.activeBoosts > 0) ||
                 (item.activeBoosts && item.activeBoosts > 0) ||
-                item.status === "active" ||
                 item.boostDetails?.status === "active" ||
                 evt.boostStatus === "active" ||
                 locallyBoostedIds.has(eventId)
@@ -102,7 +159,6 @@ export function EventBoosting() {
                         ? `${evt.retention.retentionRate}%`
                         : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
             );
-            const performanceVal = Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
             const attendeesVal = String(
                 evt.retention?.totalAttendees ??
                 item.retention?.totalAttendees ??
@@ -116,6 +172,10 @@ export function EventBoosting() {
                 evt.metrics?.views ??
                 "0"
             );
+            const attendeesCount = Number(parseInt(attendeesVal, 10) || 0);
+            const performanceVal = attendeesCount > 0
+                ? Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0)
+                : 0;
 
             const formattedDateTime = evt.startAt
                 ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
