@@ -22,11 +22,35 @@ export interface PromotionData {
     redemptions: string;
     avgRetentionTime?: string;
     averageTimeBetweenViewsMinutes?: number | string;
+    clickPerMin?: number | string;
+    clickPer5Min?: number | string;
     rate: string;
     performancePercent: number;
     performanceRate?: number;
     imageUrl: string;
     bannerImages?: string[];
+}
+
+export function formatClickPer5Min(val: any): string {
+    if (val === undefined || val === null || val === "") return "0/5min";
+    if (typeof val === "string" && (val.includes("/5min") || val.includes("/5m") || val.includes("/min") || val.includes("/m"))) {
+        return val;
+    }
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    const formatted = Number(num.toFixed(2));
+    return `${formatted}`;
+}
+
+export function formatClickPerMin(val: any): string {
+    if (val === undefined || val === null || val === "") return "0/min";
+    if (typeof val === "string" && (val.includes("/min") || val.includes("/m"))) {
+        return val;
+    }
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    const formatted = Number(num.toFixed(2));
+    return `${formatted}/min`;
 }
 
 export function getPromotionStatusConfig(statusVal?: string) {
@@ -92,22 +116,40 @@ export function PromotionCard({
 
     const statusConfig = getPromotionStatusConfig(promotion.computedStatus || promotion.status);
 
-    // Extract totalViews, averageTimeBetweenViewsMinutes, performanceRate
+    // Extract totalViews, clickPerMin / averageTimeBetweenViewsMinutes, performanceRate
     const displayViews = rawPromotion?.totalViews !== undefined && rawPromotion?.totalViews !== null
         ? String(rawPromotion.totalViews)
         : promotion.totalViews !== undefined && promotion.totalViews !== null
         ? String(promotion.totalViews)
         : promotion.views ?? "0";
 
+    const rawClickPer5Min = rawPromotion?.clickPer5Min !== undefined && rawPromotion?.clickPer5Min !== null
+        ? rawPromotion.clickPer5Min
+        : rawPromotion?.clicksPer5Min !== undefined && rawPromotion?.clicksPer5Min !== null
+        ? rawPromotion.clicksPer5Min
+        : rawPromotion?.clickPer5Minute !== undefined && rawPromotion?.clickPer5Minute !== null
+        ? rawPromotion.clickPer5Minute
+        : promotion.clickPer5Min;
+
+    const rawClickPerMin = rawPromotion?.clickPerMin !== undefined && rawPromotion?.clickPerMin !== null
+        ? rawPromotion.clickPerMin
+        : rawPromotion?.clicksPerMin !== undefined && rawPromotion?.clicksPerMin !== null
+        ? rawPromotion.clicksPerMin
+        : promotion.clickPerMin;
+
     const rawAvgMins = rawPromotion?.averageTimeBetweenViewsMinutes !== undefined && rawPromotion?.averageTimeBetweenViewsMinutes !== null
         ? rawPromotion.averageTimeBetweenViewsMinutes
         : promotion.averageTimeBetweenViewsMinutes;
 
-    const displayAvgClick = rawAvgMins !== undefined && rawAvgMins !== null
+    const displayAvgClick = rawClickPer5Min !== undefined && rawClickPer5Min !== null
+        ? formatClickPer5Min(rawClickPer5Min)
+        : rawClickPerMin !== undefined && rawClickPerMin !== null
+        ? formatClickPerMin(rawClickPerMin)
+        : rawAvgMins !== undefined && rawAvgMins !== null
         ? Number(rawAvgMins) >= 60
             ? `${Math.floor(Number(rawAvgMins) / 60)}h ${Number(rawAvgMins) % 60 ? `${Number(rawAvgMins) % 60}m` : ""}`.trim()
             : `${Number(rawAvgMins)}m`
-        : promotion.avgRetentionTime || (promotion.redemptions ? `${promotion.redemptions}m` : "0m");
+        : promotion.avgRetentionTime || "0/5min";
 
     const displayPerformanceRate = rawPromotion?.performanceRate !== undefined && rawPromotion?.performanceRate !== null
         ? Number(rawPromotion.performanceRate)
@@ -281,13 +323,13 @@ export function PromotionCard({
                         </span>
                     </div>
 
-                    {/* Avg Click (averageTimeBetweenViewsMinutes) */}
+                    {/* Avg Click (clickPer5Min) */}
                     <div className="flex flex-col items-center justify-center py-2 px-1 rounded-[16px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.12)]">
                         <span className="font-extrabold text-[13px] leading-[18px] text-[#4ADE80]">
                             {displayAvgClick}
                         </span>
                         <span className="font-semibold text-[9px] leading-[13px] text-[#8B7EC8] text-center truncate w-full px-0.5">
-                            Avg Click
+                           Clicks Per 5 Mins
                         </span>
                     </div>
                 </div>

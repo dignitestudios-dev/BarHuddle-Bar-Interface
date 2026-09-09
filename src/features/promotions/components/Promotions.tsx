@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { PromotionsPageHeader } from "./PromotionsPageHeader";
 import { StatsCard } from "@/components/ui/stats-card";
-import { PromotionCard, PromotionData, CreatePromotionModal } from "./";
+import { PromotionCard, PromotionData, CreatePromotionModal, formatClickPer5Min, formatClickPerMin } from "./";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import { SuccessModal } from "@/components/ui/success-modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -167,17 +167,29 @@ export function Promotions() {
             const visitsCount = promo.visitsDuringPromo !== undefined ? Number(promo.visitsDuringPromo) : undefined;
             const redeemedCount = String(promo.redeemedCount ?? promo.redemptions ?? promo.metrics?.redemptions ?? "0");
 
+            const rawClickPer5Min = promo.clickPer5Min !== undefined && promo.clickPer5Min !== null
+                ? promo.clickPer5Min
+                : (promo.clicksPer5Min ?? promo.clickPer5Minute ?? promo.clicksPer5Minute);
+
+            const rawClickPerMin = promo.clickPerMin !== undefined && promo.clickPerMin !== null
+                ? promo.clickPerMin
+                : (promo.clicksPerMin ?? promo.clickPerMinute ?? promo.clicksPerMinute);
+
             const avgMins = promo.averageTimeBetweenViewsMinutes !== undefined
                 ? Number(promo.averageTimeBetweenViewsMinutes)
                 : promo.averageRetentionTimeMinutes !== undefined
                 ? Number(promo.averageRetentionTimeMinutes)
                 : undefined;
 
-            const avgRetentionFormatted = avgMins !== undefined
+            const avgRetentionFormatted = rawClickPer5Min !== undefined && rawClickPer5Min !== null
+                ? formatClickPer5Min(rawClickPer5Min)
+                : rawClickPerMin !== undefined && rawClickPerMin !== null
+                ? formatClickPerMin(rawClickPerMin)
+                : avgMins !== undefined
                 ? avgMins >= 60
                     ? `${Math.floor(avgMins / 60)}h ${avgMins % 60 ? `${avgMins % 60}m` : ""}`.trim()
                     : `${avgMins}m`
-                : "0m";
+                : "0/5min";
 
             const performancePercentNum = Number(
                 promo.performanceRate ?? promo.performancePercent ?? promo.metrics?.performancePercent ?? (promo.redemptionRate ?? 0)
@@ -216,6 +228,8 @@ export function Promotions() {
                 redemptions: redeemedCount,
                 avgRetentionTime: avgRetentionFormatted,
                 averageTimeBetweenViewsMinutes: promo.averageTimeBetweenViewsMinutes,
+                clickPer5Min: rawClickPer5Min,
+                clickPerMin: rawClickPerMin ?? rawClickPer5Min,
                 rate: redemptionRateStr,
                 performancePercent: performancePercentNum,
                 performanceRate: performancePercentNum,
