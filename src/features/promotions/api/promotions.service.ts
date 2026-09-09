@@ -5,6 +5,20 @@ export interface Promotion {
   // add other fields
 }
 
+export interface PromotionAnalyticsData {
+  totalPromotions?: number;
+  totalActivePromotions?: number;
+  totalViews?: number;
+  totalCustomersVisited?: number;
+  [key: string]: any;
+}
+
+export interface PromotionAnalyticsResponse {
+  success?: boolean;
+  message?: string;
+  data?: PromotionAnalyticsData;
+}
+
 export interface PromotionQueryParams {
   page?: number;
   limit?: number;
@@ -38,7 +52,7 @@ export const promotionService = {
     const response = await axiosInstance.get(`/venue-owner/promotions/${id}`);
     return response.data;
   },
-  getPromotionAnalytics: async (venueId?: string) => {
+  getPromotionAnalytics: async (venueId?: string): Promise<PromotionAnalyticsResponse> => {
     const response = await axiosInstance.get("/venue-owner/analytics/promotions", {
       params: venueId ? { venueId } : undefined,
     });

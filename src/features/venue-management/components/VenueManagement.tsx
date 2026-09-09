@@ -7,8 +7,9 @@ import { VenueCard, type VenueCardData } from "./VenueCard";
 import { VenueDetailView } from "./VenueDetailView";
 import { ClaimFormModal } from "./ClaimFormModal";
 
-import { useMyVenuesQuery, useVenueDetailsQuery } from "../api/venue.queries";
+import { useMyVenuesQuery, useVenueDetailsQuery, useMyClaimsQuery } from "../api/venue.queries";
 import { useAppSelector } from "@/store";
+import { addPendingClaimId, getPendingClaimIds, recordVenueClaimed } from "../utils/claims";
 
 export function VenueManagement() {
     const router = useRouter();
@@ -25,6 +26,18 @@ export function VenueManagement() {
     const [selectedVenueCard, setSelectedVenueCard] = useState<any>(null);
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
     const [venueToClaim, setVenueToClaim] = useState<any>(null);
+    const [claimsVersion, setClaimsVersion] = useState(0);
+
+    // Listen to local claim submission events and storage changes so status updates instantly across components
+    React.useEffect(() => {
+        const handleClaimsChange = () => setClaimsVersion((prev) => prev + 1);
+        window.addEventListener("barhuddle_claim_submitted", handleClaimsChange);
+        window.addEventListener("storage", handleClaimsChange);
+        return () => {
+            window.removeEventListener("barhuddle_claim_submitted", handleClaimsChange);
+            window.removeEventListener("storage", handleClaimsChange);
+        };
+    }, []);
 
     // Call venue details API (GET /venue-owner/venues/:id) when View Details is clicked
     const {
@@ -33,6 +46,37 @@ export function VenueManagement() {
         isFetching: isFetchingVenueDetails,
         refetch: refetchVenueDetails,
     } = useVenueDetailsQuery(selectedVenueId || "");
+
+    const { data: rawClaims, refetch: refetchClaims } = useMyClaimsQuery();
+
+    // Track all venues that have a pending claim submitted
+    const pendingVenueIds = useMemo(() => {
+        const set = new Set<string>(getPendingClaimIds());
+
+        const claimsArr = Array.isArray(rawClaims) ? rawClaims : (rawClaims as any)?.data || [];
+        if (Array.isArray(claimsArr)) {
+            claimsArr.forEach((c: any) => {
+                const status = String(c?.status || "").toLowerCase();
+                if (status === "pending" || status === "under_review" || status === "submitted" || !status) {
+                    const targetId = String(
+                        typeof c?.venueId === "string"
+                            ? c.venueId
+                            : c?.venueId?._id || c?.venueId?.id || c?.venue?._id || c?.venue?.id || c?.placeId || c?.venue?.placeId || ""
+                    );
+                    if (targetId) set.add(targetId);
+                    if (c?.venue?._id) set.add(String(c.venue._id));
+                    if (c?.venue?.id) set.add(String(c.venue.id));
+                    if (c?.placeId) set.add(String(c.placeId));
+                    const venueName = c?.venue?.name || c?.venue?.title || c?.name;
+                    if (venueName && typeof venueName === "string" && venueName.trim()) {
+                        set.add(`name:${venueName.trim().toLowerCase()}`);
+                    }
+                }
+            });
+        }
+
+        return set;
+    }, [rawClaims, claimsVersion]);
 
     const handleViewDetails = (v: any) => {
         const id = v._id || v.id || v.placeId || "";
@@ -46,7 +90,27 @@ export function VenueManagement() {
         const base = selectedVenueCard || {};
         const details: any = fetchedVenueDetails;
 
-        if (!details) return base;
+        const vId = String(details?._id || details?.id || base?._id || base?.id || base?.placeId || "");
+        const baseName = (details?.name || details?.title || base?.name || base?.title || "").trim().toLowerCase();
+        const isPending = Boolean(
+            pendingVenueIds.has(vId) ||
+            (base?._id && pendingVenueIds.has(String(base._id))) ||
+            (base?.id && pendingVenueIds.has(String(base.id))) ||
+            (base?.placeId && pendingVenueIds.has(String(base.placeId))) ||
+            (baseName && pendingVenueIds.has(`name:${baseName}`)) ||
+            base?.isPending ||
+            base?.claimStatus === "pending" ||
+            details?.status === "pending" ||
+            details?.claimStatus === "pending"
+        );
+
+        if (!details) {
+            return {
+                ...base,
+                isPending,
+                claimStatus: isPending ? "pending" : base.claimStatus,
+            };
+        }
 
         return {
             ...base,
@@ -70,6 +134,8 @@ export function VenueManagement() {
                 : base.operatingHours || [],
             location: details.location || base.location,
             isClaimed: details.isClaimed !== undefined ? details.isClaimed : base.isClaimed,
+            isPending,
+            claimStatus: isPending ? "pending" : (details.claimStatus || (details.isClaimed ? "approved" : undefined)),
             demographics: base.demographics || {
                 male: details.gender?.malePercent ?? details.gender?.male ?? 0,
                 female: details.gender?.femalePercent ?? details.gender?.female ?? 0,
@@ -78,7 +144,7 @@ export function VenueManagement() {
             totalGoing: details.totalGoing ?? base.totalGoing,
             capacity: details.capacity || base.capacity,
         };
-    }, [selectedVenueId, selectedVenueCard, fetchedVenueDetails]);
+    }, [selectedVenueId, selectedVenueCard, fetchedVenueDetails, pendingVenueIds]);
 
     const handleOpenClaim = (v: any) => {
         setVenueToClaim(v);
@@ -113,38 +179,56 @@ export function VenueManagement() {
     };
 
     const displayVenues: VenueCardData[] = venues && venues.length > 0
-        ? venues.map((v: any) => ({
-            id: v._id || v.id,
-            _id: v._id,
-            placeId: v.placeId,
-            title: v.name || v.title || "Unnamed Venue",
-            name: v.name,
-            category: v.category || "venue",
-            address: v.address || "Unknown Location",
-            capacity: v.totalGoing !== undefined ? `${v.totalGoing} Going` : undefined,
-            totalGoing: v.totalGoing ?? 0,
-            imageUrl: v.coverImage || (v.images && v.images.length > 0 ? v.images[0] : ""),
-            coverImage: v.coverImage,
-            images: v.images || [],
-            icon: v.icon,
-            iconBackgroundColor: v.iconBackgroundColor,
-            rating: typeof v.rating === "number" ? v.rating : undefined,
-            isClaimed: Boolean(v.isClaimed),
-            hasStories: Boolean(v.hasStories),
-            storiesCount: v.storiesCount || 0,
-            popularityCount: v.popularityCount || 0,
-            isFavorite: Boolean(v.isFavorite),
-            gender: v.gender,
-            demographics: {
-                male: v.gender?.malePercent ?? v.gender?.male ?? 0,
-                female: v.gender?.femalePercent ?? v.gender?.female ?? 0,
-                nonBinary: v.gender?.nonBinaryPercent ?? v.gender?.nonBinary ?? 0,
-            },
-            friendsGoing: v.friendsGoing || [],
-            otherUsersCount: v.otherUsersCount || 0,
-            location: v.location,
-            operatingHours: v.operatingHours || [],
-        }))
+        ? venues.map((v: any) => {
+            const vId = String(v._id || v.id || v.placeId || "");
+            const vName = (v.name || v.title || "").trim().toLowerCase();
+            const isPending = Boolean(
+                pendingVenueIds.has(vId) ||
+                (v._id && pendingVenueIds.has(String(v._id))) ||
+                (v.id && pendingVenueIds.has(String(v.id))) ||
+                (v.placeId && pendingVenueIds.has(String(v.placeId))) ||
+                (vName && pendingVenueIds.has(`name:${vName}`)) ||
+                v.status === "pending" ||
+                v.claimStatus === "pending" ||
+                v.isPending === true
+            );
+
+            return {
+                id: v._id || v.id,
+                _id: v._id,
+                placeId: v.placeId,
+                title: v.name || v.title || "Unnamed Venue",
+                name: v.name,
+                category: v.category || "venue",
+                address: v.address || "Unknown Location",
+                capacity: v.totalGoing !== undefined ? `${v.totalGoing} Going` : undefined,
+                totalGoing: v.totalGoing ?? 0,
+                imageUrl: v.coverImage || (v.images && v.images.length > 0 ? v.images[0] : ""),
+                coverImage: v.coverImage,
+                images: v.images || [],
+                icon: v.icon,
+                iconBackgroundColor: v.iconBackgroundColor,
+                rating: typeof v.rating === "number" ? v.rating : undefined,
+                isClaimed: Boolean(v.isClaimed),
+                claimStatus: isPending ? "pending" : (v.claimStatus || (v.isClaimed ? "approved" : undefined)),
+                status: isPending ? "pending" : v.status,
+                isPending,
+                hasStories: Boolean(v.hasStories),
+                storiesCount: v.storiesCount || 0,
+                popularityCount: v.popularityCount || 0,
+                isFavorite: Boolean(v.isFavorite),
+                gender: v.gender,
+                demographics: {
+                    male: v.gender?.malePercent ?? v.gender?.male ?? 0,
+                    female: v.gender?.femalePercent ?? v.gender?.female ?? 0,
+                    nonBinary: v.gender?.nonBinaryPercent ?? v.gender?.nonBinary ?? 0,
+                },
+                friendsGoing: v.friendsGoing || [],
+                otherUsersCount: v.otherUsersCount || 0,
+                location: v.location,
+                operatingHours: v.operatingHours || [],
+            };
+        })
         : [];
 
     return (
@@ -301,6 +385,14 @@ export function VenueManagement() {
                                         setSelectedVenueCard(null);
                                     }}
                                     onClaim={handleOpenClaim}
+                                    onClaimSubmitted={() => {
+                                        setSelectedVenueId(null);
+                                        setSelectedVenueCard(null);
+                                        setIsClaimModalOpen(false);
+                                        setVenueToClaim(null);
+                                        refetchVenues();
+                                        refetchClaims();
+                                    }}
                                 />
                             </div>
                         ) : null}
@@ -317,12 +409,22 @@ export function VenueManagement() {
                     setVenueToClaim(null);
                 }}
                 onSubmitted={() => {
-                    refetchVenues();
-                    if (selectedVenueId) {
-                        refetchVenueDetails();
+                    if (venueToClaim) {
+                        recordVenueClaimed(venueToClaim);
                     }
+                    if (selectedVenueCard) {
+                        recordVenueClaimed(selectedVenueCard);
+                    }
+                    if (selectedVenueId) {
+                        addPendingClaimId(selectedVenueId);
+                    }
+                    // Close the detail view as well to redirect back to venue management list page
+                    setSelectedVenueId(null);
+                    setSelectedVenueCard(null);
                     setIsClaimModalOpen(false);
                     setVenueToClaim(null);
+                    refetchVenues();
+                    refetchClaims();
                 }}
             />
         </div>

@@ -89,11 +89,11 @@ export const requestFcmToken = async (vapidKey?: string): Promise<string | null>
     });
 
     if (token) {
-      console.log(
-        `%c[FCM] Device Registration Token:\n%c${token}`,
-        "color: #00ff85; font-weight: bold; font-size: 13px;",
-        "color: #38bdf8; font-family: monospace; font-size: 11px;"
-      );
+      // console.log(
+      //   `%c[FCM] Device Registration Token:\n%c${token}`,
+      //   "color: #00ff85; font-weight: bold; font-size: 13px;",
+      //   "color: #38bdf8; font-family: monospace; font-size: 11px;"
+      // );
       if (typeof window !== "undefined") {
         localStorage.setItem("fcm_device_token", token);
       }

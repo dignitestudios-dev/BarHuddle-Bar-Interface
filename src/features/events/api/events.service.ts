@@ -9,6 +9,7 @@ export interface EventQueryParams {
   page?: number;
   limit?: number;
   venueId?: string;
+  isBoosted?: boolean;
   [key: string]: any;
 }
 

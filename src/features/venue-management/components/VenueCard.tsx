@@ -28,6 +28,9 @@ export interface VenueCardData {
     iconBackgroundColor?: string;
     rating?: number;
     isClaimed?: boolean;
+    claimStatus?: "pending" | "approved" | "rejected" | string;
+    status?: "pending" | "approved" | "rejected" | string;
+    isPending?: boolean;
     totalGoing?: number;
     gender?: VenueGender;
     demographics?: DemographicsData;
@@ -113,6 +116,7 @@ export function VenueCard({
     const displayTitle = venue.name || venue.title || "Unnamed Venue";
     const totalGoingCount = venue.totalGoing ?? 0;
     const displayGoing = venue.capacity ? venue.capacity : `${totalGoingCount} Going`;
+    const isPending = Boolean(venue.isPending || venue.claimStatus === "pending" || venue.status === "pending");
 
     return (
         <div
@@ -162,7 +166,14 @@ export function VenueCard({
 
                 {/* Bottom-Left Claimed Status Indicator */}
                 <div className="absolute bottom-3 left-3.5 z-20 flex items-center gap-2">
-                    {venue.isClaimed ? (
+                    {isPending ? (
+                        <div className="px-2.5 py-0.5 rounded-full bg-amber-500/85 border border-amber-400/50 backdrop-blur-md flex items-center gap-1 shadow-[0_0_12px_rgba(245,158,11,0.35)]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                            <span className="font-bold text-[10px] uppercase tracking-wider text-white">
+                                Pending
+                            </span>
+                        </div>
+                    ) : venue.isClaimed ? (
                         <div className="px-2.5 py-0.5 rounded-full bg-emerald-500/85 border border-emerald-400/50 backdrop-blur-md flex items-center gap-1 shadow-[0_0_12px_rgba(16,185,129,0.35)]">
                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -286,7 +297,16 @@ export function VenueCard({
                 {/* Bottom Action Buttons Row */}
                 <div className="flex items-center gap-2.5 w-full pt-1">
                     {/* Claim Venue Button */}
-                    {venue.isClaimed ? (
+                    {isPending ? (
+                        <button
+                            type="button"
+                            disabled
+                            className="flex-1 h-9 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center font-bold text-[12px] text-amber-300 cursor-not-allowed select-none"
+                            title="Claim request is currently pending review"
+                        >
+                            Pending
+                        </button>
+                    ) : venue.isClaimed ? (
                         <button
                             type="button"
                             disabled

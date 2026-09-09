@@ -7,7 +7,7 @@ import { EventCard, EventCardData } from "./EventCard";
 import { CreateEventModal } from "./CreateEventModal";
 import { DeleteConfirmationModal } from "@/components/ui/DeleteConfirmationModal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGetEventsQuery, useGetBoostedEventsQuery } from "../api/events.queries";
+import { useGetEventsQuery } from "../api/events.queries";
 import { useCreateEventMutation, useUpdateEventMutation, useDeleteEventMutation } from "../api/events.mutations";
 import { useGetOwnerVenuesQuery } from "@/features/venue-management/api/venue.queries";
 import { useAppSelector } from "@/store";
@@ -37,14 +37,11 @@ export function Events() {
     const [deletingEvent, setDeletingEvent] = useState<{ id: string; title: string } | null>(null);
     const user = useAppSelector((state) => state.auth.user);
     const { selectedVenueId } = useSelectedVenue();
+    const isBoosted = activeTab === "boosted";
     const { data: apiEventsData, isLoading: isLoadingEvents } = useGetEventsQuery({
         page: 1,
         limit: 10,
-        ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
-    });
-    const { data: apiBoostedData, isLoading: isLoadingBoosted } = useGetBoostedEventsQuery({
-        page: 1,
-        limit: 10,
+        isBoosted,
         ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
     });
     const { data: ownerVenuesData } = useGetOwnerVenuesQuery();
@@ -91,7 +88,6 @@ export function Events() {
                         ? `${evt.retention.retentionRate}%`
                         : evt.conversionRate || evt.metrics?.conversionRate || "0%"
             );
-            const performanceVal = Number(evt.organicPerformance ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
             const attendeesVal = String(
                 evt.retention?.totalAttendees ??
                 evt.attendance ??
@@ -104,6 +100,10 @@ export function Events() {
                 evt.metrics?.views ??
                 "0"
             );
+            const attendeesCount = Number(parseInt(attendeesVal, 10) || 0);
+            const performanceVal = attendeesCount > 0
+                ? Number(evt.organicPerformance ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0)
+                : 0;
 
             const isPast = evt.endAt ? new Date(evt.endAt) < new Date() : (evt.startAt ? new Date(evt.startAt) < new Date() : false);
             const isUpcoming = evt.startAt ? new Date(evt.startAt) > new Date() : false;
@@ -112,6 +112,10 @@ export function Events() {
                     ? "expired"
                     : (isUpcoming ? "upcoming" : (evt.status || "active"))
             );
+
+            const isItemBoosted = activeTab === "boosted"
+                ? true
+                : Boolean(evt.isBoosted === true || evt.isBoosted === "true" || (evt.activeBoosts && evt.activeBoosts > 0) || evt.boostStatus === "active");
 
             return {
                 id,
@@ -127,116 +131,16 @@ export function Events() {
                 conversionRate: rateVal,
                 retentionRate: rateVal,
                 performancePercent: performanceVal,
-                isBoosted: Boolean(evt.isBoosted === true || evt.isBoosted === "true" || (evt.activeBoosts && evt.activeBoosts > 0) || evt.boostStatus === "active"),
+                isBoosted: isItemBoosted,
                 computedStatus: resolvedStatus,
                 status: evt.status,
             };
         });
 
-        // Also index boosted events from apiBoostedData
-        const rawBoosts = Array.isArray(apiBoostedData?.data)
-            ? apiBoostedData.data
-            : Array.isArray(apiBoostedData?.data?.boosts)
-                ? apiBoostedData.data.boosts
-                : Array.isArray(apiBoostedData?.boosts)
-                    ? apiBoostedData.boosts
-                    : Array.isArray(apiBoostedData)
-                        ? apiBoostedData
-                        : [];
-
-        rawBoosts.forEach((item: any) => {
-            const evt = item.event && typeof item.event === "object"
-                ? item.event
-                : item.eventId && typeof item.eventId === "object"
-                    ? item.eventId
-                    : item;
-
-            const targetId = String(evt._id || evt.id || item.eventId || item._id || item.id);
-            if (!map.has(targetId)) {
-                map.set(targetId, evt);
-            }
-            if (evt._id) map.set(String(evt._id), evt);
-            if (evt.id) map.set(String(evt.id), evt);
-            if (item._id) map.set(String(item._id), evt);
-            if (item.id) map.set(String(item.id), evt);
-        });
-
         return { regularEvents: mappedList, rawEventsMap: map };
-    }, [apiEventsData, apiBoostedData]);
+    }, [apiEventsData, activeTab]);
 
-    // Map API boosted events from /venue-owner/boosts
-    const boostedEventsFromApi: EventCardData[] = useMemo(() => {
-        const rawBoosts = Array.isArray(apiBoostedData?.data)
-            ? apiBoostedData.data
-            : Array.isArray(apiBoostedData?.data?.boosts)
-                ? apiBoostedData.data.boosts
-                : Array.isArray(apiBoostedData?.boosts)
-                    ? apiBoostedData.boosts
-                    : Array.isArray(apiBoostedData)
-                        ? apiBoostedData
-                        : [];
-
-        if (!rawBoosts || rawBoosts.length === 0) return [];
-
-        return rawBoosts
-            .map((item: any) => {
-                const evt = item.event && typeof item.event === "object"
-                    ? item.event
-                    : item.eventId && typeof item.eventId === "object"
-                        ? item.eventId
-                        : item;
-
-                const isItemBoosted = item.isBoosted === true || evt.isBoosted === true || item.status === "active" || (evt.activeBoosts && evt.activeBoosts > 0);
-                if (!isItemBoosted && item.status !== undefined && item.status !== "active") return null;
-
-                const eventRealId = String(evt._id || evt.id || (typeof item.eventId === "string" ? item.eventId : "") || item._id || item.id);
-
-                const ratioVal = String(evt.maleToFemaleRatio || evt.gender?.ratio || item.ratio || evt.metrics?.ratio || evt.ratio || "0:0");
-                const rateVal = String(
-                    evt.retentionRate !== undefined
-                        ? `${evt.retentionRate}%`
-                        : evt.retention?.retentionRate !== undefined
-                            ? `${evt.retention.retentionRate}%`
-                            : item.conversionRate || evt.conversionRate || evt.metrics?.conversionRate || "0%"
-                );
-                const performanceVal = Number(evt.organicPerformance ?? item.performancePercent ?? evt.performancePercent ?? evt.metrics?.performancePercent ?? 0);
-                const attendeesVal = String(
-                    evt.retention?.totalAttendees ??
-                    item.retention?.totalAttendees ??
-                    evt.attendance ??
-                    evt.attendees ??
-                    item.attendance ??
-                    item.attendees ??
-                    evt.views ??
-                    evt.viewCount ??
-                    item.views ??
-                    evt.metrics?.views ??
-                    "0"
-                );
-
-                return {
-                    id: eventRealId,
-                    title: evt.name || evt.title || item.title || "Boosted Event",
-                    venueName: evt.venue?.name || evt.venueName || "Venue",
-                    dateTime: evt.startAt
-                        ? new Date(evt.startAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + " · " + new Date(evt.startAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                        : "TBD",
-                    imageUrl: cleanImageUrl(evt.banner || item.banner || evt.bannerUrl || evt.imageUrl, DEFAULT_EVENT_IMAGE),
-                    views: attendeesVal,
-                    attendees: attendeesVal,
-                    ratio: ratioVal,
-                    conversionRate: rateVal,
-                    retentionRate: rateVal,
-                    performancePercent: performanceVal,
-                    isBoosted: true,
-                    computedStatus: evt.computedStatus || item.computedStatus || evt.status || item.status,
-                    status: evt.status || item.status,
-                };
-            })
-            .filter((item: any): item is EventCardData => item !== null);
-    }, [apiBoostedData]);
-
-    // Tab display logic
+    // Tab display logic: in events tab show only events that are not boosted, in boosted tab show only boosted events
     const displayedEvents = useMemo(() => {
         if (activeTab === "events") {
             return regularEvents.filter((evt) => !evt.isBoosted);

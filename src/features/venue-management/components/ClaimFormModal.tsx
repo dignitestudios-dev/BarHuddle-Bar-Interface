@@ -8,6 +8,7 @@ import { updateUser } from "@/store/slices/auth.slice";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { toast } from "sonner";
+import { addPendingClaimId, recordVenueClaimed } from "../utils/claims";
 
 export interface ClaimFormModalProps {
     isOpen: boolean;
@@ -22,6 +23,7 @@ const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg"];
 const ALLOWED_MIME_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 
 export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFormModalProps) {
+
     const { mutateAsync: claimVenue, isPending: isClaiming } = useClaimVenueMutation();
     const { mutateAsync: getMe, isPending: isFetchingMe } = useGetMeMutation();
     const dispatch = useAppDispatch();
@@ -123,6 +125,15 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
                 dispatch(updateUser(profileResponse.data));
             }
 
+            // Save pending claim ID locally so status updates immediately
+            if (venue) {
+                recordVenueClaimed(venue);
+            }
+            const vId = venue?.id || venue?._id || venue?.placeId;
+            if (vId) {
+                addPendingClaimId(vId);
+            }
+
             toast.success("Ownership documents submitted successfully!");
             onClose();
             try {
@@ -134,6 +145,16 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
             console.error("Failed to claim venue:", error);
             const backendMsg = error?.response?.data?.message || error?.message || "";
             let displayMsg = backendMsg;
+
+            if (
+                backendMsg.toLowerCase().includes("already") ||
+                backendMsg.toLowerCase().includes("pending") ||
+                backendMsg.toLowerCase().includes("claimed")
+            ) {
+                if (venue) {
+                    recordVenueClaimed(venue);
+                }
+            }
 
             if (
                 error?.response?.status === 413 ||

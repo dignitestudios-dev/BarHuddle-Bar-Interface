@@ -48,10 +48,29 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Custom Scrollbar */
+/* Sleek Theme-Aligned Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.35);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(159, 79, 250, 0.75);
+}
+
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -59,12 +78,18 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(81, 54, 255, 0.44);
-  border-radius: 3px;
+  background: rgba(124, 58, 237, 0.35);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(81, 54, 255, 0.75);
+  background: rgba(159, 79, 250, 0.75);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 58, 237, 0.35) transparent;
 }
 
 :root {

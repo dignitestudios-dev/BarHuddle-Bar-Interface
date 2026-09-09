@@ -9,6 +9,7 @@ export interface VenueHeaderProps {
     venue?: VenueCardData;
     onBack?: () => void;
     onClaim?: (venue: VenueCardData) => void;
+    onClaimSubmitted?: () => void;
     onOpenSubscription?: () => void;
     className?: string;
 }
@@ -17,21 +18,26 @@ export function VenueHeader({
     venue,
     onBack,
     onClaim,
+    onClaimSubmitted,
     onOpenSubscription,
     className = "",
 }: VenueHeaderProps) {
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+    const isPending = Boolean(venue?.isPending || venue?.claimStatus === "pending" || venue?.status === "pending");
+
     const handleClaimClick = () => {
         if (onClaim && venue) {
             onClaim(venue);
+        } else {
+            setIsClaimModalOpen(true);
         }
-        setIsClaimModalOpen(true);
     };
 
     const handleClaimSubmitted = () => {
         setIsClaimModalOpen(false);
+        onClaimSubmitted?.();
     };
 
     return (
@@ -59,17 +65,17 @@ export function VenueHeader({
 
                 {/* Right Side Action Buttons: Edit Details & Claim Now */}
                 <div className="flex items-center gap-3 shrink-0">
-                    {/* Edit Details Button
-                    <button
-                        type="button"
-                        onClick={() => setIsEditModalOpen(true)}
-                        className="h-[57px] px-5 py-3 rounded-[24px] bg-[rgba(124,58,237,0.25)] hover:bg-[rgba(124,58,237,0.4)] border border-[rgba(124,58,237,0.4)] flex items-center justify-center font-bold text-[15px] text-[#C4B5FD] hover:text-white transition-all cursor-pointer"
-                    >
-                        Edit Details
-                    </button> */}
-
                     {/* Claim Button */}
-                    {venue?.isClaimed ? (
+                    {isPending ? (
+                        <button
+                            type="button"
+                            disabled
+                            className="h-[48px] sm:h-[57px] px-6 rounded-[24px] bg-amber-500/15 border border-amber-500/30 flex items-center justify-center font-bold text-[14px] text-amber-300 cursor-not-allowed select-none"
+                            title="Claim request is currently pending review"
+                        >
+                            Pending
+                        </button>
+                    ) : venue?.isClaimed ? (
                         <button
                             type="button"
                             disabled
