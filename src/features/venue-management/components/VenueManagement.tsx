@@ -6,6 +6,7 @@ import { ClaimVenuesBanner } from "./ClaimVenuesBanner";
 import { VenueCard, type VenueCardData } from "./VenueCard";
 import { VenueDetailView } from "./VenueDetailView";
 import { ClaimFormModal } from "./ClaimFormModal";
+import { ClaimPendingDialog } from "./ClaimPendingDialog";
 
 import { useMyVenuesQuery, useVenueDetailsQuery, useMyClaimsQuery } from "../api/venue.queries";
 import { useAppSelector } from "@/store";
@@ -26,6 +27,7 @@ export function VenueManagement() {
     const [selectedVenueCard, setSelectedVenueCard] = useState<any>(null);
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
     const [venueToClaim, setVenueToClaim] = useState<any>(null);
+    const [pendingSuccessVenue, setPendingSuccessVenue] = useState<any>(null);
     const [claimsVersion, setClaimsVersion] = useState(0);
 
     // Listen to local claim submission events and storage changes so status updates instantly across components
@@ -49,33 +51,47 @@ export function VenueManagement() {
 
     const { data: rawClaims, refetch: refetchClaims } = useMyClaimsQuery();
 
-    // Track all venues that have a pending claim submitted
-    const pendingVenueIds = useMemo(() => {
-        const set = new Set<string>(getPendingClaimIds());
+    // Track both pending and approved claims from /venue-owner/claims and local storage
+    const { pendingVenueIds, approvedVenueIds } = useMemo(() => {
+        const pendingSet = new Set<string>(getPendingClaimIds());
+        const approvedSet = new Set<string>();
 
         const claimsArr = Array.isArray(rawClaims) ? rawClaims : (rawClaims as any)?.data || [];
         if (Array.isArray(claimsArr)) {
             claimsArr.forEach((c: any) => {
                 const status = String(c?.status || "").toLowerCase();
-                if (status === "pending" || status === "under_review" || status === "submitted" || !status) {
-                    const targetId = String(
-                        typeof c?.venueId === "string"
-                            ? c.venueId
-                            : c?.venueId?._id || c?.venueId?.id || c?.venue?._id || c?.venue?.id || c?.placeId || c?.venue?.placeId || ""
-                    );
-                    if (targetId) set.add(targetId);
-                    if (c?.venue?._id) set.add(String(c.venue._id));
-                    if (c?.venue?.id) set.add(String(c.venue.id));
-                    if (c?.placeId) set.add(String(c.placeId));
-                    const venueName = c?.venue?.name || c?.venue?.title || c?.name;
-                    if (venueName && typeof venueName === "string" && venueName.trim()) {
-                        set.add(`name:${venueName.trim().toLowerCase()}`);
-                    }
+                const targetId = String(
+                    typeof c?.venueId === "string"
+                        ? c.venueId
+                        : c?.venueId?._id || c?.venueId?.id || c?.venue?._id || c?.venue?.id || c?.placeId || c?.venue?.placeId || ""
+                );
+                const venueName = c?.venue?.name || c?.venue?.title || c?.name;
+                const nameKey = (venueName && typeof venueName === "string" && venueName.trim())
+                    ? `name:${venueName.trim().toLowerCase()}`
+                    : "";
+
+                if (status === "approved" || status === "claimed") {
+                    if (targetId) approvedSet.add(targetId);
+                    if (c?.venue?._id) approvedSet.add(String(c.venue._id));
+                    if (c?.venue?.id) approvedSet.add(String(c.venue.id));
+                    if (c?.placeId) approvedSet.add(String(c.placeId));
+                    if (c?.venue?.placeId) approvedSet.add(String(c.venue.placeId));
+                    if (nameKey) approvedSet.add(nameKey);
+                } else if (status === "pending" || status === "under_review" || status === "submitted" || !status) {
+                    if (targetId) pendingSet.add(targetId);
+                    if (c?.venue?._id) pendingSet.add(String(c.venue._id));
+                    if (c?.venue?.id) pendingSet.add(String(c.venue.id));
+                    if (c?.placeId) pendingSet.add(String(c.placeId));
+                    if (c?.venue?.placeId) pendingSet.add(String(c.venue.placeId));
+                    if (nameKey) pendingSet.add(nameKey);
                 }
             });
         }
 
-        return set;
+        // If a venue is in approvedSet, ensure it is not treated as pending
+        approvedSet.forEach((id) => pendingSet.delete(id));
+
+        return { pendingVenueIds: pendingSet, approvedVenueIds: approvedSet };
     }, [rawClaims, claimsVersion]);
 
     const handleViewDetails = (v: any) => {
@@ -92,7 +108,22 @@ export function VenueManagement() {
 
         const vId = String(details?._id || details?.id || base?._id || base?.id || base?.placeId || "");
         const baseName = (details?.name || details?.title || base?.name || base?.title || "").trim().toLowerCase();
-        const isPending = Boolean(
+
+        const isApproved = Boolean(
+            approvedVenueIds.has(vId) ||
+            (base?._id && approvedVenueIds.has(String(base._id))) ||
+            (base?.id && approvedVenueIds.has(String(base.id))) ||
+            (base?.placeId && approvedVenueIds.has(String(base.placeId))) ||
+            (baseName && approvedVenueIds.has(`name:${baseName}`)) ||
+            base?.isClaimed ||
+            base?.claimStatus === "approved" ||
+            base?.status === "approved" ||
+            details?.isClaimed ||
+            details?.claimStatus === "approved" ||
+            details?.status === "approved"
+        );
+
+        const isPending = !isApproved && Boolean(
             pendingVenueIds.has(vId) ||
             (base?._id && pendingVenueIds.has(String(base._id))) ||
             (base?.id && pendingVenueIds.has(String(base.id))) ||
@@ -104,11 +135,14 @@ export function VenueManagement() {
             details?.claimStatus === "pending"
         );
 
+        const claimStatus = isApproved ? "approved" : isPending ? "pending" : (details?.claimStatus || base?.claimStatus || (isApproved ? "approved" : undefined));
+
         if (!details) {
             return {
                 ...base,
+                isClaimed: isApproved,
                 isPending,
-                claimStatus: isPending ? "pending" : base.claimStatus,
+                claimStatus,
             };
         }
 
@@ -133,9 +167,9 @@ export function VenueManagement() {
                 ? details.operatingHours
                 : base.operatingHours || [],
             location: details.location || base.location,
-            isClaimed: details.isClaimed !== undefined ? details.isClaimed : base.isClaimed,
+            isClaimed: isApproved || Boolean(details.isClaimed),
             isPending,
-            claimStatus: isPending ? "pending" : (details.claimStatus || (details.isClaimed ? "approved" : undefined)),
+            claimStatus,
             demographics: base.demographics || {
                 male: details.gender?.malePercent ?? details.gender?.male ?? 0,
                 female: details.gender?.femalePercent ?? details.gender?.female ?? 0,
@@ -144,7 +178,7 @@ export function VenueManagement() {
             totalGoing: details.totalGoing ?? base.totalGoing,
             capacity: details.capacity || base.capacity,
         };
-    }, [selectedVenueId, selectedVenueCard, fetchedVenueDetails, pendingVenueIds]);
+    }, [selectedVenueId, selectedVenueCard, fetchedVenueDetails, pendingVenueIds, approvedVenueIds]);
 
     const handleOpenClaim = (v: any) => {
         setVenueToClaim(v);
@@ -182,7 +216,19 @@ export function VenueManagement() {
         ? venues.map((v: any) => {
             const vId = String(v._id || v.id || v.placeId || "");
             const vName = (v.name || v.title || "").trim().toLowerCase();
-            const isPending = Boolean(
+
+            const isApproved = Boolean(
+                approvedVenueIds.has(vId) ||
+                (v._id && approvedVenueIds.has(String(v._id))) ||
+                (v.id && approvedVenueIds.has(String(v.id))) ||
+                (v.placeId && approvedVenueIds.has(String(v.placeId))) ||
+                (vName && approvedVenueIds.has(`name:${vName}`)) ||
+                v.isClaimed === true ||
+                v.claimStatus === "approved" ||
+                v.status === "approved"
+            );
+
+            const isPending = !isApproved && Boolean(
                 pendingVenueIds.has(vId) ||
                 (v._id && pendingVenueIds.has(String(v._id))) ||
                 (v.id && pendingVenueIds.has(String(v.id))) ||
@@ -192,6 +238,8 @@ export function VenueManagement() {
                 v.claimStatus === "pending" ||
                 v.isPending === true
             );
+
+            const claimStatus = isApproved ? "approved" : isPending ? "pending" : (v.claimStatus || (v.isClaimed ? "approved" : undefined));
 
             return {
                 id: v._id || v.id,
@@ -209,9 +257,9 @@ export function VenueManagement() {
                 icon: v.icon,
                 iconBackgroundColor: v.iconBackgroundColor,
                 rating: typeof v.rating === "number" ? v.rating : undefined,
-                isClaimed: Boolean(v.isClaimed),
-                claimStatus: isPending ? "pending" : (v.claimStatus || (v.isClaimed ? "approved" : undefined)),
-                status: isPending ? "pending" : v.status,
+                isClaimed: isApproved,
+                claimStatus,
+                status: isApproved ? "approved" : isPending ? "pending" : v.status,
                 isPending,
                 hasStories: Boolean(v.hasStories),
                 storiesCount: v.storiesCount || 0,
@@ -385,13 +433,17 @@ export function VenueManagement() {
                                         setSelectedVenueCard(null);
                                     }}
                                     onClaim={handleOpenClaim}
-                                    onClaimSubmitted={() => {
-                                        setSelectedVenueId(null);
-                                        setSelectedVenueCard(null);
+                                    onClaimSubmitted={(submittedVenue?: any) => {
+                                        const targetVenue = submittedVenue || activeVenue || selectedVenueCard;
+                                        if (targetVenue) {
+                                            recordVenueClaimed(targetVenue);
+                                        }
+                                        if (selectedVenueId) {
+                                            addPendingClaimId(selectedVenueId);
+                                        }
                                         setIsClaimModalOpen(false);
                                         setVenueToClaim(null);
-                                        refetchVenues();
-                                        refetchClaims();
+                                        setPendingSuccessVenue(targetVenue);
                                     }}
                                 />
                             </div>
@@ -403,26 +455,33 @@ export function VenueManagement() {
             {/* Global Claim Form Modal */}
             <ClaimFormModal
                 isOpen={isClaimModalOpen}
-                venue={venueToClaim}
+                venue={venueToClaim || selectedVenueCard || activeVenue}
                 onClose={() => {
                     setIsClaimModalOpen(false);
                     setVenueToClaim(null);
                 }}
-                onSubmitted={() => {
-                    if (venueToClaim) {
-                        recordVenueClaimed(venueToClaim);
-                    }
-                    if (selectedVenueCard) {
-                        recordVenueClaimed(selectedVenueCard);
+                onSubmitted={(submittedVenue?: any) => {
+                    const targetVenue = submittedVenue || venueToClaim || selectedVenueCard || activeVenue;
+                    if (targetVenue) {
+                        recordVenueClaimed(targetVenue);
                     }
                     if (selectedVenueId) {
                         addPendingClaimId(selectedVenueId);
                     }
-                    // Close the detail view as well to redirect back to venue management list page
-                    setSelectedVenueId(null);
-                    setSelectedVenueCard(null);
                     setIsClaimModalOpen(false);
                     setVenueToClaim(null);
+                    setPendingSuccessVenue(targetVenue);
+                }}
+            />
+
+            {/* Global Claim Pending Confirmation Dialog */}
+            <ClaimPendingDialog
+                isOpen={Boolean(pendingSuccessVenue)}
+                venueName={pendingSuccessVenue?.title || pendingSuccessVenue?.name || "your bar"}
+                onOk={() => {
+                    setPendingSuccessVenue(null);
+                    setSelectedVenueId(null);
+                    setSelectedVenueCard(null);
                     refetchVenues();
                     refetchClaims();
                 }}

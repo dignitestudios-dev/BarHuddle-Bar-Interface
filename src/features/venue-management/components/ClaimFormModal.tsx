@@ -14,7 +14,7 @@ export interface ClaimFormModalProps {
     isOpen: boolean;
     venue?: any;
     onClose: () => void;
-    onSubmitted?: () => void;
+    onSubmitted?: (venue?: any) => void;
 }
 
 const MAX_FILE_SIZE_MB = 10;
@@ -53,7 +53,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            
+
             // 1. Check file size against allowed limit
             if (file.size > MAX_FILE_SIZE_BYTES) {
                 const uploadedMb = (file.size / (1024 * 1024)).toFixed(1);
@@ -93,7 +93,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!venue) {
             toast.error("No venue selected");
             return;
@@ -114,7 +114,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
         try {
             setFileError("");
             await claimVenue(formData);
-            
+
             // Hit /users API to fetch updated user state and update Redux
             const profileResponse = await getMe();
             if (profileResponse?.user) {
@@ -137,7 +137,7 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
             toast.success("Ownership documents submitted successfully!");
             onClose();
             try {
-                onSubmitted?.();
+                onSubmitted?.(venue);
             } catch (cbErr) {
                 console.error("Error in onSubmitted callback:", cbErr);
             }

@@ -14,4 +14,5 @@ export * from "./AttendeesModal";
 export * from "./SubscriptionPlansModal";
 export * from "./SubscriptionPlansScreen";
 export * from "./VenueManagement";
+export * from "./ClaimPendingDialog";
 
