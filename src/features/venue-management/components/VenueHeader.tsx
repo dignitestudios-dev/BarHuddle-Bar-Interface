@@ -9,7 +9,7 @@ export interface VenueHeaderProps {
     venue?: VenueCardData;
     onBack?: () => void;
     onClaim?: (venue: VenueCardData) => void;
-    onClaimSubmitted?: () => void;
+    onClaimSubmitted?: (venue?: any) => void;
     onOpenSubscription?: () => void;
     className?: string;
 }
@@ -25,7 +25,8 @@ export function VenueHeader({
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-    const isPending = Boolean(venue?.isPending || venue?.claimStatus === "pending" || venue?.status === "pending");
+    const isApproved = Boolean(venue?.isClaimed || venue?.claimStatus === "approved" || venue?.status === "approved");
+    const isPending = !isApproved && Boolean(venue?.isPending || venue?.claimStatus === "pending" || venue?.status === "pending");
 
     const handleClaimClick = () => {
         if (onClaim && venue) {
@@ -35,9 +36,9 @@ export function VenueHeader({
         }
     };
 
-    const handleClaimSubmitted = () => {
+    const handleClaimSubmitted = (submittedVenue?: any) => {
         setIsClaimModalOpen(false);
-        onClaimSubmitted?.();
+        onClaimSubmitted?.(submittedVenue || venue);
     };
 
     return (
@@ -75,14 +76,14 @@ export function VenueHeader({
                         >
                             Pending
                         </button>
-                    ) : venue?.isClaimed ? (
+                    ) : isApproved ? (
                         <button
                             type="button"
                             disabled
                             className="h-[48px] sm:h-[57px] px-6 rounded-[24px] bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[14px] text-white/40 cursor-not-allowed select-none"
                             title="This venue has already been claimed"
                         >
-                            Claimed
+                            Already Claimed
                         </button>
                     ) : (
                         <button

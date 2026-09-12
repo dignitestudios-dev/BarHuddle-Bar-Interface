@@ -306,14 +306,14 @@ export function VenueCard({
                         >
                             Pending
                         </button>
-                    ) : venue.isClaimed ? (
+                    ) : (venue.isClaimed || venue.claimStatus === "approved" || venue.status === "approved") ? (
                         <button
                             type="button"
                             disabled
                             className="flex-1 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center font-bold text-[12px] text-white/40 cursor-not-allowed select-none"
                             title="This venue has already been claimed"
                         >
-                            Claimed
+                            Already Claimed
                         </button>
                     ) : (
                         <button

@@ -16,7 +16,7 @@ export interface VenueDetailViewProps {
     venue?: VenueCardData;
     onBack?: () => void;
     onClaim?: (venue: VenueCardData) => void;
-    onClaimSubmitted?: () => void;
+    onClaimSubmitted?: (venue?: any) => void;
     className?: string;
 }
 
@@ -67,6 +67,8 @@ export function VenueDetailView({
 
     const formattedCategory = formatCategory(venue.category);
     const heroImage = venue.coverImage || venue.imageUrl || (venue.images && venue.images.length > 0 ? venue.images[0] : "");
+    const isApproved = Boolean(venue.isClaimed || venue.claimStatus === "approved" || venue.status === "approved");
+    const isPending = !isApproved && Boolean(venue.isPending || venue.claimStatus === "pending" || venue.status === "pending");
 
     return (
         <div className={`w-full flex flex-col gap-6 font-['Manrope',sans-serif] pb-24 ${className}`}>
@@ -118,12 +120,17 @@ export function VenueDetailView({
                                 </div>
                             )}
 
-                            {venue.isClaimed ? (
-                                <div className="px-3 py-1.5 rounded-full bg-emerald-500/80 border border-emerald-400/40 backdrop-blur-md flex items-center gap-1 text-white text-[11px] font-bold">
+                            {isPending ? (
+                                <div className="px-3 py-1.5 rounded-full bg-amber-500/80 border border-amber-400/40 backdrop-blur-md flex items-center gap-1.5 text-white text-[11px] font-bold shadow-lg">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                    <span>Claim Pending</span>
+                                </div>
+                            ) : isApproved ? (
+                                <div className="px-3 py-1.5 rounded-full bg-emerald-500/80 border border-emerald-400/40 backdrop-blur-md flex items-center gap-1 text-white text-[11px] font-bold shadow-lg">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    <span>Claimed</span>
+                                    <span>Already Claimed</span>
                                 </div>
                             ) : (
                                 <div className="px-3 py-1.5 rounded-full bg-[rgba(124,58,237,0.6)] border border-[rgba(124,58,237,0.4)] backdrop-blur-md flex items-center gap-1 text-[#E8FF57] text-[11px] font-bold">
