@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Image from "next/image";
 import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 
 export interface EditDetailsModalProps {
@@ -143,10 +144,10 @@ export function EditDetailsModal({ isOpen, onClose, onSave }: EditDetailsModalPr
                                     key={idx}
                                     className="relative w-[76px] h-[90px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                 >
-                                    <img
+                                    <Image
                                         src={cleanImageUrl(imgUrl, DEFAULT_VENUE_IMAGE)}
                                         alt=""
-                                        onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                                        fill
                                         className="w-full h-full object-cover opacity-80"
                                     />
 
@@ -198,11 +199,10 @@ export function EditDetailsModal({ isOpen, onClose, onSave }: EditDetailsModalPr
                                             key={idx}
                                             type="button"
                                             onClick={() => toggleDay(idx)}
-                                            className={`flex-1 h-10 rounded-[12px] flex items-center justify-center font-semibold text-[14px] leading-[19px] transition-all cursor-pointer ${
-                                                isSelected
+                                            className={`flex-1 h-10 rounded-[12px] flex items-center justify-center font-semibold text-[14px] leading-[19px] transition-all cursor-pointer ${isSelected
                                                     ? "bg-[rgba(124,58,237,0.12)] border border-[#B45FF2] shadow-[0px_1px_10.5px_rgba(194,122,255,0.38)] text-[#E8C7FF]"
                                                     : "bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] text-white/70 hover:text-white"
-                                            }`}
+                                                }`}
                                         >
                                             {day.label}
                                         </button>

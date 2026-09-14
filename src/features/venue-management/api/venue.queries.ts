@@ -15,11 +15,12 @@ export const useMyVenuesQuery = (
   page: number = 1,
   limit: number = 10,
   search: string = "",
+  type: string = "list"
   // isClaimed: boolean = false
 ) => {
   return useQuery({
-    queryKey: [...venueKeys.lists(), { page, limit, search }],
-    queryFn: () => venueService.getMyVenues(page, limit, search),
+    queryKey: [...venueKeys.lists(), { page, limit, search, type }],
+    queryFn: () => venueService.getMyVenues(page, limit, search, type),
     enabled: !!search?.trim(),
   });
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Image from "next/image";
 import { useProfile } from "@/context/ProfileContext";
 import { EditProfileModal } from "@/components/layout/EditProfileModal";
 import { useGetEventsQuery } from "@/features/events/api/events.queries";
@@ -58,9 +59,10 @@ export default function ProfilePage() {
                     {/* Main Avatar Circle */}
                     <div className="absolute left-[217px] top-[74px] w-[157px] h-[157px] bg-gradient-to-br from-[#7C3AED] to-[#F472B6] border-4 border-[#04022E] shadow-[0px_0px_32px_rgba(124,58,237,0.5)] rounded-full flex items-center justify-center overflow-hidden z-10">
                         {avatarUrl ? (
-                            <img
+                            <Image
                                 src={avatarUrl}
                                 alt={fullName}
+                                fill
                                 className="w-full h-full object-cover"
                             />
                         ) : (

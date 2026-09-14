@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { cleanImageUrl } from "@/utils/image";
 
 export interface RankedEventItem {
@@ -99,9 +100,11 @@ export function TopPerformingEventsCard({
                     >
                         {/* Left: Thumbnail & Details */}
                         <div className="flex items-center gap-3 min-w-0">
-                            <img
+                            <Image
                                 src={cleanImageUrl(item.image, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                                 alt={item.title}
+                                width={40}
+                                height={40}
                                 className="w-10 h-10 rounded-[12px] object-cover shrink-0 border border-[rgba(124,58,237,0.2)]"
                             />
                             <div className="flex flex-col truncate">

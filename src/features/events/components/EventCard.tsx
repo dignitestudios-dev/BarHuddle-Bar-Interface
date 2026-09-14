@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { cleanImageUrl } from "@/utils/image";
 
@@ -139,9 +140,10 @@ export function EventCard({
                 )}
 
                 {/* Event Photo */}
-                <img
+                <Image
                     src={cleanImageUrl(event.imageUrl, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                     alt={event.title}
+                    fill
                     className="w-full h-full object-cover opacity-75 group-hover:scale-105 transition-transform duration-500"
                 />
 
@@ -287,9 +289,8 @@ export function EventCard({
                             {performanceLabel}
                         </span>
                         <span
-                            className={`font-extrabold text-[10px] leading-[15px] ${
-                                event.isBoosted ? "text-[#E8FF57]" : "text-[#F472B6]"
-                            }`}
+                            className={`font-extrabold text-[10px] leading-[15px] ${event.isBoosted ? "text-[#E8FF57]" : "text-[#F472B6]"
+                                }`}
                         >
                             {performancePercent}%
                         </span>
@@ -297,11 +298,10 @@ export function EventCard({
                     {/* Progress Track */}
                     <div className="w-full h-[6px] rounded-full bg-[rgba(124,58,237,0.12)] overflow-hidden">
                         <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                                event.isBoosted
+                            className={`h-full rounded-full transition-all duration-500 ${event.isBoosted
                                     ? "bg-gradient-to-r from-[#7C3AED] via-[#A855F7] to-[#E8FF57] shadow-[0px_0px_6px_rgba(232,255,87,0.44)]"
                                     : "bg-gradient-to-r from-[#7C3AED] to-[#4ADE80] shadow-[0px_0px_6px_rgba(74,222,128,0.44)]"
-                            }`}
+                                }`}
                             style={{ width: `${performancePercent}%` }}
                         />
                     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Image from "next/image";
 import { useAddGalleryImageMutation } from "@/features/venue-management/api/venue.mutations";
 import { toast } from "sonner";
 
@@ -123,17 +124,17 @@ export function UploadGalleryModal({
                     {/* Upload Drop Area */}
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className={`relative w-full h-56 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 cursor-pointer overflow-hidden transition-all ${
-                            previewUrl
+                        className={`relative w-full h-56 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 cursor-pointer overflow-hidden transition-all ${previewUrl
                                 ? "border-[rgba(124,58,237,0.6)] bg-black/50"
                                 : "border-[rgba(124,58,237,0.3)] bg-[#140E50]/40 hover:bg-[#140E50]/70 hover:border-[#7C3AED]"
-                        }`}
+                            }`}
                     >
                         {previewUrl ? (
                             <>
-                                <img
+                                <Image
                                     src={previewUrl}
                                     alt="Upload preview"
+                                    fill
                                     className="w-full h-full object-cover rounded-xl"
                                 />
                                 <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white gap-2">

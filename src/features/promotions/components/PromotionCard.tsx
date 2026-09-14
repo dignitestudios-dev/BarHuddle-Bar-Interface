@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { cleanImageUrl } from "@/utils/image";
 
 export interface PromotionData {
@@ -120,22 +121,22 @@ export function PromotionCard({
     const displayViews = rawPromotion?.totalViews !== undefined && rawPromotion?.totalViews !== null
         ? String(rawPromotion.totalViews)
         : promotion.totalViews !== undefined && promotion.totalViews !== null
-        ? String(promotion.totalViews)
-        : promotion.views ?? "0";
+            ? String(promotion.totalViews)
+            : promotion.views ?? "0";
 
     const rawClickPer5Min = rawPromotion?.clickPer5Min !== undefined && rawPromotion?.clickPer5Min !== null
         ? rawPromotion.clickPer5Min
         : rawPromotion?.clicksPer5Min !== undefined && rawPromotion?.clicksPer5Min !== null
-        ? rawPromotion.clicksPer5Min
-        : rawPromotion?.clickPer5Minute !== undefined && rawPromotion?.clickPer5Minute !== null
-        ? rawPromotion.clickPer5Minute
-        : promotion.clickPer5Min;
+            ? rawPromotion.clicksPer5Min
+            : rawPromotion?.clickPer5Minute !== undefined && rawPromotion?.clickPer5Minute !== null
+                ? rawPromotion.clickPer5Minute
+                : promotion.clickPer5Min;
 
     const rawClickPerMin = rawPromotion?.clickPerMin !== undefined && rawPromotion?.clickPerMin !== null
         ? rawPromotion.clickPerMin
         : rawPromotion?.clicksPerMin !== undefined && rawPromotion?.clicksPerMin !== null
-        ? rawPromotion.clicksPerMin
-        : promotion.clickPerMin;
+            ? rawPromotion.clicksPerMin
+            : promotion.clickPerMin;
 
     const rawAvgMins = rawPromotion?.averageTimeBetweenViewsMinutes !== undefined && rawPromotion?.averageTimeBetweenViewsMinutes !== null
         ? rawPromotion.averageTimeBetweenViewsMinutes
@@ -144,18 +145,18 @@ export function PromotionCard({
     const displayAvgClick = rawClickPer5Min !== undefined && rawClickPer5Min !== null
         ? formatClickPer5Min(rawClickPer5Min)
         : rawClickPerMin !== undefined && rawClickPerMin !== null
-        ? formatClickPerMin(rawClickPerMin)
-        : rawAvgMins !== undefined && rawAvgMins !== null
-        ? Number(rawAvgMins) >= 60
-            ? `${Math.floor(Number(rawAvgMins) / 60)}h ${Number(rawAvgMins) % 60 ? `${Number(rawAvgMins) % 60}m` : ""}`.trim()
-            : `${Number(rawAvgMins)}m`
-        : promotion.avgRetentionTime || "0/5min";
+            ? formatClickPerMin(rawClickPerMin)
+            : rawAvgMins !== undefined && rawAvgMins !== null
+                ? Number(rawAvgMins) >= 60
+                    ? `${Math.floor(Number(rawAvgMins) / 60)}h ${Number(rawAvgMins) % 60 ? `${Number(rawAvgMins) % 60}m` : ""}`.trim()
+                    : `${Number(rawAvgMins)}m`
+                : promotion.avgRetentionTime || "0/5min";
 
     const displayPerformanceRate = rawPromotion?.performanceRate !== undefined && rawPromotion?.performanceRate !== null
         ? Number(rawPromotion.performanceRate)
         : promotion.performanceRate !== undefined && promotion.performanceRate !== null
-        ? Number(promotion.performanceRate)
-        : promotion.performancePercent ?? 0;
+            ? Number(promotion.performanceRate)
+            : promotion.performancePercent ?? 0;
 
     return (
         <div
@@ -164,9 +165,10 @@ export function PromotionCard({
             {/* Top Image Section (176px) */}
             <div className="relative w-full h-[176px] bg-[#3C0366] overflow-hidden shrink-0">
                 {/* Promo Image */}
-                <img
+                <Image
                     src={cleanImageUrl(activeImageUrl, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                     alt={promotion.title}
+                    fill
                     className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500"
                 />
 
@@ -211,11 +213,10 @@ export function PromotionCard({
                             {banners.map((_, idx) => (
                                 <span
                                     key={idx}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                                        idx === currentImgIndex
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentImgIndex
                                             ? "w-3.5 bg-[#4ADE80] shadow-[0_0_6px_#4ADE80]"
                                             : "w-1.5 bg-white/40"
-                                    }`}
+                                        }`}
                                 />
                             ))}
                         </div>
@@ -226,18 +227,17 @@ export function PromotionCard({
                 {promotion.tagText &&
                     promotion.tagText.trim() !== "" &&
                     promotion.tagText.trim().toLowerCase() !== "special" && (
-                    <div
-                        className={`absolute top-3.5 left-3.5 px-3 py-1 rounded-full flex items-center justify-center font-extrabold text-[12px] leading-[16px] tracking-[0.3px] shadow-lg z-10 ${
-                            isGreenTag
-                                ? "bg-[#4ADE80] text-[#04022E] shadow-[0px_0px_20px_rgba(74,222,128,0.5)]"
-                                : isYellowTag
-                                ? "bg-[#E8FF57] text-[#04022E] shadow-[0px_0px_20px_rgba(232,255,87,0.5)]"
-                                : "bg-[#9F4FFA] text-white shadow-[0px_0px_20px_rgba(159,79,250,0.5)]"
-                        }`}
-                    >
-                        {promotion.tagText}
-                    </div>
-                )}
+                        <div
+                            className={`absolute top-3.5 left-3.5 px-3 py-1 rounded-full flex items-center justify-center font-extrabold text-[12px] leading-[16px] tracking-[0.3px] shadow-lg z-10 ${isGreenTag
+                                    ? "bg-[#4ADE80] text-[#04022E] shadow-[0px_0px_20px_rgba(74,222,128,0.5)]"
+                                    : isYellowTag
+                                        ? "bg-[#E8FF57] text-[#04022E] shadow-[0px_0px_20px_rgba(232,255,87,0.5)]"
+                                        : "bg-[#9F4FFA] text-white shadow-[0px_0px_20px_rgba(159,79,250,0.5)]"
+                                }`}
+                        >
+                            {promotion.tagText}
+                        </div>
+                    )}
 
                 {/* Top Right Status Badge (Active / Upcoming / Expired) */}
                 {statusConfig && (
@@ -293,15 +293,14 @@ export function PromotionCard({
                                 return (
                                     <span
                                         key={day}
-                                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
-                                            isActiveDay
+                                        className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${isActiveDay
                                                 ? isGreenTag
                                                     ? "bg-[rgba(74,222,128,0.18)] border border-[rgba(74,222,128,0.4)] text-[#4ADE80] shadow-[0_0_8px_rgba(74,222,128,0.2)]"
                                                     : isYellowTag
-                                                    ? "bg-[rgba(232,255,87,0.18)] border border-[rgba(232,255,87,0.4)] text-[#E8FF57] shadow-[0_0_8px_rgba(232,255,87,0.2)]"
-                                                    : "bg-[rgba(159,79,250,0.2)] border border-[rgba(159,79,250,0.45)] text-[#C4B5FD] shadow-[0_0_8px_rgba(159,79,250,0.2)]"
+                                                        ? "bg-[rgba(232,255,87,0.18)] border border-[rgba(232,255,87,0.4)] text-[#E8FF57] shadow-[0_0_8px_rgba(232,255,87,0.2)]"
+                                                        : "bg-[rgba(159,79,250,0.2)] border border-[rgba(159,79,250,0.45)] text-[#C4B5FD] shadow-[0_0_8px_rgba(159,79,250,0.2)]"
                                                 : "bg-[rgba(124,58,237,0.03)] border border-[rgba(124,58,237,0.08)] text-[#8B7EC8]/25 opacity-35"
-                                        }`}
+                                            }`}
                                     >
                                         {day}
                                     </span>
@@ -329,7 +328,7 @@ export function PromotionCard({
                             {displayAvgClick}
                         </span>
                         <span className="font-semibold text-[9px] leading-[13px] text-[#8B7EC8] text-center truncate w-full px-0.5">
-                           Clicks Per 5 Mins
+                            Clicks Per 5 Mins
                         </span>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getAvatarUrl } from "@/context/ProfileContext";
@@ -41,14 +42,14 @@ export function ProfileDropdown() {
     const displayName = (user as any)?.firstName || (user as any)?.name || (user as any)?.fullName || user?.email?.split('@')[0] || "User";
     const firstName = displayName.split(" ")[0];
     const avatarUrl = getAvatarUrl(user);
-    
+
     const getInitials = (name: string) => {
         const parts = name.trim().split(" ").filter(Boolean);
         if (parts.length === 0) return "U";
         if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
-    
+
     const initials = getInitials(displayName);
 
     return (
@@ -62,9 +63,11 @@ export function ProfileDropdown() {
                 {/* Gradient Avatar or Image */}
                 {avatarUrl ? (
                     <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-[rgba(124,58,237,0.4)]">
-                        <img
+                        <Image
                             src={avatarUrl}
                             alt={firstName}
+                            width={24}
+                            height={24}
                             className="w-full h-full object-cover"
                         />
                     </div>
@@ -79,9 +82,8 @@ export function ProfileDropdown() {
 
                 {/* Chevron Down */}
                 <svg
-                    className={`w-3 h-3 text-[#C27AFF] transition-transform duration-200 ${
-                        showProfileMenu ? "rotate-180" : ""
-                    }`}
+                    className={`w-3 h-3 text-[#C27AFF] transition-transform duration-200 ${showProfileMenu ? "rotate-180" : ""
+                        }`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

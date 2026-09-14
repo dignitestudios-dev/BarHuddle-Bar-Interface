@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import Image from "next/image";
 import { format } from "date-fns";
 import { StatsCard } from "@/components/ui";
 import { VisitorTrendsChart } from "@/components/charts/VisitorTrendsChart";
@@ -332,9 +333,11 @@ export function Dashboard() {
                             className="group flex items-center gap-3.5 p-2.5 pr-5 rounded-2xl bg-[#140E50]/75 hover:bg-[#140E50] border border-[rgba(124,58,237,0.3)] hover:border-[rgba(124,58,237,0.6)] backdrop-blur-xl shadow-lg transition-all"
                         >
                             {selectedVenue.coverImage ? (
-                                <img
+                                <Image
                                     src={cleanImageUrl(selectedVenue.coverImage)}
                                     alt={selectedVenue.name}
+                                    width={48}
+                                    height={48}
                                     className="w-12 h-12 rounded-xl object-cover border border-purple-900/50 shrink-0 group-hover:scale-105 transition-transform"
                                 />
                             ) : (

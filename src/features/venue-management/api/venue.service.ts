@@ -51,11 +51,11 @@ export const venueService = {
   // 3. Venue Management Endpoints
 
   // List My Venues
-  getMyVenues: async (page = 1, limit = 10, search = ""): Promise<Venue[]> => {
+  getMyVenues: async (page = 1, limit = 10, search = "", type = "list"): Promise<any> => {
     const response = await axiosInstance.get("/venues", {
-      params: { page, limit, search }
+      params: { page, limit, search, type }
     });
-    return response.data?.data || [];
+    return response.data;
   },
 
   getOwnerVenues: async (): Promise<Venue[]> => {

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useGetBestPerformingEventsQuery } from "@/features/analytics/api/analytics.queries";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,9 +65,10 @@ function EventPerformanceRow({ event }: { event: any }) {
             {/* Event Thumbnail */}
             <div className="relative w-[100px] h-[87px] rounded-[12px] overflow-hidden shrink-0 bg-gradient-to-br from-[#1E0938] to-[#0B0633] flex items-center justify-center border border-[rgba(124,58,237,0.2)]">
                 {imageSrc ? (
-                    <img
+                    <Image
                         src={imageSrc}
                         alt={title}
+                        fill
                         className="w-full h-full object-cover"
                     />
                 ) : (

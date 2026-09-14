@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useRemoveGalleryImageMutation } from "@/features/venue-management/api/venue.mutations";
 import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 import { toast } from "sonner";
@@ -87,10 +88,10 @@ export function DeleteGalleryConfirmModal({
                 {/* Thumbnail Preview */}
                 {imageUrl && (
                     <div className="relative w-full h-44 rounded-2xl overflow-hidden bg-black/50 border border-white/10 shadow-inner">
-                        <img
+                        <Image
                             src={cleanImageUrl(imageUrl, DEFAULT_VENUE_IMAGE)}
                             alt=""
-                            onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                            fill
                             className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -292,7 +293,7 @@ export function CreateEventModal({
     const isMaxImagesReached = currentImagesCount >= MAX_IMAGES_COUNT;
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]"
             onClick={(e) => {
                 if (isLoading) return;
@@ -394,9 +395,10 @@ export function CreateEventModal({
                                             key={`existing-${idx}`}
                                             className="relative w-[76px] h-[90px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                         >
-                                            <img
+                                            <Image
                                                 src={cleanImageUrl(imgUrl)}
                                                 alt={`Current banner ${idx + 1}`}
+                                                fill
                                                 className="w-full h-full object-cover opacity-80"
                                             />
                                             <button
@@ -425,9 +427,10 @@ export function CreateEventModal({
                                             key={`new-${idx}`}
                                             className="relative w-[76px] h-[90px] rounded-[12px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                         >
-                                            <img
+                                            <Image
                                                 src={imgUrl}
                                                 alt={`New image ${idx + 1}`}
+                                                fill
                                                 className="w-full h-full object-cover opacity-80"
                                             />
                                             <button

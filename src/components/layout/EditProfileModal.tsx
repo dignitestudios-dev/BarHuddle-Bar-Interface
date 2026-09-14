@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { useUpdateProfileMutation } from "@/features/auth/api/auth.mutations";
 import { RootState, useAppDispatch, useAppSelector } from "@/store";
 import { updateUser, User } from "@/store/slices/auth.slice";
@@ -156,9 +157,10 @@ export function EditProfileModal({
                     <div className="flex flex-col items-center mb-5">
                         <div className="relative w-20 h-20 rounded-full overflow-hidden bg-white/10 flex items-center justify-center border-2 border-[#7C3AED] shadow-md group">
                             {previewUrl ? (
-                                <img
+                                <Image
                                     src={previewUrl}
                                     alt="Profile Preview"
+                                    fill
                                     className="w-full h-full object-cover"
                                 />
                             ) : (

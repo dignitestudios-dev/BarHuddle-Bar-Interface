@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import type { Attendee } from "./VenueAttendeesSection";
 import { handleImageError } from "@/utils/image";
 
@@ -64,10 +65,10 @@ export function AttendeesModal({
                                 className="relative w-full h-[133.59px] rounded-[16px] overflow-hidden group shadow-[0px_4px_12px_rgba(0,0,0,0.25)] bg-[#100A3A]"
                             >
                                 {/* Attendee Image */}
-                                <img
+                                <Image
                                     src={person.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"}
                                     alt=""
-                                    onError={(e) => handleImageError(e, "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80")}
+                                    fill
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 />
 

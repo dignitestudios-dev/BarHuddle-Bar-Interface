@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { cleanImageUrl } from "@/utils/image";
 
 export interface EventTagConfig {
@@ -68,9 +69,10 @@ export function EventAnalyticsCard({
             {/* Top Banner Image Section */}
             <div className="relative w-[237.9px] h-[112px] bg-[#3C0366] shrink-0 overflow-hidden">
                 {/* Image */}
-                <img
+                <Image
                     src={cleanImageUrl(image, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                     alt={title}
+                    fill
                     className="w-full h-full object-cover opacity-80 transition-transform duration-300 hover:scale-105"
                 />
 

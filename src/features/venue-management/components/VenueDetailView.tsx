@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { VenueCardData, formatCategory } from "./VenueCard";
+import Image from "next/image";
+import { VenueCardData, formatCategory, getCategoryIcon } from "./VenueCard";
 import { VenueHeader } from "./VenueHeader";
 import { VenueStoriesSection, VisitorStory } from "./VenueStoriesSection";
 import { StoryViewerModal } from "./StoryViewerModal";
 import { VenueCarouselSection } from "./VenueCarouselSection";
 import { VenueInfoSection } from "./VenueInfoSection";
 import { VenueAttendeesSection } from "./VenueAttendeesSection";
-import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
+import { cleanImageUrl } from "@/utils/image";
 import { VenueEventsSection } from "./VenueEventsSection";
 import { SubscriptionPlansScreen } from "./SubscriptionPlansScreen";
 
@@ -43,6 +44,7 @@ export function VenueDetailView({
 }: VenueDetailViewProps) {
     const [activeStory, setActiveStory] = useState<VisitorStory | null>(null);
     const [showSubscriptionScreen, setShowSubscriptionScreen] = useState(false);
+    const [imgError, setImgError] = useState(false);
 
     if (showSubscriptionScreen) {
         return (
@@ -66,7 +68,11 @@ export function VenueDetailView({
         : null;
 
     const formattedCategory = formatCategory(venue.category);
-    const heroImage = venue.coverImage || venue.imageUrl || (venue.images && venue.images.length > 0 ? venue.images[0] : "");
+    const rawHeroImage = venue.coverImage || venue.imageUrl || (venue.images && venue.images.length > 0 ? venue.images[0] : "");
+    const finalHeroImage = cleanImageUrl(rawHeroImage, "");
+    const hasValidHeroImage = Boolean(finalHeroImage && !imgError);
+    const CategoryIcon = getCategoryIcon(venue.category, venue.title || venue.name);
+
     const isApproved = Boolean(venue.isClaimed || venue.claimStatus === "approved" || venue.status === "approved");
     const isPending = !isApproved && Boolean(venue.isPending || venue.claimStatus === "pending" || venue.status === "pending");
 
@@ -86,23 +92,42 @@ export function VenueDetailView({
                 <VenueCarouselSection slides={carouselSlides} />
             ) : (
                 /* Hero Image Section */
-                <div className="relative w-full h-[300px] md:h-[450px] rounded-[24px] overflow-hidden bg-[#140E50] border border-[rgba(124,58,237,0.3)] shadow-[0px_0px_40px_rgba(0,0,0,0.5)]">
-                    <img
-                        src={cleanImageUrl(heroImage, DEFAULT_VENUE_IMAGE)}
-                        alt=""
-                        onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
-                        className="w-full h-full object-cover"
-                    />
-                    
+                <div className="relative w-full h-[300px] md:h-[450px] rounded-[24px] overflow-hidden bg-[#0A0524] border border-[rgba(124,58,237,0.3)] shadow-[0px_0px_40px_rgba(0,0,0,0.5)]">
+                    {hasValidHeroImage ? (
+                        <Image
+                            src={finalHeroImage}
+                            alt=""
+                            fill
+                            onError={() => setImgError(true)}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#150D3A] via-[#0E0729] to-[#070318]">
+                            {/* Soft ambient halo spotlight matching design */}
+                            <div className="absolute w-64 h-64 rounded-full bg-[#F5E188]/20 blur-3xl pointer-events-none" />
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(245,225,136,0.22)_0%,_rgba(124,58,237,0.08)_40%,_transparent_70%)] pointer-events-none" />
+
+                            {/* Yellow Cocktail / Category Icon */}
+                            <div className="relative z-10 flex items-center justify-center mb-10 md:mb-16">
+                                <CategoryIcon
+                                    className="w-16 h-16 md:w-24 md:h-24 text-[#F5E188] drop-shadow-[0_0_24px_rgba(245,225,136,0.45)]"
+                                    strokeWidth={2.2}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     {/* Dark Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#05033A]/95 via-[#05033A]/30 to-transparent pointer-events-none" />
-                    
+
                     {/* Overlay Text Content */}
                     <div className="absolute bottom-0 left-0 p-6 md:p-10 flex flex-col gap-3">
                         <div className="flex items-center gap-2 flex-wrap">
                             <div className="px-3.5 py-1.5 rounded-full bg-[rgba(124,58,237,0.85)] border border-[rgba(124,58,237,0.5)] backdrop-blur-md flex items-center gap-1.5 w-fit">
-                                {venue.icon && (
-                                    <img src={venue.icon} alt="" className="w-3.5 h-3.5 object-contain" />
+                                {venue.icon ? (
+                                    <Image src={venue.icon} alt="" width={14} height={14} className="w-3.5 h-3.5 object-contain" onError={(e) => ((e.currentTarget as HTMLElement).style.display = "none")} />
+                                ) : (
+                                    <CategoryIcon className="w-3.5 h-3.5 text-[#E8FF57] shrink-0" strokeWidth={2.5} />
                                 )}
                                 <span className="font-bold text-[12px] leading-[16px] text-white">
                                     {formattedCategory}

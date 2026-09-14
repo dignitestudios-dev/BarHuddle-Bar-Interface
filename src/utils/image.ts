@@ -121,7 +121,7 @@ export const DEFAULT_VENUE_IMAGE =
  * If rawInput contains multiple concatenated URLs, returns the primary valid image URL.
  * Falls back to the provided fallback URL if rawInput is empty or invalid.
  */
-export function cleanImageUrl(rawInput: any, fallback: string = DEFAULT_VENUE_IMAGE): string {
+export function cleanImageUrl(rawInput: any, fallback: string = ""): string {
   if (!rawInput) return fallback;
 
   if (typeof rawInput === "string") {

@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+import Image from "next/image";
 import type { VisitorStory } from "./VenueStoriesSection";
 import { DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 
@@ -22,11 +24,11 @@ export function StoryViewerModal({ story, onClose }: StoryViewerModalProps) {
                 {/* Top Story Header */}
                 <div className="flex items-center justify-between z-10 pt-2">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-purple-500 shrink-0">
-                            <img
+                        <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-purple-500 shrink-0">
+                            <Image
                                 src={story.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"}
                                 alt=""
-                                onError={(e) => handleImageError(e, "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80")}
+                                fill
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -48,10 +50,10 @@ export function StoryViewerModal({ story, onClose }: StoryViewerModalProps) {
 
                 {/* Story Image */}
                 <div className="absolute inset-0 z-0">
-                    <img
+                    <Image
                         src={story.storyImageUrl || DEFAULT_VENUE_IMAGE}
                         alt=""
-                        onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                        fill
                         className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/30" />

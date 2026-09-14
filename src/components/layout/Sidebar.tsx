@@ -105,9 +105,11 @@ export function Sidebar() {
                     {/* User Avatar Circle */}
                     {avatarUrl ? (
                         <div className="relative w-9 h-9 rounded-full overflow-hidden shrink-0 border border-[rgba(124,58,237,0.4)]">
-                            <img
+                            <Image
                                 src={avatarUrl}
                                 alt={displayName}
+                                width={36}
+                                height={36}
                                 className="w-full h-full object-cover"
                             />
                         </div>

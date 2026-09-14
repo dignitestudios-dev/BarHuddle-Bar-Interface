@@ -2,7 +2,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
+import { getCategoryIcon } from "@/features/venue-management/components/VenueCard";
 
 export interface VenueSwitcherOption {
     _id?: string;
@@ -52,8 +54,10 @@ export function VenueSwitcherDropdown({
             ? activeVenue.images[0]
             : "");
 
+    const TriggerCategoryIcon = getCategoryIcon(activeVenue?.category, activeVenue?.name);
+
     return (
-        <div ref={dropdownRef} className="relative font-['Manrope',sans-serif] z-40">
+        <div ref={dropdownRef} className="relative font-['Manrope',sans-serif] z-20">
             {/* Dropdown Trigger Pill */}
             <button
                 type="button"
@@ -61,18 +65,16 @@ export function VenueSwitcherDropdown({
                 className="h-10 px-3.5 bg-[rgba(124,58,237,0.15)] hover:bg-[rgba(124,58,237,0.25)] border border-[rgba(124,58,237,0.35)] rounded-2xl flex items-center gap-2.5 text-white transition-all duration-150 focus:outline-none focus:border-[#7C3AED] shadow-sm cursor-pointer active:scale-95"
             >
                 {/* Mini Venue Image or Icon */}
-                <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-[rgba(124,58,237,0.4)] bg-[#140E50] flex items-center justify-center">
+                <div className="relative w-6 h-6 rounded-full overflow-hidden shrink-0 border border-[rgba(124,58,237,0.4)] bg-[#140E50] flex items-center justify-center">
                     {activeImage ? (
-                        <img
+                        <Image
                             src={cleanImageUrl(activeImage, DEFAULT_VENUE_IMAGE)}
                             alt=""
-                            onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                            fill
                             className="w-full h-full object-cover"
                         />
                     ) : (
-                        <svg className="w-3.5 h-3.5 text-[#E8FF57]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4" />
-                        </svg>
+                        <TriggerCategoryIcon className="w-3.5 h-3.5 text-[#F5E188]" strokeWidth={2.2} />
                     )}
                 </div>
 
@@ -83,9 +85,8 @@ export function VenueSwitcherDropdown({
 
                 {/* Animated Chevron */}
                 <svg
-                    className={`w-3.5 h-3.5 text-[#C27AFF] transition-transform duration-200 ${
-                        isOpen ? "rotate-180" : ""
-                    }`}
+                    className={`w-3.5 h-3.5 text-[#C27AFF] transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+                        }`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -121,6 +122,7 @@ export function VenueSwitcherDropdown({
                                 (venue.images && venue.images.length > 0
                                     ? venue.images[0]
                                     : "");
+                            const ItemCategoryIcon = getCategoryIcon(venue.category, venue.name);
 
                             return (
                                 <button
@@ -130,37 +132,33 @@ export function VenueSwitcherDropdown({
                                         onSelectVenue(vId);
                                         setIsOpen(false);
                                     }}
-                                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all group ${
-                                        isSelected
+                                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all group ${isSelected
                                             ? "bg-[rgba(124,58,237,0.25)] border border-[rgba(124,58,237,0.4)] shadow-sm"
                                             : "hover:bg-white/5 border border-transparent"
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
                                         {/* Avatar */}
-                                        <div className="w-8 h-8 rounded-xl overflow-hidden bg-[#140E50] border border-white/10 shrink-0 flex items-center justify-center">
+                                        <div className="relative w-8 h-8 rounded-xl overflow-hidden bg-[#140E50] border border-white/10 shrink-0 flex items-center justify-center">
                                             {vImg ? (
-                                                <img
+                                                <Image
                                                     src={cleanImageUrl(vImg, DEFAULT_VENUE_IMAGE)}
                                                     alt=""
-                                                    onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                                                    fill
                                                     className="w-full h-full object-cover"
                                                 />
                                             ) : (
-                                                <span className="text-xs font-bold text-[#E8FF57]">
-                                                    {venue.name ? venue.name.charAt(0) : "V"}
-                                                </span>
+                                                <ItemCategoryIcon className="w-4 h-4 text-[#F5E188]" strokeWidth={2.2} />
                                             )}
                                         </div>
 
                                         {/* Name & Address */}
                                         <div className="flex flex-col min-w-0 flex-1">
                                             <span
-                                                className={`text-xs font-bold truncate ${
-                                                    isSelected
+                                                className={`text-xs font-bold truncate ${isSelected
                                                         ? "text-[#E8FF57]"
                                                         : "text-white group-hover:text-[#C4B5FD]"
-                                                }`}
+                                                    }`}
                                             >
                                                 {venue.name || "Unnamed Venue"}
                                             </span>
