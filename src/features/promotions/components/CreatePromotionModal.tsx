@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -309,11 +310,11 @@ export function CreatePromotionModal({
             return;
         }
 
-        const formattedStartDate = formValues.validFrom instanceof Date 
-            ? formValues.validFrom.toLocaleDateString('en-CA') 
+        const formattedStartDate = formValues.validFrom instanceof Date
+            ? formValues.validFrom.toLocaleDateString('en-CA')
             : formValues.validFrom;
-        const formattedEndDate = formValues.validTo instanceof Date 
-            ? formValues.validTo.toLocaleDateString('en-CA') 
+        const formattedEndDate = formValues.validTo instanceof Date
+            ? formValues.validTo.toLocaleDateString('en-CA')
             : formValues.validTo;
 
         const startTime = formValues.startTime || "00:00";
@@ -362,7 +363,7 @@ export function CreatePromotionModal({
     const isMaxImagesReached = currentImagesCount >= MAX_IMAGES_COUNT;
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]"
             onClick={(e) => {
                 if (isLoading) return;
@@ -371,7 +372,7 @@ export function CreatePromotionModal({
         >
             {/* Modal Container */}
             <div className="relative w-full max-w-[563px] bg-[#05033A] border border-[rgba(124,58,237,0.25)] shadow-[0px_4px_24px_rgba(0,0,0,0.5)] rounded-[24px] p-6 sm:p-[30px] flex flex-col gap-6 max-h-[92vh] overflow-y-auto scrollbar-none">
-                
+
                 {/* Modal Header */}
                 <div className="flex items-center justify-between">
                     <h2 className="font-bold text-[20px] leading-[27px] text-white capitalize tracking-tight">
@@ -446,11 +447,11 @@ export function CreatePromotionModal({
                             >
                                 <div className="w-[30px] h-[30px] flex items-center justify-center text-[#B45FF2] mb-1">
                                     <svg className="w-[30px] h-[30px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={1.5} 
-                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={1.5}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                                         />
                                     </svg>
                                 </div>
@@ -477,9 +478,10 @@ export function CreatePromotionModal({
                                                 key={`existing-${idx}`}
                                                 className="relative w-[76px] h-[76px] rounded-[16px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                             >
-                                                <img
+                                                <Image
                                                     src={cleanImageUrl(imgUrl)}
                                                     alt={`Current banner ${idx + 1}`}
+                                                    fill
                                                     className="w-full h-full object-cover"
                                                 />
                                                 <button
@@ -508,9 +510,10 @@ export function CreatePromotionModal({
                                                 key={`new-${idx}`}
                                                 className="relative w-[76px] h-[76px] rounded-[16px] overflow-hidden shrink-0 border border-[rgba(124,58,237,0.3)] bg-purple-950/60"
                                             >
-                                                <img
+                                                <Image
                                                     src={imgUrl}
                                                     alt={`New promo image ${idx + 1}`}
+                                                    fill
                                                     className="w-full h-full object-cover"
                                                 />
                                                 <button
@@ -698,12 +701,13 @@ export function CreatePromotionModal({
                     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
                         {/* Promotion Card Preview Container */}
                         <div className="relative w-full h-[256px] bg-[rgba(10,6,48,0.8)] border border-[#2C166C] rounded-[24px] overflow-hidden flex flex-col justify-between p-0 shadow-lg">
-                            
+
                             {/* Top Image Banner */}
                             <div className="relative w-full h-[163px] overflow-hidden rounded-t-[24px]">
-                                <img
+                                <Image
                                     src={cleanImageUrl(imagePreviews[0], "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=800&q=80")}
                                     alt="Promotion preview cover"
+                                    fill
                                     className="w-full h-full object-cover opacity-75"
                                 />
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
     useGetOwnerVenuesQuery,
     useMyClaimsQuery,
@@ -14,6 +15,7 @@ import { DeleteGalleryConfirmModal } from "./DeleteGalleryConfirmModal";
 import { VenueSwitcherDropdown } from "./VenueSwitcherDropdown";
 import { MyVenueSkeleton } from "./MyVenueSkeleton";
 import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
+import { getCategoryIcon } from "@/features/venue-management/components/VenueCard";
 import { useAppSelector } from "@/store";
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 import { toast } from "sonner";
@@ -54,6 +56,7 @@ function parseGalleryItem(item: any, index: number): { id: string; url: string }
 
 export function MyVenueView() {
     const { user } = useAppSelector((state) => state.auth);
+    const [heroImgError, setHeroImgError] = useState(false);
 
     // Queries
     const {
@@ -215,6 +218,11 @@ export function MyVenueView() {
     // Active tab in details view: "overview" | "hours" | "gallery"
     const [activeSection, setActiveSection] = useState<"overview" | "hours" | "gallery">("overview");
 
+    // Reset hero image error state on active venue switch
+    useEffect(() => {
+        setHeroImgError(false);
+    }, [activeVenueId]);
+
     // Loading State
     if (((isLoadingVenues || isLoadingClaims) && venuesList.length === 0) || (isLoadingDetails && !activeVenue)) {
         return <MyVenueSkeleton />;
@@ -246,10 +254,13 @@ export function MyVenueView() {
         );
     }
 
-    const coverImg =
+    const rawCoverImg =
         activeVenue?.coverImage ||
         (activeVenue?.images && activeVenue.images.length > 0 ? activeVenue.images[0] : "") ||
         "";
+    const finalCoverImg = cleanImageUrl(rawCoverImg, "");
+    const hasValidCoverImg = Boolean(finalCoverImg && !heroImgError);
+    const CategoryIcon = getCategoryIcon(activeVenue?.category, activeVenue?.name || activeVenue?.title);
 
     const coords = activeVenue?.location?.coordinates || null;
     const ratingVal = typeof activeVenue?.rating === "number" ? activeVenue.rating.toFixed(1) : "4.3";
@@ -292,15 +303,32 @@ export function MyVenueView() {
             </div>
 
             {/* Hero Banner Card */}
-            <div className="relative w-full rounded-[28px] overflow-hidden bg-[#140E50] border border-[rgba(124,58,237,0.3)] shadow-[0px_16px_48px_rgba(0,0,0,0.5)]">
-                {/* Hero Cover Image */}
+            <div className="relative w-full rounded-[28px] overflow-hidden bg-[#0A0524] border border-[rgba(124,58,237,0.3)] shadow-[0px_16px_48px_rgba(0,0,0,0.5)]">
+                {/* Hero Cover Image or Fallback Ambient Icon */}
                 <div className="relative w-full h-64 sm:h-80 md:h-96">
-                    <img
-                        src={cleanImageUrl(coverImg, DEFAULT_VENUE_IMAGE)}
-                        alt=""
-                        onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
-                        className="w-full h-full object-cover"
-                    />
+                    {hasValidCoverImg ? (
+                        <Image
+                            src={finalCoverImg}
+                            alt=""
+                            fill
+                            onError={() => setHeroImgError(true)}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#150D3A] via-[#0E0729] to-[#070318]">
+                            {/* Soft ambient halo spotlight matching design */}
+                            <div className="absolute w-64 h-64 rounded-full bg-[#F5E188]/20 blur-3xl pointer-events-none" />
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(245,225,136,0.22)_0%,_rgba(124,58,237,0.08)_40%,_transparent_70%)] pointer-events-none" />
+
+                            {/* Yellow Cocktail / Category Icon */}
+                            <div className="relative z-10 flex items-center justify-center mb-10 md:mb-16">
+                                <CategoryIcon
+                                    className="w-16 h-16 md:w-24 md:h-24 text-[#F5E188] drop-shadow-[0_0_24px_rgba(245,225,136,0.45)]"
+                                    strokeWidth={2.2}
+                                />
+                            </div>
+                        </div>
+                    )}
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#080318] via-[#080318]/50 to-transparent pointer-events-none" />
 
@@ -371,31 +399,28 @@ export function MyVenueView() {
             <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#0E0528]/80 border border-[rgba(124,58,237,0.25)] max-w-md backdrop-blur-md">
                 <button
                     onClick={() => setActiveSection("overview")}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                        activeSection === "overview"
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeSection === "overview"
                             ? "bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)]"
                             : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
-                    }`}
+                        }`}
                 >
                     Overview & Details
                 </button>
                 <button
                     onClick={() => setActiveSection("hours")}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                        activeSection === "hours"
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeSection === "hours"
                             ? "bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)]"
                             : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
-                    }`}
+                        }`}
                 >
                     Operating Hours
                 </button>
                 <button
                     onClick={() => setActiveSection("gallery")}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-                        activeSection === "gallery"
+                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeSection === "gallery"
                             ? "bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)]"
                             : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
-                    }`}
+                        }`}
                 >
                     Gallery ({activeVenue?.images?.length || 0})
                 </button>
@@ -587,20 +612,18 @@ export function MyVenueView() {
                                 return (
                                     <div
                                         key={dayIndex}
-                                        className={`p-4 rounded-2xl border flex flex-col gap-2 transition-all ${
-                                            isClosed
+                                        className={`p-4 rounded-2xl border flex flex-col gap-2 transition-all ${isClosed
                                                 ? "bg-white/[0.02] border-white/10 opacity-70"
                                                 : "bg-[#140E50]/80 border-[rgba(124,58,237,0.3)] shadow-sm"
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between">
                                             <span className="font-bold text-sm text-white">{dayName}</span>
                                             <span
-                                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider ${
-                                                    isClosed
+                                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider ${isClosed
                                                         ? "bg-red-500/20 text-red-400 border border-red-500/30"
                                                         : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                                }`}
+                                                    }`}
                                             >
                                                 {isClosed ? "CLOSED" : "OPEN"}
                                             </span>
@@ -664,10 +687,10 @@ export function MyVenueView() {
                                     onClick={() => setPreviewItem(item)}
                                     className="group relative aspect-square rounded-2xl overflow-hidden bg-black/40 border border-white/10 hover:border-[#7C3AED] transition-all cursor-pointer shadow-md"
                                 >
-                                    <img
+                                    <Image
                                         src={cleanImageUrl(item.url, DEFAULT_VENUE_IMAGE)}
                                         alt=""
-                                        onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                                        fill
                                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                     />
                                     {/* Top-Right Trash Delete Button */}
@@ -741,14 +764,14 @@ export function MyVenueView() {
 
                     {/* Image Container */}
                     <div
-                        className="relative max-w-4xl max-h-[82vh] rounded-2xl overflow-hidden shadow-2xl"
+                        className="relative w-full max-w-4xl h-[70vh] rounded-2xl overflow-hidden shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <img
+                        <Image
                             src={cleanImageUrl(previewItem.url, DEFAULT_VENUE_IMAGE)}
                             alt=""
-                            onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
-                            className="max-w-full max-h-[82vh] object-contain rounded-2xl"
+                            fill
+                            className="w-full h-full object-contain rounded-2xl"
                         />
                     </div>
                 </div>

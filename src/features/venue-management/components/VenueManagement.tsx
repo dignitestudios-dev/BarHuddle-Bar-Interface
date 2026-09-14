@@ -7,6 +7,7 @@ import { VenueCard, type VenueCardData } from "./VenueCard";
 import { VenueDetailView } from "./VenueDetailView";
 import { ClaimFormModal } from "./ClaimFormModal";
 import { ClaimPendingDialog } from "./ClaimPendingDialog";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useMyVenuesQuery, useVenueDetailsQuery, useMyClaimsQuery } from "../api/venue.queries";
 import { useAppSelector } from "@/store";
@@ -17,7 +18,7 @@ export function VenueManagement() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const page = Number(searchParams?.get("page")) || 1;
-    const limit = Number(searchParams?.get("limit")) || 10;
+    const limit = Number(searchParams?.get("limit")) || 12;
     const search = searchParams?.get("search") || "";
 
     const { user } = useAppSelector((state) => state.auth);
@@ -197,8 +198,14 @@ export function VenueManagement() {
         page,
         limit,
         search,
+        "list"
         // false // isClaimed = false
     );
+
+    // Sync local searchInput if search param changes (e.g. browser navigation)
+    React.useEffect(() => {
+        setSearchInput(search);
+    }, [search]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -212,8 +219,85 @@ export function VenueManagement() {
         router.push(`${pathname}?${params.toString()}`);
     };
 
-    const displayVenues: VenueCardData[] = venues && venues.length > 0
-        ? venues.map((v: any) => {
+    const handleClearSearch = () => {
+        setSearchInput("");
+        if (search) {
+            const params = new URLSearchParams(searchParams?.toString() || "");
+            params.delete("search");
+            params.set("page", "1");
+            router.push(`${pathname}?${params.toString()}`);
+        }
+    };
+
+    const handlePageChange = (newPage: number) => {
+        const params = new URLSearchParams(searchParams?.toString() || "");
+        params.set("page", String(newPage));
+        router.push(`${pathname}?${params.toString()}`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const venueList: any[] = useMemo(() => {
+        if (!venues) return [];
+        if (Array.isArray(venues)) return venues;
+        if (Array.isArray(venues.data)) return venues.data;
+        if (Array.isArray(venues.venues)) return venues.venues;
+        return [];
+    }, [venues]);
+
+    const paginationData = useMemo(() => {
+        const rawTotal =
+            venues?.pagination?.totalItems ??
+            venues?.pagination?.total ??
+            venues?.pagination?.totalCount ??
+            venues?.pagination?.count ??
+            venues?.totalItems ??
+            venues?.totalCount ??
+            venues?.count;
+
+        const rawPages =
+            venues?.pagination?.pages ??
+            venues?.pagination?.totalPages ??
+            venues?.totalPages ??
+            venues?.pages;
+
+        const totalPages = rawPages
+            ? Number(rawPages)
+            : rawTotal
+            ? Math.max(1, Math.ceil(Number(rawTotal) / limit))
+            : 1;
+
+        const total = rawTotal
+            ? Number(rawTotal)
+            : totalPages > 1
+            ? (venues?.total && venues.total > venueList.length ? venues.total : totalPages * limit)
+            : (venues?.total ?? venueList.length);
+
+        const currentPage = Number(venues?.pagination?.page ?? venues?.page ?? page) || 1;
+        return { total, totalPages, currentPage };
+    }, [venues, venueList.length, limit, page]);
+
+    // Truncate pagination buttons to prevent horizontal overflow on large page counts (e.g. 1 2 3 ... 355)
+    const visiblePages = useMemo(() => {
+        const total = paginationData.totalPages;
+        const current = paginationData.currentPage;
+
+        if (total <= 7) {
+            return Array.from({ length: total }, (_, i) => i + 1);
+        }
+
+        if (current <= 4) {
+            return [1, 2, 3, 4, 5, "...", total];
+        }
+
+        if (current >= total - 3) {
+            return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+        }
+
+        return [1, "...", current - 1, current, current + 1, "...", total];
+    }, [paginationData.totalPages, paginationData.currentPage]);
+
+    const displayVenues: VenueCardData[] = venueList && venueList.length > 0
+        ? venueList.map((v: any) => {
             const vId = String(v._id || v.id || v.placeId || "");
             const vName = (v.name || v.title || "").trim().toLowerCase();
 
@@ -315,7 +399,7 @@ export function VenueManagement() {
 
                 {/* Search Bar Section */}
                 <form onSubmit={handleSearch} className="w-full max-w-[600px] mx-auto relative flex items-center">
-                    <div className="absolute left-4 text-[#9D8FD0]">
+                    <div className="absolute left-4 text-[#9D8FD0] pointer-events-none">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
@@ -325,8 +409,19 @@ export function VenueManagement() {
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="Search for your venue by name or location..."
-                        className="w-full h-14 pl-12 pr-32 rounded-full bg-[rgba(20,14,80,0.6)] border border-[rgba(124,58,237,0.3)] text-white placeholder:text-[#9D8FD0]/60 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all"
+                        className={`w-full h-14 pl-12 ${searchInput ? "pr-36" : "pr-32"} rounded-full bg-[rgba(20,14,80,0.6)] border border-[rgba(124,58,237,0.3)] text-white placeholder:text-[#9D8FD0]/60 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all`}
                     />
+                    {searchInput && (
+                        <button
+                            type="button"
+                            onClick={handleClearSearch}
+                            className="absolute right-28 p-1.5 rounded-full text-[#9D8FD0] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-all flex items-center justify-center"
+                            title="Clear search"
+                            aria-label="Clear search"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    )}
                     <button
                         type="submit"
                         className="absolute right-2 h-10 px-6 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white font-semibold text-sm hover:brightness-110 active:scale-95 transition-all"
@@ -346,7 +441,7 @@ export function VenueManagement() {
                         </h2>
                         {search?.trim() && displayVenues.length > 0 && (
                             <span className="text-xs font-semibold text-[#C4B5FD] bg-[rgba(124,58,237,0.2)] px-3 py-1 rounded-full border border-[rgba(124,58,237,0.3)]">
-                                {displayVenues.length} {displayVenues.length === 1 ? "Venue" : "Venues"}
+                                {paginationData.total} {paginationData.total === 1 ? "Venue" : "Venues"}
                             </span>
                         )}
                     </div>
@@ -404,6 +499,69 @@ export function VenueManagement() {
                             ))
                         )}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {paginationData.totalPages > 1 && (
+                        <div className="flex items-center justify-between gap-4 pt-6 mt-4 border-t border-[rgba(124,58,237,0.2)] flex-wrap w-full">
+                            <span className="text-xs font-medium text-[#8B7EC8]">
+                                Page {paginationData.currentPage} of {paginationData.totalPages}
+                                {paginationData.total > 0 && ` (${paginationData.total} ${paginationData.total === 1 ? "venue" : "venues"})`}
+                            </span>
+
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(Math.max(1, paginationData.currentPage - 1))}
+                                    disabled={paginationData.currentPage <= 1}
+                                    className="px-3 py-1.5 rounded-xl border border-[rgba(124,58,237,0.2)] bg-[rgba(124,58,237,0.05)] hover:bg-[rgba(124,58,237,0.15)] text-[#8B7EC8] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold flex items-center gap-1 transition-all"
+                                >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                    <span>Previous</span>
+                                </button>
+
+                                {visiblePages.map((item, i) => {
+                                    if (item === "...") {
+                                        return (
+                                            <span
+                                                key={`ellipsis-${i}`}
+                                                className="w-8 h-8 flex items-center justify-center text-[#8B7EC8] text-xs font-bold select-none"
+                                            >
+                                                ...
+                                            </span>
+                                        );
+                                    }
+
+                                    const pageNum = Number(item);
+                                    const isActive = pageNum === paginationData.currentPage;
+
+                                    return (
+                                        <button
+                                            key={`page-${pageNum}`}
+                                            type="button"
+                                            onClick={() => handlePageChange(pageNum)}
+                                            className={`w-8 h-8 rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
+                                                isActive
+                                                    ? "bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white shadow-md ring-1 ring-[#A78BFA]/50"
+                                                    : "text-[#8B7EC8] hover:text-white hover:bg-white/10"
+                                            }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+
+                                <button
+                                    type="button"
+                                    onClick={() => handlePageChange(Math.min(paginationData.totalPages, paginationData.currentPage + 1))}
+                                    disabled={paginationData.currentPage >= paginationData.totalPages}
+                                    className="px-3 py-1.5 rounded-xl border border-[rgba(124,58,237,0.2)] bg-[rgba(124,58,237,0.05)] hover:bg-[rgba(124,58,237,0.15)] text-[#8B7EC8] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold flex items-center gap-1 transition-all"
+                                >
+                                    <span>Next</span>
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </main>
 

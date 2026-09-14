@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 
 export interface VenueEvent {
@@ -103,10 +104,10 @@ export function VenueEventsSection({
                             className="relative w-full h-[220px] rounded-[16px] overflow-hidden group shadow-[0px_4px_16px_rgba(0,0,0,0.3)] border border-[rgba(124,58,237,0.3)] bg-purple-950/40"
                         >
                             {/* Event Image */}
-                            <img
+                            <Image
                                 src={cleanImageUrl(evt.imageUrl, DEFAULT_VENUE_IMAGE)}
                                 alt=""
-                                onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                                fill
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
 

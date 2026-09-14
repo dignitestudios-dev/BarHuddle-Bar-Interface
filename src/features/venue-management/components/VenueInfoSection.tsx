@@ -63,12 +63,12 @@ export function VenueInfoSection({
                 <div className="relative p-5 rounded-[24px] bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)] flex items-center justify-between gap-4 overflow-hidden min-h-[178px]">
                     {/* Overlapping Avatars Pill (Top Right) */}
                     {/* <div className="absolute top-3 right-4 flex items-center -space-x-2 shrink-0 drop-shadow-[0px_4px_7px_rgba(254,243,128,0.1)]">
-                        <img
+                        <Image
                             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"
                             alt="User 1"
                             className="w-[36.77px] h-[36.77px] rounded-full object-cover border border-purple-900"
                         />
-                        <img
+                        <Image
                             src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80"
                             alt="User 2"
                             className="w-[36.77px] h-[36.77px] rounded-full object-cover border border-purple-900"

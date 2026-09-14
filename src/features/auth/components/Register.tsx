@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useRef } from "react";
 import { Button, InputField } from "@/components/ui";
 import { Eye, EyeOff } from "lucide-react";
@@ -43,7 +44,7 @@ export function Register() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         const passwordError = validatePassword(password);
         if (passwordError) {
             toast.error(passwordError);
@@ -85,9 +86,10 @@ export function Register() {
                     className="relative w-[106px] h-[106px] rounded-full bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] flex items-center justify-center hover:bg-[rgba(124,58,237,0.2)] active:scale-95 transition-all overflow-hidden cursor-pointer group"
                 >
                     {profileImage ? (
-                        <img
+                        <Image
                             src={profileImage}
                             alt="Profile preview"
+                            fill
                             className="w-full h-full object-cover"
                         />
                     ) : (

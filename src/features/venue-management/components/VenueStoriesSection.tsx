@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
 
 export interface VisitorStory {
@@ -120,10 +121,10 @@ export function VenueStoriesSection({
                         {/* Inner Story Card Content */}
                         <div className="relative w-full h-full rounded-[14.5px] overflow-hidden bg-[#1E0B36]">
                             {/* Background Image */}
-                            <img
+                            <Image
                                 src={story.storyImageUrl || DEFAULT_VENUE_IMAGE}
                                 alt=""
-                                onError={(e) => handleImageError(e, DEFAULT_VENUE_IMAGE)}
+                                fill
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
 
@@ -132,10 +133,10 @@ export function VenueStoriesSection({
 
                             {/* Top-Left Visitor Profile Avatar (28x28 circle at top 6px, left 7px) */}
                             <div className="absolute top-[6px] left-[7px] w-[28px] h-[28px] rounded-full overflow-hidden border-[1.5px] border-white/80 shadow-[0px_2px_4px_rgba(0,0,0,0.5)] bg-gray-800">
-                                <img
+                                <Image
                                     src={story.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80"}
                                     alt=""
-                                    onError={(e) => handleImageError(e, "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80")}
+                                    fill
                                     className="w-full h-full object-cover"
                                 />
                             </div>

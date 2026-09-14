@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { cleanImageUrl, DEFAULT_VENUE_IMAGE, handleImageError } from "@/utils/image";
+import { cleanImageUrl } from "@/utils/image";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Martini, Wine, Beer, Utensils, Coffee, Music, LucideIcon } from "lucide-react";
 import type { VenueGender, VenueLocationCoords } from "../api/venue.service";
 
 export interface DemographicsData {
@@ -61,6 +62,24 @@ export function formatCategory(category?: string): string {
         .join(" ");
 }
 
+export function getCategoryIcon(category?: string, name?: string): LucideIcon {
+    const raw = `${category || ""} ${name || ""}`.toLowerCase();
+    if (raw.includes("beer") || raw.includes("brewery") || raw.includes("ale")) {
+        return Beer;
+    }
+    if (raw.includes("club") || raw.includes("dance") || raw.includes("music") || raw.includes("dj")) {
+        return Music;
+    }
+    if (raw.includes("cafe") || raw.includes("coffee") || raw.includes("tea")) {
+        return Coffee;
+    }
+    if (raw.includes("restaurant") || raw.includes("food") || raw.includes("dine") || raw.includes("bistro") || raw.includes("grill") || raw.includes("eatery") || raw.includes("kitchen")) {
+        return Utensils;
+    }
+    // Default cocktail / martini icon matching design
+    return Martini;
+}
+
 const DEFAULT_VENUE: VenueCardData = {
     id: 1,
     title: "Barcelona Wine Bar",
@@ -85,6 +104,7 @@ export function VenueCard({
     className = "",
 }: VenueCardProps) {
     const [imgError, setImgError] = useState(false);
+    const [iconError, setIconError] = useState(false);
 
     const handleViewDetails = () => {
         if (onViewDetails) {
@@ -94,7 +114,8 @@ export function VenueCard({
 
     // Determine primary image
     const rawImage = venue.coverImage || venue.imageUrl || (venue.images && venue.images.length > 0 ? venue.images[0] : "");
-    const finalImageUrl = cleanImageUrl(rawImage);
+    const finalImageUrl = cleanImageUrl(rawImage, "");
+    const hasValidImage = Boolean(finalImageUrl && !imgError);
 
     // Audience demographics
     const malePercent = venue.gender?.malePercent ?? venue.gender?.male ?? venue.demographics?.male ?? 0;
@@ -114,6 +135,7 @@ export function VenueCard({
 
     const formattedCategory = formatCategory(venue.category);
     const displayTitle = venue.name || venue.title || "Unnamed Venue";
+    const CategoryIcon = getCategoryIcon(venue.category, displayTitle);
     const totalGoingCount = venue.totalGoing ?? 0;
     const displayGoing = venue.capacity ? venue.capacity : `${totalGoingCount} Going`;
     const isPending = Boolean(venue.isPending || venue.claimStatus === "pending" || venue.status === "pending");
@@ -124,28 +146,45 @@ export function VenueCard({
         >
             {/* Top Image Section with Category, Rating, Stories & Claim Badges */}
             <div className="relative w-full h-[220px] overflow-hidden bg-[#2E1065]">
-                <div className="relative w-full h-full">
-                    {/* Image with automatic dummy fallback on load failure */}
-                    <img
-                        src={!imgError && finalImageUrl ? finalImageUrl : DEFAULT_VENUE_IMAGE}
-                        alt=""
-                        onError={(e) => {
-                            setImgError(true);
-                            handleImageError(e, DEFAULT_VENUE_IMAGE);
-                        }}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                </div>
+                {hasValidImage ? (
+                    <div className="relative w-full h-full">
+                        <Image
+                            src={finalImageUrl}
+                            alt={displayTitle}
+                            fill
+                            onError={() => setImgError(true)}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                    </div>
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#150D3A] via-[#0E0729] to-[#070318]">
+                        {/* Soft ambient halo spotlight matching reference image */}
+                        <div className="absolute w-36 h-36 rounded-full bg-[#F5E188]/20 blur-2xl pointer-events-none" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(245,225,136,0.22)_0%,_rgba(124,58,237,0.08)_40%,_transparent_70%)] pointer-events-none" />
+
+                        {/* Yellow Cocktail / Martini Icon with glowing drop shadow */}
+                        <div className="relative z-10 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                            <CategoryIcon
+                                className="w-12 h-12 text-[#F5E188] drop-shadow-[0_0_18px_rgba(245,225,136,0.45)]"
+                                strokeWidth={2.2}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 {/* Top-Left Category Badge */}
                 <div className="absolute top-3 left-3.5 z-20 px-2.5 py-1 bg-[#F2CA54] shadow-[0px_0px_10px_rgba(242,202,84,0.5)] rounded-full flex items-center gap-1.5 max-w-[65%]">
-                    {venue.icon && (
-                        <img
+                    {venue.icon ? (
+                        <Image
                             src={venue.icon}
                             alt=""
+                            width={14}
+                            height={14}
                             className="w-3.5 h-3.5 object-contain shrink-0"
                             onError={(e) => (e.currentTarget.style.display = "none")}
                         />
+                    ) : (
+                        <CategoryIcon className="w-3.5 h-3.5 text-black shrink-0" />
                     )}
                     <span className="font-bold text-[11px] capitalize leading-[15px] text-black truncate">
                         {formattedCategory}

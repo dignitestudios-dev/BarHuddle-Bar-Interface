@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { EventCardData } from "@/features/events/components";
 import { cleanImageUrl } from "@/utils/image";
 
@@ -62,7 +63,7 @@ export function BoostEventModal({
         >
             {/* Modal Container: 563px width, #05033A background, 16px radius */}
             <div className="relative w-full max-w-[563px] bg-[#05033A] border border-[rgba(124,58,237,0.25)] shadow-[0px_4px_24px_rgba(0,0,0,0.5)] rounded-[16px] p-6 sm:p-[30px] flex flex-col gap-6 max-h-[92vh] overflow-y-auto scrollbar-none">
-                
+
                 {/* Modal Header */}
                 <div className="flex items-center justify-between">
                     <h2 className="font-bold text-[20px] leading-[27px] text-white capitalize tracking-tight">
@@ -89,9 +90,11 @@ export function BoostEventModal({
                     {/* Left: Thumbnail & Title/Details */}
                     <div className="flex items-center gap-3 overflow-hidden flex-1">
                         <div className="w-[80px] h-[56px] rounded-[12px] bg-[#3C0366] overflow-hidden shrink-0">
-                            <img
+                            <Image
                                 src={cleanImageUrl(event?.imageUrl, "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=600&q=80")}
                                 alt={event?.title || "Event"}
+                                width={80}
+                                height={56}
                                 className="w-full h-full object-cover opacity-85"
                             />
                         </div>
@@ -146,11 +149,10 @@ export function BoostEventModal({
                     <button
                         type="button"
                         onClick={() => setSelectedDuration("7 Days")}
-                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
-                            selectedDuration === "7 Days"
+                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${selectedDuration === "7 Days"
                                 ? "bg-[rgba(124,58,237,0.18)] border-2 border-[#7C3AED] shadow-[0px_0px_16px_rgba(124,58,237,0.3)]"
                                 : "bg-[rgba(124,58,237,0.047)] border border-[rgba(124,58,237,0.133)] hover:bg-[rgba(124,58,237,0.1)]"
-                        }`}
+                            }`}
                     >
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#7C3AED]">
                             7 Days
@@ -164,11 +166,10 @@ export function BoostEventModal({
                     <button
                         type="button"
                         onClick={() => setSelectedDuration("14 Days")}
-                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
-                            selectedDuration === "14 Days"
+                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${selectedDuration === "14 Days"
                                 ? "bg-[rgba(232,255,87,0.18)] border-2 border-[#E8FF57] shadow-[0px_0px_16px_rgba(232,255,87,0.3)]"
                                 : "bg-[rgba(232,255,87,0.047)] border border-[rgba(232,255,87,0.133)] hover:bg-[rgba(232,255,87,0.1)]"
-                        }`}
+                            }`}
                     >
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#E8FF57]">
                             14 Days
@@ -182,11 +183,10 @@ export function BoostEventModal({
                     <button
                         type="button"
                         onClick={() => setSelectedDuration("21 Days")}
-                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
-                            selectedDuration === "21 Days"
+                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${selectedDuration === "21 Days"
                                 ? "bg-[rgba(34,211,238,0.18)] border-2 border-[#22D3EE] shadow-[0px_0px_16px_rgba(34,211,238,0.3)]"
                                 : "bg-[rgba(34,211,238,0.047)] border border-[rgba(34,211,238,0.133)] hover:bg-[rgba(34,211,238,0.1)]"
-                        }`}
+                            }`}
                     >
                         <span className="font-extrabold text-[14px] leading-[20px] text-[#22D3EE]">
                             21 Days

@@ -60,12 +60,12 @@ export function useSelectedVenue() {
     const rawList = Array.isArray(raw?.data)
       ? raw.data
       : Array.isArray(raw?.venues)
-      ? raw.venues
-      : Array.isArray(raw)
-      ? raw
-      : raw && typeof raw === "object" && (raw.name || raw._id || raw.id)
-      ? [raw]
-      : [];
+        ? raw.venues
+        : Array.isArray(raw)
+          ? raw
+          : raw && typeof raw === "object" && (raw.name || raw._id || raw.id)
+            ? [raw]
+            : [];
     rawList.forEach(addVenue);
 
     // 2. From /venue-owner/claims
