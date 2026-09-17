@@ -46,7 +46,11 @@ export function VenueSwitcherDropdown({
     }, []);
 
     const activeVenue =
-        venues.find((v) => (v._id || v.id) === activeVenueId) || venues[0];
+        venues.find(
+            (v) =>
+                String(v._id || v.id || "") === String(activeVenueId || "") ||
+                (v.name && activeVenueId && v.name.toLowerCase() === activeVenueId.toLowerCase())
+        ) || venues[0];
 
     const activeImage =
         activeVenue?.coverImage ||
@@ -113,10 +117,12 @@ export function VenueSwitcherDropdown({
                     </div>
 
                     {/* Venue Items List */}
-                    <div className="flex flex-col gap-1 max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar py-1 pr-1">
-                        {venues.map((venue) => {
-                            const vId = venue._id || venue.id || "";
-                            const isSelected = vId === activeVenueId;
+                    <div className="flex flex-col gap-1 max-h-72 overflow-y-auto overflow-x-hidden custom-scrollbar py-1 pr-1">
+                        {venues.map((venue, index) => {
+                            const vId = String(venue._id || venue.id || index);
+                            const isSelected =
+                                String(venue._id || venue.id) === String(activeVenueId) ||
+                                (activeVenue && venue.name && activeVenue.name && venue.name.toLowerCase() === activeVenue.name.toLowerCase());
                             const vImg =
                                 venue.coverImage ||
                                 (venue.images && venue.images.length > 0
@@ -126,7 +132,7 @@ export function VenueSwitcherDropdown({
 
                             return (
                                 <button
-                                    key={vId}
+                                    key={`${vId}-${index}`}
                                     type="button"
                                     onClick={() => {
                                         onSelectVenue(vId);

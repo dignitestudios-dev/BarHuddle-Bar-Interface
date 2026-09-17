@@ -23,29 +23,72 @@ export function useSelectedVenue() {
   const { data: ownerVenuesData, isLoading: isLoadingOwnerVenues } = useGetOwnerVenuesQuery();
   const { data: rawClaims, isLoading: isLoadingClaims } = useMyClaimsQuery();
 
-  // Normalize list of owner venues from API (venues & approved claims) or user context
+  // Normalize list of owner venues from API (venues & claims) or user context
   const venues: OwnerVenueItem[] = useMemo(() => {
     const list: OwnerVenueItem[] = [];
-    const seen = new Set<string>();
+    const seenIds = new Set<string>();
+    const seenNames = new Set<string>();
 
-    const addVenue = (item: any) => {
-      if (!item) return;
-      const v = item?.venue || item;
-      const id = String(v?._id || v?.id || item?._id || item?.id || "");
-      const name = String(v?.name || v?.title || item?.name || item?.title || "");
+    const addCandidate = (candidate: any) => {
+      if (!candidate) return;
+
+      const venueObj =
+        candidate.venue && typeof candidate.venue === "object"
+          ? candidate.venue
+          : candidate.venueId && typeof candidate.venueId === "object"
+          ? candidate.venueId
+          : candidate.details && typeof candidate.details === "object"
+          ? candidate.details
+          : candidate;
+
+      const id = String(
+        venueObj._id ||
+        venueObj.id ||
+        (typeof candidate.venue === "string" ? candidate.venue : "") ||
+        (typeof candidate.venueId === "string" ? candidate.venueId : "") ||
+        venueObj.placeId ||
+        candidate._id ||
+        candidate.id ||
+        ""
+      ).trim();
+
+      const name = String(
+        venueObj.name ||
+        venueObj.title ||
+        candidate.name ||
+        candidate.title ||
+        ""
+      ).trim();
+
       if (!id && !name) return;
-      const key = id || name;
-      if (seen.has(key)) return;
-      seen.add(key);
 
-      const address = v?.address || item?.address || "";
-      const coverImage = cleanImageUrl(v?.coverImage || item?.coverImage || (v?.images && v.images[0]) || "");
-      const category = v?.category || item?.category || "";
-      const rating = v?.rating ?? item?.rating;
-      const isClaimed = v?.isClaimed ?? item?.isClaimed ?? true;
+      // Only skip explicitly rejected claims
+      const status = String(candidate.status || venueObj.status || "").toLowerCase();
+      if (status === "rejected" || status === "denied" || status === "cancelled") {
+        return;
+      }
+
+      const nameKey = name.toLowerCase();
+      if (id && seenIds.has(id)) return;
+      if (nameKey && seenNames.has(nameKey)) return;
+
+      if (id) seenIds.add(id);
+      if (nameKey) seenNames.add(nameKey);
+
+      const address = venueObj.address || candidate.address || "";
+      const coverImage = cleanImageUrl(
+        venueObj.coverImage ||
+        candidate.coverImage ||
+        (Array.isArray(venueObj.images) && venueObj.images[0]) ||
+        (Array.isArray(candidate.images) && candidate.images[0]) ||
+        ""
+      );
+      const category = venueObj.category || candidate.category || "";
+      const rating = venueObj.rating ?? candidate.rating;
+      const isClaimed = venueObj.isClaimed ?? candidate.isClaimed ?? true;
 
       list.push({
-        id: key,
+        id: id || name,
         name: name || "Unnamed Venue",
         address,
         coverImage,
@@ -55,39 +98,69 @@ export function useSelectedVenue() {
       });
     };
 
-    // 1. From /venue-owner/venues
+    // 1. From /venue-owner/venues (handle all response shapes)
     const raw = ownerVenuesData as any;
-    const rawList = Array.isArray(raw?.data)
+    const rawList = Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.data)
       ? raw.data
       : Array.isArray(raw?.venues)
-        ? raw.venues
-        : Array.isArray(raw)
-          ? raw
-          : raw && typeof raw === "object" && (raw.name || raw._id || raw.id)
-            ? [raw]
-            : [];
-    rawList.forEach(addVenue);
+      ? raw.venues
+      : Array.isArray(raw?.data?.venues)
+      ? raw.data.venues
+      : Array.isArray(raw?.data?.data)
+      ? raw.data.data
+      : Array.isArray(raw?.result)
+      ? raw.result
+      : raw && typeof raw === "object" && (raw.name || raw._id || raw.id || raw.venue)
+      ? [raw]
+      : [];
+    rawList.forEach(addCandidate);
 
-    // 2. From /venue-owner/claims
-    const claimsArr = Array.isArray(rawClaims) ? rawClaims : (rawClaims as any)?.data || [];
-    if (Array.isArray(claimsArr)) {
-      claimsArr.forEach((c: any) => {
-        if (c.status === "approved" && c.venue) {
-          addVenue(c.venue);
-        } else if (c.venueId && typeof c.venueId === "object") {
-          addVenue(c.venueId);
+    // 2. From /venue-owner/claims (handle all response shapes)
+    const rawClaimsData = rawClaims as any;
+    const claimsArr = Array.isArray(rawClaimsData)
+      ? rawClaimsData
+      : Array.isArray(rawClaimsData?.data)
+      ? rawClaimsData.data
+      : Array.isArray(rawClaimsData?.claims)
+      ? rawClaimsData.claims
+      : Array.isArray(rawClaimsData?.data?.claims)
+      ? rawClaimsData.data.claims
+      : Array.isArray(rawClaimsData?.data?.data)
+      ? rawClaimsData.data.data
+      : Array.isArray(rawClaimsData?.result)
+      ? rawClaimsData.result
+      : rawClaimsData && typeof rawClaimsData === "object" && (rawClaimsData.name || rawClaimsData._id || rawClaimsData.venue || rawClaimsData.venueId)
+      ? [rawClaimsData]
+      : [];
+    claimsArr.forEach(addCandidate);
+
+    // 3. From user profile venue in Redux
+    if (user) {
+      if (Array.isArray(user.venues)) {
+        user.venues.forEach(addCandidate);
+      }
+      if (Array.isArray(user.claimedVenues)) {
+        user.claimedVenues.forEach(addCandidate);
+      }
+      if (user.venue) {
+        if (Array.isArray(user.venue)) {
+          user.venue.forEach(addCandidate);
+        } else {
+          addCandidate(user.venue);
         }
-      });
-    }
-
-    // 3. Fallback to user profile venue in Redux
-    if (user?.venue) {
-      addVenue(user.venue);
-    } else if ((user as any)?.venueId || (user as any)?.venueName) {
-      addVenue({
-        id: (user as any)?.venueId,
-        name: (user as any)?.venueName,
-      });
+      }
+      if (user.claimedVenue) {
+        addCandidate(user.claimedVenue);
+      }
+      if (user.venueId || user.venueName) {
+        addCandidate({
+          id: user.venueId,
+          _id: user.venueId,
+          name: user.venueName,
+        });
+      }
     }
 
     return list;

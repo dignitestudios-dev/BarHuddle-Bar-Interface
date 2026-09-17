@@ -4,4 +4,5 @@ export * from "./SignUp";
 export * from "./VerifyEmail";
 export * from "./ForgotPassword";
 export * from "./CreateNewPassword";
+export * from "./PasswordStrengthMeter";
 

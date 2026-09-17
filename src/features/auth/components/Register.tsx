@@ -3,20 +3,42 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef } from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button, InputField } from "@/components/ui";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
+import { PasswordStrengthMeter } from "./PasswordStrengthMeter";
+
+const registerSchema = z
+    .object({
+        name: z.string().min(1, "Name is required").max(80, "Name cannot exceed 80 characters"),
+        email: z.string().min(1, "Email is required").email("Please enter a valid email address"),
+        password: z
+            .string()
+            .min(1, "Password is required")
+            .min(8, "Password must be at least 8 characters")
+            .max(50, "Password cannot exceed 50 characters")
+            .regex(/[A-Z]/, "Must contain at least 1 uppercase letter (A-Z)")
+            .regex(/[a-z]/, "Must contain at least 1 lowercase letter (a-z)")
+            .regex(/[0-9]/, "Must contain at least 1 number (0-9)")
+            .regex(/[^a-zA-Z0-9]/, "Must contain at least 1 special character (!@#$%^&* etc.)"),
+        confirmPassword: z.string().min(1, "Please confirm your password"),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+    });
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function Register() {
     const router = useRouter();
     const { handleGoogleAuth, isLoadingGoogle } = useAuth();
 
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(true);
@@ -24,15 +46,23 @@ export function Register() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const validatePassword = (pwd: string): string | null => {
-        if (pwd.length < 8) return "Password must be at least 8 characters long";
-        if (pwd.length > 50) return "Password cannot exceed 50 characters";
-        if (!/[A-Z]/.test(pwd)) return "Password must contain at least 1 uppercase letter (A-Z)";
-        if (!/[a-z]/.test(pwd)) return "Password must contain at least 1 lowercase letter (a-z)";
-        if (!/[0-9]/.test(pwd)) return "Password must contain at least 1 number (0-9)";
-        if (!/[^a-zA-Z0-9]/.test(pwd)) return "Password must contain at least 1 special character (!@#$%^&* etc.)";
-        return null;
-    };
+    const {
+        control,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<RegisterFormValues>({
+        resolver: zodResolver(registerSchema),
+        mode: "onChange",
+        defaultValues: {
+            name: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+        },
+    });
+
+    const watchedPassword = useWatch({ control, name: "password" }) || "";
+    const watchedEmail = useWatch({ control, name: "email" }) || "";
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -42,35 +72,25 @@ export function Register() {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        const passwordError = validatePassword(password);
-        if (passwordError) {
-            toast.error(passwordError);
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            toast.error("Passwords do not match");
+    const onSubmit = (data: RegisterFormValues) => {
+        if (!acceptedTerms) {
+            toast.error("Please accept the Terms & Conditions and Privacy Policy");
             return;
         }
 
         console.log("Register submitted:", {
-            name,
-            email,
-            password,
-            confirmPassword,
+            name: data.name,
+            email: data.email,
+            password: data.password,
             acceptedTerms,
             profileImage,
         });
-        router.push('/auth/verify-email');
+        toast.success("Registration details submitted!");
+        router.push("/auth/verify-email");
     };
 
-
     return (
-
-        <>
+        <div className="w-full flex flex-col items-center">
             {/* Profile Pic / Business Logo Upload */}
             <div className="flex flex-col items-center gap-3 mb-6">
                 <input
@@ -108,73 +128,96 @@ export function Register() {
                     Upload Profile Pic/Business Logo
                 </span>
             </div>
-            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
+
+            <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col gap-5">
                 {/* Name Field */}
-                <InputField
-                    label="Name"
-                    type="text"
-                    value={name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                    placeholder="James Smith"
-                    required
+                <Controller
+                    name="name"
+                    control={control}
+                    render={({ field }) => (
+                        <InputField
+                            label="Name"
+                            type="text"
+                            placeholder="James Smith"
+                            error={errors.name?.message}
+                            {...field}
+                        />
+                    )}
                 />
 
                 {/* Email Field */}
-                <InputField
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                    placeholder="jamessmith@gmail.com"
-                    required
+                <Controller
+                    name="email"
+                    control={control}
+                    render={({ field }) => (
+                        <InputField
+                            label="Email"
+                            type="email"
+                            placeholder="jamessmith@gmail.com"
+                            error={errors.email?.message}
+                            {...field}
+                        />
+                    )}
                 />
 
                 {/* Password Field */}
-                <InputField
-                    label="Password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                    placeholder="•••••••••"
-                    required
-                    rightElement={
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="focus:outline-none p-1 text-[#B972FC] hover:text-[#D188FF] transition-colors cursor-pointer flex items-center justify-center"
-                            aria-label={showPassword ? "Hide password" : "Show password"}
-                        >
-                            {showPassword ? (
-                                <EyeOff className="w-5 h-5" />
-                            ) : (
-                                <Eye className="w-5 h-5" />
-                            )}
-                        </button>
-                    }
-                />
+                <div className="flex flex-col gap-1 w-full">
+                    <Controller
+                        name="password"
+                        control={control}
+                        render={({ field }) => (
+                            <InputField
+                                label="Password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Create a strong password"
+                                error={errors.password?.message}
+                                rightElement={
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="focus:outline-none p-1 text-[#B972FC] hover:text-[#D188FF] transition-colors cursor-pointer flex items-center justify-center"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                }
+                                {...field}
+                            />
+                        )}
+                    />
+
+                    {/* Password Strength Meter */}
+                    <PasswordStrengthMeter
+                        password={watchedPassword}
+                        comparePassword={watchedEmail}
+                        compareLabel="Different from email"
+                        className="mt-1"
+                    />
+                </div>
 
                 {/* Confirm Password Field */}
-                <InputField
-                    label="Confirm Password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
-                    placeholder="•••••••••"
-                    required
-                    rightElement={
-                        <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="focus:outline-none p-1 text-[#B972FC] hover:text-[#D188FF] transition-colors cursor-pointer flex items-center justify-center"
-                            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                        >
-                            {showConfirmPassword ? (
-                                <EyeOff className="w-5 h-5" />
-                            ) : (
-                                <Eye className="w-5 h-5" />
-                            )}
-                        </button>
-                    }
+                <Controller
+                    name="confirmPassword"
+                    control={control}
+                    render={({ field }) => (
+                        <InputField
+                            label="Confirm Password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Re-enter your password"
+                            error={errors.confirmPassword?.message}
+                            rightElement={
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="focus:outline-none p-1 text-[#B972FC] hover:text-[#D188FF] transition-colors cursor-pointer flex items-center justify-center"
+                                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                >
+                                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                            }
+                            {...field}
+                        />
+                    )}
                 />
 
                 {/* Terms and Conditions Checkbox */}
@@ -182,8 +225,9 @@ export function Register() {
                     <button
                         type="button"
                         onClick={() => setAcceptedTerms(!acceptedTerms)}
-                        className={`w-6 h-6 min-w-[24px] rounded-[4px] flex items-center justify-center transition-colors ${acceptedTerms ? "bg-[#B45FF2]" : "bg-white/10 border border-white/30"
-                            }`}
+                        className={`w-6 h-6 min-w-[24px] rounded-[4px] flex items-center justify-center transition-colors cursor-pointer ${
+                            acceptedTerms ? "bg-[#B45FF2]" : "bg-white/10 border border-white/30"
+                        }`}
                     >
                         {acceptedTerms && (
                             <svg className="w-4 h-3 text-white fill-current" viewBox="0 0 16 12">
@@ -204,8 +248,13 @@ export function Register() {
                 </div>
 
                 {/* Sign Up CTA Button */}
-                <Button type="submit" variant="gradient" className="mt-2">
-                    Sign Up
+                <Button
+                    type="submit"
+                    variant="gradient"
+                    disabled={isSubmitting}
+                    className="mt-2 h-[52px] rounded-full font-bold text-[15px] cursor-pointer"
+                >
+                    {isSubmitting ? "Creating Account..." : "Sign Up"}
                 </Button>
 
                 {/* OR Divider */}
@@ -219,7 +268,6 @@ export function Register() {
 
                 {/* Social Login Buttons */}
                 <div className="flex items-center gap-3 w-full">
-                    {/* Google Button */}
                     <Button
                         type="button"
                         variant="social"
@@ -260,12 +308,8 @@ export function Register() {
                         )}
                     </Button>
                 </div>
-
-
             </form>
-        </>
-
-
+        </div>
     );
 }
 

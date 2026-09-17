@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useGetNotificationsQuery } from "@/features/notifications/api/notifications.queries";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useGetInfiniteNotificationsQuery } from "@/features/notifications/api/notifications.queries";
 import { useMarkAllNotificationsAsReadMutation } from "@/features/notifications/api/notifications.mutations";
 
 export interface NotificationItem {
@@ -12,10 +12,22 @@ export interface NotificationItem {
     isRead?: boolean;
 }
 
+const NOTIFICATIONS_PAGE_LIMIT = 10;
+
 export function NotificationDropdown() {
     const [showNotifications, setShowNotifications] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
-    const { data: apiNotificationsData, isLoading } = useGetNotificationsQuery();
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const bottomSentinelRef = useRef<HTMLDivElement>(null);
+
+    const {
+        data: infiniteNotificationsData,
+        isLoading,
+        isFetchingNextPage,
+        hasNextPage,
+        fetchNextPage,
+    } = useGetInfiniteNotificationsQuery(NOTIFICATIONS_PAGE_LIMIT);
+
     const markAllAsReadMutation = useMarkAllNotificationsAsReadMutation();
 
     // Close dropdown on click outside
@@ -32,39 +44,101 @@ export function NotificationDropdown() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Flatten all pages from infinite query
     const notifications: NotificationItem[] = useMemo(() => {
-        const rawNotifications = Array.isArray(apiNotificationsData?.data)
-            ? apiNotificationsData.data
-            : Array.isArray(apiNotificationsData?.data?.notifications)
-                ? apiNotificationsData.data.notifications
-                : Array.isArray(apiNotificationsData?.notifications)
-                    ? apiNotificationsData.notifications
-                    : Array.isArray(apiNotificationsData)
-                        ? apiNotificationsData
-                        : [];
+        if (!infiniteNotificationsData?.pages) return [];
 
-        if (!rawNotifications || rawNotifications.length === 0) return [];
+        const list: NotificationItem[] = [];
+        const seenIds = new Set<string>();
 
-        return rawNotifications.map((item: any) => ({
-            id: item._id || item.id,
-            title: item.notificationContent?.title || item.title || "Notification",
-            message: item.notificationContent?.body || item.message || item.body || "",
-            time: item.createdAt 
-                ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-                : (item.time || "Recently"),
-            isRead: item.isRead ?? false,
-        }));
-    }, [apiNotificationsData]);
+        infiniteNotificationsData.pages.forEach((page: any) => {
+            const rawNotifications = Array.isArray(page?.data)
+                ? page.data
+                : Array.isArray(page?.data?.notifications)
+                ? page.data.notifications
+                : Array.isArray(page?.notifications)
+                ? page.notifications
+                : Array.isArray(page?.data?.data)
+                ? page.data.data
+                : Array.isArray(page)
+                ? page
+                : [];
+
+            rawNotifications.forEach((item: any) => {
+                const id = String(item._id || item.id || "");
+                if (id && seenIds.has(id)) return;
+                if (id) seenIds.add(id);
+
+                const title = item.notificationContent?.title || item.title || "Notification";
+                const message = item.notificationContent?.body || item.message || item.body || "";
+                const time = item.createdAt
+                    ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : (item.time || "Recently");
+                const isRead = item.isRead ?? false;
+
+                list.push({
+                    id: id || `${Math.random()}`,
+                    title,
+                    message,
+                    time,
+                    isRead,
+                });
+            });
+        });
+
+        return list;
+    }, [infiniteNotificationsData]);
 
     const unreadCount = useMemo(() => {
         return notifications.filter((n) => !n.isRead).length;
     }, [notifications]);
 
+    // IntersectionObserver to auto-load next page when bottom sentinel is reached
+    useEffect(() => {
+        if (!showNotifications || !hasNextPage || isFetchingNextPage) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+                    fetchNextPage();
+                }
+            },
+            {
+                root: scrollContainerRef.current,
+                threshold: 0.1,
+                rootMargin: "60px",
+            }
+        );
+
+        const currentTarget = bottomSentinelRef.current;
+        if (currentTarget) {
+            observer.observe(currentTarget);
+        }
+
+        return () => {
+            if (currentTarget) {
+                observer.unobserve(currentTarget);
+            }
+            observer.disconnect();
+        };
+    }, [showNotifications, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    // Fallback scroll listener on container for instant page triggering
+    const handleScroll = useCallback(
+        (e: React.UIEvent<HTMLDivElement>) => {
+            const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+            if (scrollHeight - scrollTop - clientHeight < 60 && hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+            }
+        },
+        [hasNextPage, isFetchingNextPage, fetchNextPage]
+    );
+
     const handleToggleDropdown = () => {
         const willOpen = !showNotifications;
         setShowNotifications(willOpen);
 
-        // When opening the notification dropdown, call read-all API
+        // When opening the notification dropdown, mark all as read
         if (willOpen && unreadCount > 0) {
             markAllAsReadMutation.mutate();
         }
@@ -119,7 +193,11 @@ export function NotificationDropdown() {
                         )}
                     </div>
 
-                    <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto pr-1">
+                    <div
+                        ref={scrollContainerRef}
+                        onScroll={handleScroll}
+                        className="flex flex-col gap-3 max-h-[340px] sm:max-h-[380px] overflow-y-auto pr-1 custom-scrollbar"
+                    >
                         {isLoading ? (
                             <div className="flex flex-col gap-3 py-2">
                                 <div className="h-14 w-full bg-white/5 rounded-lg animate-pulse" />
@@ -141,31 +219,51 @@ export function NotificationDropdown() {
                                 <span className="text-xs text-purple-200/60">You&apos;re all caught up!</span>
                             </div>
                         ) : (
-                            notifications.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className={`flex flex-col gap-1 border-b border-[#23165A] pb-3 last:border-b-0 hover:bg-white/5 p-2 rounded-lg transition-colors cursor-pointer ${
-                                        !item.isRead ? "bg-purple-950/20" : ""
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            {!item.isRead && (
-                                                <span className="w-1.5 h-1.5 rounded-full bg-[#E8FF57]" />
-                                            )}
-                                            <span className="font-bold text-xs text-white">
-                                                {item.title}
+                            <>
+                                {notifications.map((item, idx) => (
+                                    <div
+                                        key={`${item.id}-${idx}`}
+                                        className={`flex flex-col gap-1 border-b border-[#23165A] pb-3 last:border-b-0 hover:bg-white/5 p-2.5 rounded-xl transition-colors cursor-pointer ${
+                                            !item.isRead ? "bg-purple-950/25 border-l-2 border-l-[#E8FF57]" : ""
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                {!item.isRead && (
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-[#E8FF57] shrink-0" />
+                                                )}
+                                                <span className="font-bold text-xs text-white truncate">
+                                                    {item.title}
+                                                </span>
+                                            </div>
+                                            <span className="font-medium text-[10px] text-[#B45FF2] shrink-0">
+                                                {item.time}
                                             </span>
                                         </div>
-                                        <span className="font-medium text-[11px] text-[#B45FF2]">
-                                            {item.time}
-                                        </span>
+                                        <p className="font-normal text-xs text-white/70 leading-relaxed break-words">
+                                            {item.message}
+                                        </p>
                                     </div>
-                                    <p className="font-normal text-xs text-white/60 leading-relaxed">
-                                        {item.message}
-                                    </p>
-                                </div>
-                            ))
+                                ))}
+
+                                {/* Bottom Intersection Observer Sentinel */}
+                                <div ref={bottomSentinelRef} className="h-2 w-full shrink-0" />
+
+                                {/* Next Page Loading Indicator */}
+                                {isFetchingNextPage && (
+                                    <div className="flex items-center justify-center py-3 gap-2.5 bg-white/[0.02] rounded-xl border border-white/5">
+                                        <div className="w-4 h-4 border-2 border-[#A855F7] border-t-transparent rounded-full animate-spin" />
+                                        <span className="text-[#C4B5FD] text-xs font-medium">Loading more notifications...</span>
+                                    </div>
+                                )}
+
+                                {/* End of list indicator */}
+                                {!hasNextPage && notifications.length >= NOTIFICATIONS_PAGE_LIMIT && (
+                                    <div className="py-2.5 text-center text-[11px] text-[#8B7EC8]/70 font-medium">
+                                        All notifications loaded
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
