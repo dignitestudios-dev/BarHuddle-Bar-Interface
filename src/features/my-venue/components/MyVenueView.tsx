@@ -19,6 +19,7 @@ import { getCategoryIcon } from "@/features/venue-management/components/VenueCar
 import { useAppSelector } from "@/store";
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
 import { toast } from "sonner";
+import { Camera, Clock } from "lucide-react";
 
 const DAYS_MAP = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -70,69 +71,196 @@ export function MyVenueView() {
         isLoading: isLoadingClaims,
     } = useMyClaimsQuery();
 
-    // Consolidate list of claimed venues from owner venues API, claims API, and user.venue
-    const venuesList = useMemo(() => {
-        const list: any[] = [];
-        const seen = new Set<string>();
-
-        const addVenue = (v: any) => {
-            if (!v) return;
-            const id = v._id || v.id;
-            if (id && !seen.has(id)) {
-                seen.add(id);
-                list.push(v);
-            }
-        };
-
-        // 1. From /venue-owner/venues
-        if (Array.isArray(rawOwnerVenues)) {
-            rawOwnerVenues.forEach(addVenue);
-        } else if (rawOwnerVenues && typeof rawOwnerVenues === "object") {
-            const dataArr = (rawOwnerVenues as any).data || (rawOwnerVenues as any).venues;
-            if (Array.isArray(dataArr)) dataArr.forEach(addVenue);
-            else addVenue(rawOwnerVenues);
-        }
-
-        // 2. From /venue-owner/claims
-        const claimsArr = Array.isArray(rawClaims) ? rawClaims : (rawClaims as any)?.data || [];
-        if (Array.isArray(claimsArr)) {
-            claimsArr.forEach((c: any) => {
-                if (c.status === "approved" && c.venue) {
-                    addVenue(c.venue);
-                } else if (c.venueId && typeof c.venueId === "object") {
-                    addVenue(c.venueId);
-                }
-            });
-        }
-
-        // 3. From user profile venue in Redux
-        if (user?.venue) {
-            addVenue(user.venue);
-        }
-
-        return list;
-    }, [rawOwnerVenues, rawClaims, user]);
-
     // Active selected venue synced with top navbar
     const {
         selectedVenueId: navbarVenueId,
+        venues: hookVenues,
         selectVenue,
     } = useSelectedVenue();
 
+    // Consolidate complete list of venues from owner venues API, claims API, hook venues, and user state
+    const venuesList = useMemo(() => {
+        const list: any[] = [];
+        const seenIds = new Set<string>();
+        const seenNames = new Set<string>();
+
+        const addCandidate = (candidate: any) => {
+            if (!candidate) return;
+
+            // Handle wrapped venue objects like { venue: {...} } or { venueId: {...} } or { details: {...} }
+            const venueObj =
+                candidate.venue && typeof candidate.venue === "object"
+                    ? candidate.venue
+                    : candidate.venueId && typeof candidate.venueId === "object"
+                    ? candidate.venueId
+                    : candidate.details && typeof candidate.details === "object"
+                    ? candidate.details
+                    : candidate;
+
+            const id = String(
+                venueObj._id ||
+                venueObj.id ||
+                (typeof candidate.venue === "string" ? candidate.venue : "") ||
+                (typeof candidate.venueId === "string" ? candidate.venueId : "") ||
+                venueObj.placeId ||
+                candidate._id ||
+                candidate.id ||
+                ""
+            ).trim();
+
+            const name = String(
+                venueObj.name ||
+                venueObj.title ||
+                candidate.name ||
+                candidate.title ||
+                ""
+            ).trim();
+
+            if (!id && !name) return;
+
+            // Check if status is rejected/denied (only skip if explicitly rejected)
+            const status = String(candidate.status || venueObj.status || "").toLowerCase();
+            if (status === "rejected" || status === "denied" || status === "cancelled") {
+                return;
+            }
+
+            const nameKey = name.toLowerCase();
+            if (id && seenIds.has(id)) return;
+            if (nameKey && seenNames.has(nameKey)) return;
+
+            if (id) seenIds.add(id);
+            if (nameKey) seenNames.add(nameKey);
+
+            const address = venueObj.address || candidate.address || "";
+            const coverImage =
+                venueObj.coverImage ||
+                candidate.coverImage ||
+                (Array.isArray(venueObj.images) && venueObj.images[0]) ||
+                (Array.isArray(candidate.images) && candidate.images[0]) ||
+                "";
+            const images = Array.isArray(venueObj.images)
+                ? venueObj.images
+                : Array.isArray(candidate.images)
+                ? candidate.images
+                : coverImage
+                ? [coverImage]
+                : [];
+            const category = venueObj.category || candidate.category || "";
+            const rating = venueObj.rating ?? candidate.rating;
+            const placeId = venueObj.placeId || candidate.placeId || "";
+
+            const merged = {
+                ...candidate,
+                ...venueObj,
+                _id: id || name,
+                id: id || name,
+                name: name || "Unnamed Venue",
+                address,
+                coverImage,
+                images,
+                category,
+                rating,
+                placeId,
+            };
+
+            list.push(merged);
+        };
+
+        // 1. From /venue-owner/venues (handle all API response wrapper variants)
+        const rawVenues = rawOwnerVenues as any;
+        const ownerList = Array.isArray(rawVenues)
+            ? rawVenues
+            : Array.isArray(rawVenues?.data)
+            ? rawVenues.data
+            : Array.isArray(rawVenues?.venues)
+            ? rawVenues.venues
+            : Array.isArray(rawVenues?.data?.venues)
+            ? rawVenues.data.venues
+            : Array.isArray(rawVenues?.data?.data)
+            ? rawVenues.data.data
+            : Array.isArray(rawVenues?.result)
+            ? rawVenues.result
+            : rawVenues && typeof rawVenues === "object" && (rawVenues.name || rawVenues._id || rawVenues.id || rawVenues.venue)
+            ? [rawVenues]
+            : [];
+        ownerList.forEach(addCandidate);
+
+        // 2. From /venue-owner/claims (handle all API response wrapper variants)
+        const rawClaimsData = rawClaims as any;
+        const claimsList = Array.isArray(rawClaimsData)
+            ? rawClaimsData
+            : Array.isArray(rawClaimsData?.data)
+            ? rawClaimsData.data
+            : Array.isArray(rawClaimsData?.claims)
+            ? rawClaimsData.claims
+            : Array.isArray(rawClaimsData?.data?.claims)
+            ? rawClaimsData.data.claims
+            : Array.isArray(rawClaimsData?.data?.data)
+            ? rawClaimsData.data.data
+            : Array.isArray(rawClaimsData?.result)
+            ? rawClaimsData.result
+            : rawClaimsData && typeof rawClaimsData === "object" && (rawClaimsData.name || rawClaimsData._id || rawClaimsData.venue || rawClaimsData.venueId)
+            ? [rawClaimsData]
+            : [];
+        claimsList.forEach(addCandidate);
+
+        // 3. From hookVenues (useSelectedVenue items)
+        if (Array.isArray(hookVenues)) {
+            hookVenues.forEach(addCandidate);
+        }
+
+        // 4. From user profile state in Redux
+        if (user) {
+            if (Array.isArray(user.venues)) {
+                user.venues.forEach(addCandidate);
+            }
+            if (Array.isArray(user.claimedVenues)) {
+                user.claimedVenues.forEach(addCandidate);
+            }
+            if (user.venue) {
+                if (Array.isArray(user.venue)) {
+                    user.venue.forEach(addCandidate);
+                } else {
+                    addCandidate(user.venue);
+                }
+            }
+            if (user.claimedVenue) {
+                addCandidate(user.claimedVenue);
+            }
+            if (user.venueId || user.venueName) {
+                addCandidate({
+                    id: user.venueId,
+                    _id: user.venueId,
+                    name: user.venueName,
+                });
+            }
+        }
+
+        return list;
+    }, [rawOwnerVenues, rawClaims, hookVenues, user]);
+
     const activeVenueId = useMemo(() => {
         if (navbarVenueId) {
-            const found = venuesList.find((v) => (v._id || v.id) === navbarVenueId);
-            if (found) return navbarVenueId;
+            const found = venuesList.find(
+                (v) =>
+                    String(v._id || v.id) === String(navbarVenueId) ||
+                    (v.name && navbarVenueId.toLowerCase() === v.name.toLowerCase())
+            );
+            if (found) return String(found._id || found.id);
         }
-        return venuesList.length > 0 ? (venuesList[0]._id || venuesList[0].id) : (navbarVenueId || "");
+        return venuesList.length > 0 ? String(venuesList[0]._id || venuesList[0].id) : (navbarVenueId || "");
     }, [navbarVenueId, venuesList]);
 
     // When dropdown inside MyVenueView is used, update the global selected venue
     const handleSelectVenue = (venueId: string) => {
-        const v = venuesList.find((item) => (item._id || item.id) === venueId);
+        const v = venuesList.find(
+            (item) =>
+                String(item._id || item.id) === String(venueId) ||
+                (item.name && item.name.toLowerCase() === venueId.toLowerCase())
+        );
         if (v) {
             selectVenue({
-                id: v._id || v.id,
+                id: String(v._id || v.id),
                 name: v.name || v.title,
                 address: v.address,
                 coverImage: v.coverImage || (v.images && v.images[0]),
@@ -145,7 +273,7 @@ export function MyVenueView() {
         if (!navbarVenueId && venuesList.length > 0) {
             const first = venuesList[0];
             selectVenue({
-                id: first._id || first.id,
+                id: String(first._id || first.id),
                 name: first.name || first.title,
                 address: first.address,
                 coverImage: first.coverImage || (first.images && first.images[0]),
@@ -171,10 +299,22 @@ export function MyVenueView() {
     const activeVenue = useMemo(() => {
         if (!activeVenueId) return null;
         const details = (rawVenueDetails as any)?.data || rawVenueDetails;
-        if (details && (details._id === activeVenueId || details.id === activeVenueId)) {
+        if (
+            details &&
+            (String(details._id) === String(activeVenueId) ||
+                String(details.id) === String(activeVenueId) ||
+                String(details.placeId) === String(activeVenueId))
+        ) {
             return details;
         }
-        return venuesList.find((v) => (v._id || v.id) === activeVenueId) || null;
+        return (
+            venuesList.find(
+                (v) =>
+                    String(v._id || v.id) === String(activeVenueId) ||
+                    String(v.placeId) === String(activeVenueId) ||
+                    (v.name && v.name.toLowerCase() === activeVenueId.toLowerCase())
+            ) || null
+        );
     }, [rawVenueDetails, activeVenueId, venuesList]);
 
     // Normalize operating hours
@@ -531,7 +671,7 @@ export function MyVenueView() {
                                     className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-[rgba(124,58,237,0.4)] transition-all text-xs font-semibold text-white group"
                                 >
                                     <div className="flex items-center gap-2.5">
-                                        <span className="text-[#E8FF57]">⏰</span>
+                                        <span className="text-[#E8FF57]"><Clock/></span>
                                         <span>Update Operating Hours</span>
                                     </div>
                                     <span className="text-[#A855F7] group-hover:translate-x-0.5 transition-transform">➔</span>
@@ -543,7 +683,7 @@ export function MyVenueView() {
                                     className="w-full flex items-center justify-between p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-[rgba(124,58,237,0.4)] transition-all text-xs font-semibold text-white group"
                                 >
                                     <div className="flex items-center gap-2.5">
-                                        <span className="text-[#E8FF57]">📷</span>
+                                        <span className="text-[#E8FF57]"><Camera/></span>
                                         <span>Upload to Gallery</span>
                                     </div>
                                     <span className="text-[#A855F7] group-hover:translate-x-0.5 transition-transform">➔</span>

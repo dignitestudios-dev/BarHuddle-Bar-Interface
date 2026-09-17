@@ -6,6 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useResetPasswordMutation } from "../api/auth.mutations";
 import { toast } from "sonner";
+import { PasswordStrengthMeter } from "./PasswordStrengthMeter";
 
 export function CreateNewPassword() {
     const router = useRouter();
@@ -133,34 +134,10 @@ export function CreateNewPassword() {
                     />
                 </div>
 
-                {/* Password requirements checklist */}
-                {password && (
-                    <div className="w-full max-w-[388px] p-3 rounded-xl bg-purple-950/40 border border-purple-800/30 flex flex-col gap-1.5 text-[11px] -mt-2 animate-in fade-in duration-200">
-                        <div className="font-semibold text-purple-200 text-[11.5px] mb-0.5">Password requirements:</div>
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                            <div className={`flex items-center gap-1.5 ${hasMinLength ? "text-emerald-400 font-medium" : "text-white/50"}`}>
-                                <span>{hasMinLength ? "✓" : "○"}</span>
-                                <span>8+ characters</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasUppercase ? "text-emerald-400 font-medium" : "text-white/50"}`}>
-                                <span>{hasUppercase ? "✓" : "○"}</span>
-                                <span>1 uppercase (A-Z)</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasLowercase ? "text-emerald-400 font-medium" : "text-white/50"}`}>
-                                <span>{hasLowercase ? "✓" : "○"}</span>
-                                <span>1 lowercase (a-z)</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasNumber ? "text-emerald-400 font-medium" : "text-white/50"}`}>
-                                <span>{hasNumber ? "✓" : "○"}</span>
-                                <span>1 number (0-9)</span>
-                            </div>
-                            <div className={`flex items-center gap-1.5 ${hasSpecial ? "text-emerald-400 font-medium" : "text-white/50"}`}>
-                                <span>{hasSpecial ? "✓" : "○"}</span>
-                                <span>1 special char (!@#$)</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* Password Strength Meter */}
+                <div className="w-full max-w-[388px] -mt-2">
+                    <PasswordStrengthMeter password={password} />
+                </div>
 
                 {/* Confirm Password Field */}
                 <div className="w-full max-w-[388px]">

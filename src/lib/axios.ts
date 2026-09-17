@@ -70,7 +70,7 @@ export function getDeviceModel(): string {
 }
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.dev.barhuddle.com/",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.staging.barhuddle.com/",
   timeout: 300000,
   headers: { "Content-Type": "application/json" },
 });

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button, InputField } from "@/components/ui";
@@ -14,26 +14,48 @@ import { useAuth } from "../hooks/use-auth";
 import { useAppDispatch } from "@/store";
 import { setAuth, updateUser } from "@/store/slices/auth.slice";
 import { toast } from "sonner";
+import { PasswordStrengthMeter } from "./PasswordStrengthMeter";
 
 const emailSchema = z.object({
     email: z.string().min(1, "Email is required").email({ message: "Please enter a valid email address" }).max(100, { message: "Email must be less than 100 characters" }),
 });
 
-const passwordSchema = z.object({
-    password: z.string()
-        .min(1, "Password is required")
-        .min(8, { message: "Password must be at least 8 characters" })
-        .max(50, { message: "Password must be less than 50 characters" })
-        .regex(/[A-Z]/, { message: "Password must contain at least 1 uppercase letter (A-Z)" })
-        .regex(/[a-z]/, { message: "Password must contain at least 1 lowercase letter (a-z)" })
-        .regex(/[0-9]/, { message: "Password must contain at least 1 number (0-9)" })
-        .regex(/[^a-zA-Z0-9]/, { message: "Password must contain at least 1 special character (!@#$%^&* etc.)" }),
-    confirmPassword: z.string().optional(),
-});
-
+const createPasswordSchema = (isExisting: boolean) =>
+    z.object({
+        password: isExisting
+            ? z.string().min(1, "Password is required")
+            : z.string()
+                .min(1, "Password is required")
+                .min(8, "Password must be at least 8 characters")
+                .max(50, "Password cannot exceed 50 characters")
+                .regex(/[A-Z]/, "Must contain at least 1 uppercase letter (A-Z)")
+                .regex(/[a-z]/, "Must contain at least 1 lowercase letter (a-z)")
+                .regex(/[0-9]/, "Must contain at least 1 number (0-9)")
+                .regex(/[^a-zA-Z0-9]/, "Must contain at least 1 special character (!@#$%^&* etc.)"),
+        confirmPassword: z.string().optional(),
+    }).superRefine((data, ctx) => {
+        if (!isExisting) {
+            if (!data.confirmPassword) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Please confirm your password",
+                    path: ["confirmPassword"],
+                });
+            } else if (data.password !== data.confirmPassword) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Passwords do not match",
+                    path: ["confirmPassword"],
+                });
+            }
+        }
+    });
 
 type EmailFormValues = z.infer<typeof emailSchema>;
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+type PasswordFormValues = {
+    password: string;
+    confirmPassword?: string;
+};
 
 export function Login() {
     const router = useRouter();
@@ -66,9 +88,12 @@ export function Login() {
         reset: resetPasswordForm,
         formState: { errors: passwordErrors },
     } = useForm<PasswordFormValues>({
-        resolver: zodResolver(passwordSchema),
+        resolver: zodResolver(createPasswordSchema(isExistingUser)),
         defaultValues: { password: "", confirmPassword: "" },
+        mode: "onChange",
     });
+
+    const watchedPassword = useWatch({ control: passwordControl, name: "password" }) || "";
 
     const onEmailSubmit = async (data: EmailFormValues) => {
         try {
@@ -254,6 +279,16 @@ export function Login() {
                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                         </div>
+
+                        {/* Password Strength Meter for Account Creation */}
+                        {!isExistingUser && (
+                            <PasswordStrengthMeter
+                                password={watchedPassword}
+                                comparePassword={emailValue}
+                                compareLabel="Different from email"
+                                className="mt-2"
+                            />
+                        )}
                     </div>
 
                     {/* Confirm Password Field only for new users */}
