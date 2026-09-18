@@ -11,16 +11,10 @@ interface SettingsSidePanelProps {
 export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelProps) {
     return (
         <aside
-            className="box-border flex flex-col items-start p-[20px] isolate w-[220px] shrink-0 z-[9] font-['Manrope',sans-serif] select-none"
-            style={{
-                minHeight: "750px",
-                background: "rgba(173, 70, 255, 0.06)",
-                borderRight: "0.8px solid rgba(124, 58, 237, 0.7)",
-                borderRadius: "24px 24px 0px 0px",
-            }}
+            className="box-border flex flex-row md:flex-col items-center md:items-start p-2.5 sm:p-3 md:p-[20px] isolate w-full md:w-[220px] shrink-0 z-[9] font-['Manrope',sans-serif] select-none overflow-x-auto md:overflow-x-visible custom-scrollbar rounded-2xl md:rounded-[24px_24px_0px_0px] bg-[#AD46FF]/[0.06] border border-[#7C3AED]/70 md:border-b-0 md:border-t-0 md:border-l-0 md:min-h-[750px]"
         >
-            {/* Paragraph / SETTINGS MENU Header */}
-            <div className="flex flex-col items-start px-[12px] py-0 w-[179.2px] h-[14px] mb-[12px]">
+            {/* Paragraph / SETTINGS MENU Header (Desktop only) */}
+            <div className="hidden md:flex flex-col items-start px-[12px] py-0 w-[179.2px] h-[14px] mb-[12px]">
                 <span
                     className="font-extrabold text-[9px] leading-[14px] uppercase tracking-[0.9px]"
                     style={{ color: "#8B7EC8" }}
@@ -29,13 +23,13 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                 </span>
             </div>
 
-            {/* Frame 2147227824 - Menu List */}
-            <div className="flex flex-col items-start p-0 gap-[4px] w-[179.2px]">
+            {/* Menu List */}
+            <div className="flex flex-row md:flex-col items-center md:items-start p-0 gap-1.5 sm:gap-2 md:gap-[4px] w-full md:w-[179.2px]">
                 {/* 1. Notifications */}
                 <button
                     type="button"
                     onClick={() => onTabChange("Notifications")}
-                    className={`box-border flex flex-row items-center px-[12px] py-[10px] gap-[12px] w-[179.2px] h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left ${
+                    className={`box-border flex flex-row items-center px-3 md:px-[12px] py-2 md:py-[10px] gap-2 md:gap-[12px] shrink-0 md:shrink md:w-[179.2px] h-[36px] md:h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left whitespace-nowrap ${
                         activeTab === "Notifications"
                             ? "bg-[rgba(124,58,237,0.18)] border border-[rgba(124,58,237,0.28)]"
                             : "hover:bg-[rgba(124,58,237,0.1)] border border-transparent"
@@ -64,9 +58,9 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                         Notifications
                     </span>
 
-                    {/* Icon:align (Right Chevron for Active tab) */}
+                    {/* Icon:align (Right Chevron for Active tab on desktop) */}
                     {activeTab === "Notifications" && (
-                        <div className="flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
+                        <div className="hidden md:flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
                             <svg className="w-[12px] h-[12px]" viewBox="0 0 12 12" fill="none">
                                 <path
                                     d="M4.5 9L7.5 6L4.5 3"
@@ -84,7 +78,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                 <button
                     type="button"
                     onClick={() => onTabChange("Change Password")}
-                    className={`box-border flex flex-row items-center px-[12px] py-[10px] gap-[12px] w-[179.2px] h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left ${
+                    className={`box-border flex flex-row items-center px-3 md:px-[12px] py-2 md:py-[10px] gap-2 md:gap-[12px] shrink-0 md:shrink md:w-[179.2px] h-[36px] md:h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left whitespace-nowrap ${
                         activeTab === "Change Password"
                             ? "bg-[rgba(124,58,237,0.18)] border border-[rgba(124,58,237,0.28)]"
                             : "hover:bg-[rgba(124,58,237,0.1)] border border-transparent"
@@ -123,7 +117,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
 
                     {/* Active chevron */}
                     {activeTab === "Change Password" && (
-                        <div className="flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
+                        <div className="hidden md:flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
                             <svg className="w-[12px] h-[12px]" viewBox="0 0 12 12" fill="none">
                                 <path
                                     d="M4.5 9L7.5 6L4.5 3"
@@ -141,7 +135,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                 <button
                     type="button"
                     onClick={() => onTabChange("Subscription")}
-                    className={`box-border flex flex-row items-center px-[12px] py-[10px] gap-[12px] w-[179.2px] h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left ${
+                    className={`box-border flex flex-row items-center px-3 md:px-[12px] py-2 md:py-[10px] gap-2 md:gap-[12px] shrink-0 md:shrink md:w-[179.2px] h-[36px] md:h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left whitespace-nowrap ${
                         activeTab === "Subscription"
                             ? "bg-[rgba(124,58,237,0.18)] border border-[rgba(124,58,237,0.28)]"
                             : "hover:bg-[rgba(124,58,237,0.1)] border border-transparent"
@@ -179,7 +173,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
 
                     {/* Active chevron */}
                     {activeTab === "Subscription" && (
-                        <div className="flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
+                        <div className="hidden md:flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
                             <svg className="w-[12px] h-[12px]" viewBox="0 0 12 12" fill="none">
                                 <path
                                     d="M4.5 9L7.5 6L4.5 3"
@@ -197,7 +191,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                 <button
                     type="button"
                     onClick={() => onTabChange("Privacy Policy")}
-                    className={`box-border flex flex-row items-center px-[12px] py-[10px] gap-[12px] w-[179.2px] h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left ${
+                    className={`box-border flex flex-row items-center px-3 md:px-[12px] py-2 md:py-[10px] gap-2 md:gap-[12px] shrink-0 md:shrink md:w-[179.2px] h-[36px] md:h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left whitespace-nowrap ${
                         activeTab === "Privacy Policy"
                             ? "bg-[rgba(124,58,237,0.18)] border border-[rgba(124,58,237,0.28)]"
                             : "hover:bg-[rgba(124,58,237,0.1)] border border-transparent"
@@ -228,7 +222,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
 
                     {/* Active chevron */}
                     {activeTab === "Privacy Policy" && (
-                        <div className="flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
+                        <div className="hidden md:flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
                             <svg className="w-[12px] h-[12px]" viewBox="0 0 12 12" fill="none">
                                 <path
                                     d="M4.5 9L7.5 6L4.5 3"
@@ -246,7 +240,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                 <button
                     type="button"
                     onClick={() => onTabChange("Terms & Conditions")}
-                    className={`box-border flex flex-row items-center px-[12px] py-[10px] gap-[12px] w-[179.2px] h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left ${
+                    className={`box-border flex flex-row items-center px-3 md:px-[12px] py-2 md:py-[10px] gap-2 md:gap-[12px] shrink-0 md:shrink md:w-[179.2px] h-[36px] md:h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left whitespace-nowrap ${
                         activeTab === "Terms & Conditions"
                             ? "bg-[rgba(124,58,237,0.18)] border border-[rgba(124,58,237,0.28)]"
                             : "hover:bg-[rgba(124,58,237,0.1)] border border-transparent"
@@ -286,6 +280,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                                 }
                                 strokeWidth="1.16667"
                                 strokeLinecap="round"
+                                strokeLinejoin="round"
                             />
                         </svg>
                     </div>
@@ -302,7 +297,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
 
                     {/* Active chevron */}
                     {activeTab === "Terms & Conditions" && (
-                        <div className="flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
+                        <div className="hidden md:flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
                             <svg className="w-[12px] h-[12px]" viewBox="0 0 12 12" fill="none">
                                 <path
                                     d="M4.5 9L7.5 6L4.5 3"
@@ -320,7 +315,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
                 <button
                     type="button"
                     onClick={() => onTabChange("Delete Account")}
-                    className={`box-border flex flex-row items-center px-[12px] py-[10px] gap-[12px] w-[179.2px] h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left ${
+                    className={`box-border flex flex-row items-center px-3 md:px-[12px] py-2 md:py-[10px] gap-2 md:gap-[12px] shrink-0 md:shrink md:w-[179.2px] h-[36px] md:h-[39.6px] rounded-[13px] transition-all cursor-pointer text-left whitespace-nowrap ${
                         activeTab === "Delete Account"
                             ? "bg-[rgba(124,58,237,0.18)] border border-[rgba(124,58,237,0.28)]"
                             : "hover:bg-[rgba(124,58,237,0.1)] border border-transparent"
@@ -351,7 +346,7 @@ export function SettingsSidePanel({ activeTab, onTabChange }: SettingsSidePanelP
 
                     {/* Active chevron */}
                     {activeTab === "Delete Account" && (
-                        <div className="flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
+                        <div className="hidden md:flex flex-row justify-end items-center shrink-0 w-[12px] h-[12px]">
                             <svg className="w-[12px] h-[12px]" viewBox="0 0 12 12" fill="none">
                                 <path
                                     d="M4.5 9L7.5 6L4.5 3"

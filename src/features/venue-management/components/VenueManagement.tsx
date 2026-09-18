@@ -399,8 +399,8 @@ export function VenueManagement() {
 
                 {/* Search Bar Section */}
                 <form onSubmit={handleSearch} className="w-full max-w-[600px] mx-auto relative flex items-center">
-                    <div className="absolute left-4 text-[#9D8FD0] pointer-events-none">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="absolute left-3.5 sm:left-4 text-[#9D8FD0] pointer-events-none">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
@@ -409,22 +409,22 @@ export function VenueManagement() {
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         placeholder="Search for your venue by name or location..."
-                        className={`w-full h-14 pl-12 ${searchInput ? "pr-36" : "pr-32"} rounded-full bg-[rgba(20,14,80,0.6)] border border-[rgba(124,58,237,0.3)] text-white placeholder:text-[#9D8FD0]/60 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all`}
+                        className={`w-full h-12 sm:h-14 pl-10 sm:pl-12 ${searchInput ? "pr-28 sm:pr-36" : "pr-24 sm:pr-32"} rounded-full bg-[rgba(20,14,80,0.6)] border border-[rgba(124,58,237,0.3)] text-white text-xs sm:text-sm placeholder:text-[#9D8FD0]/60 focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED] transition-all`}
                     />
                     {searchInput && (
                         <button
                             type="button"
                             onClick={handleClearSearch}
-                            className="absolute right-28 p-1.5 rounded-full text-[#9D8FD0] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-all flex items-center justify-center"
+                            className="absolute right-20 sm:right-28 p-1 sm:p-1.5 rounded-full text-[#9D8FD0] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-all flex items-center justify-center"
                             title="Clear search"
                             aria-label="Clear search"
                         >
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                     )}
                     <button
                         type="submit"
-                        className="absolute right-2 h-10 px-6 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white font-semibold text-sm hover:brightness-110 active:scale-95 transition-all"
+                        className="absolute right-1.5 sm:right-2 h-9 sm:h-10 px-4 sm:px-6 rounded-full bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white font-semibold text-xs sm:text-sm hover:brightness-110 active:scale-95 transition-all"
                     >
                         Search
                     </button>

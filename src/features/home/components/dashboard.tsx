@@ -291,11 +291,11 @@ export function Dashboard() {
     if (isLoading) {
         return (
             <div className="w-full flex flex-col font-['Manrope',sans-serif]">
-                <main className="flex-1 w-full px-6 py-8 flex flex-col gap-8">
-                    <h1 className="text-[32px] font-extrabold leading-[40px] text-white tracking-tight">
+                <main className="flex-1 w-full px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 sm:gap-8">
+                    <h1 className="text-[26px] sm:text-[32px] font-extrabold leading-[34px] sm:leading-[40px] text-white tracking-tight">
                         Dashboard
                     </h1>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                         {Array.from({ length: 8 }).map((_, i) => (
                             <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
                         ))}
@@ -316,14 +316,14 @@ export function Dashboard() {
     return (
         <div className="w-full flex flex-col font-['Manrope',sans-serif]">
             {/* Main Content Area */}
-            <main className="flex-1 w-full px-6 py-8 flex flex-col gap-8">
+            <main className="flex-1 w-full px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 sm:gap-8">
                 {/* Dashboard Page Header & Active Venue Card */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-[32px] font-extrabold leading-[40px] text-white tracking-tight">
+                        <h1 className="text-[26px] sm:text-[32px] font-extrabold leading-[34px] sm:leading-[40px] text-white tracking-tight">
                             Dashboard
                         </h1>
-                        <p className="text-[#9D8FD0] text-[14px]">
+                        <p className="text-[#9D8FD0] text-[13px] sm:text-[14px]">
                             Real-time overview and analytics for your active venue.
                         </p>
                     </div>

@@ -43,23 +43,23 @@ export function VenueHeader({
 
     return (
         <>
-            <div className={`w-full flex items-center justify-between min-h-[57px] font-['Manrope',sans-serif] ${className}`}>
+            <div className={`w-full flex items-center justify-between min-h-[57px] flex-wrap sm:flex-nowrap gap-3 font-['Manrope',sans-serif] ${className}`}>
                 {/* Left Side: Back Arrow + Bar Detail Screen Title */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     {/* Back Arrow Button */}
                     <button
                         type="button"
                         onClick={onBack}
-                        className="w-12 h-12 flex items-center justify-center p-3 text-white/80 hover:text-white transition-all cursor-pointer shrink-0"
+                        className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center p-2 sm:p-3 text-white/80 hover:text-white transition-all cursor-pointer shrink-0"
                         aria-label="Go Back"
                     >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
 
                     {/* Gradient Screen Title */}
-                    <h1 className="font-extrabold text-[32px] sm:text-[36px] leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
+                    <h1 className="font-extrabold text-[22px] sm:text-[30px] md:text-[36px] leading-[30px] sm:leading-[40px] md:leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight truncate">
                         Bar Detail Screen
                     </h1>
                 </div>

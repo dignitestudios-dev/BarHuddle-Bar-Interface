@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 sizes="100vw"
                 className="object-cover object-left pointer-events-none select-none"
             />
-            <div className="w-full lg:w-1/2 min-h-screen flex items-center justify-center p-6 md:p-12 z-10">
+            <div className="w-full lg:w-1/2 min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-12 z-10">
                 {children}
             </div>
         </div>

@@ -107,42 +107,43 @@ export function OperatingHoursModal({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
             <div className="absolute inset-0" onClick={onClose} />
 
             <div
-                className="relative w-full max-w-[620px] rounded-[24px] p-6 sm:p-8 flex flex-col gap-6 shadow-[0px_16px_48px_rgba(0,0,0,0.6)] border border-[rgba(124,58,237,0.35)] max-h-[90vh] overflow-y-auto custom-scrollbar"
-                style={{ background: "rgba(14, 7, 34, 0.95)" }}
+                className="relative w-full max-w-[640px] rounded-[24px] p-4 sm:p-6 flex flex-col gap-4 sm:gap-6 shadow-[0px_16px_48px_rgba(0,0,0,0.6)] border border-[rgba(124,58,237,0.35)] max-h-[92vh] overflow-y-auto custom-scrollbar"
+                style={{ background: "rgba(14, 7, 34, 0.96)" }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[rgba(124,58,237,0.2)] border border-[rgba(124,58,237,0.4)] flex items-center justify-center text-[#E8FF57]">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[rgba(124,58,237,0.2)] border border-[rgba(124,58,237,0.4)] flex items-center justify-center text-[#E8FF57] shrink-0">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 className="text-xl font-extrabold text-white">Operating Hours</h3>
-                            <p className="text-xs text-[#8B7EC8]">Configure open and close times for each day of the week</p>
+                            <h3 className="text-lg sm:text-xl font-extrabold text-white">Operating Hours</h3>
+                            <p className="text-xs text-[#8B7EC8] leading-tight mt-0.5">Configure open and close times for each day of the week</p>
                         </div>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors shrink-0"
                     >
                         ✕
                     </button>
                 </div>
 
-                {/* Quick actions */}
-                <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)]">
+                {/* Quick actions template */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 py-2 px-3 rounded-xl bg-[rgba(124,58,237,0.1)] border border-[rgba(124,58,237,0.2)]">
                     <span className="text-xs text-[#C4B5FD]">Quick Template:</span>
                     <button
                         type="button"
                         onClick={handleApplyWeekdayDefaults}
-                        className="text-xs font-semibold text-[#E8FF57] hover:underline"
+                        className="text-xs font-semibold text-[#E8FF57] hover:underline text-left sm:text-right"
                     >
                         Apply Standard Bar Schedule (18:00 - 02:00)
                     </button>
@@ -150,7 +151,7 @@ export function OperatingHoursModal({
 
                 {/* Hours Form */}
                 <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-2 sm:gap-2.5">
                         {DAYS.map((d) => {
                             const current = hours.find((h) => h.day === d.day) || {
                                 day: d.day,
@@ -162,75 +163,108 @@ export function OperatingHoursModal({
                             return (
                                 <div
                                     key={d.day}
-                                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all ${
+                                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:px-4 sm:py-3 rounded-xl border gap-2.5 sm:gap-3 transition-all ${
                                         current.isClosed
                                             ? "bg-white/[0.02] border-white/10 opacity-70"
                                             : "bg-[#140E50]/70 border-[rgba(124,58,237,0.3)] shadow-sm"
                                     }`}
                                 >
-                                    {/* Day Name & Closed Toggle */}
-                                    <div className="flex items-center justify-between sm:w-40">
+                                    {/* Day Name & Mobile Custom Closed Toggle */}
+                                    <div className="flex items-center justify-between sm:w-28 md:w-32 shrink-0">
                                         <span className="font-bold text-sm text-white">{d.label}</span>
-                                        <label className="flex items-center gap-2 cursor-pointer sm:hidden">
-                                            <input
-                                                type="checkbox"
-                                                checked={current.isClosed}
-                                                onChange={(e) =>
-                                                    handleDayChange(d.day, "isClosed", e.target.checked)
-                                                }
-                                                className="rounded border-purple-500 text-purple-600 focus:ring-purple-500"
-                                            />
-                                            <span className="text-xs text-[#9D8FD0]">Closed</span>
-                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleDayChange(d.day, "isClosed", !current.isClosed)
+                                            }
+                                            className="flex items-center gap-1.5 cursor-pointer select-none sm:hidden group shrink-0"
+                                            aria-label={`Toggle closed for ${d.label}`}
+                                        >
+                                            <div
+                                                className={`w-4 h-4 min-w-[16px] min-h-[16px] rounded-[4px] flex items-center justify-center transition-all shrink-0 ${
+                                                    current.isClosed
+                                                        ? "bg-[#7C3AED] border border-[#A855F7] shadow-[0_0_8px_rgba(124,58,237,0.6)]"
+                                                        : "bg-black/50 border border-white/25 group-hover:border-[#7C3AED]/70"
+                                                }`}
+                                            >
+                                                {current.isClosed && (
+                                                    <svg className="w-2.5 h-2 text-white fill-current shrink-0" viewBox="0 0 16 12">
+                                                        <path d="M5.5 10.586L1.707 6.793A1 1 0 00.293 8.207l4.5 4.5a1 1 0 001.414 0l9-9A1 1 0 0013.793 2.293L5.5 10.586z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <span className={`text-xs font-semibold whitespace-nowrap transition-colors ${current.isClosed ? "text-[#E8FF57]" : "text-[#9D8FD0] group-hover:text-white"}`}>
+                                                Closed
+                                            </span>
+                                        </button>
                                     </div>
 
                                     {/* Time Inputs */}
-                                    <div className="flex items-center gap-2.5 mt-2 sm:mt-0 flex-1 justify-end">
+                                    <div className="flex items-center gap-2 sm:gap-3 flex-1 justify-between sm:justify-end w-full sm:w-auto">
                                         {current.isClosed ? (
-                                            <span className="text-xs font-semibold text-[#9D8FD0] italic py-1.5">
-                                                Closed all day
-                                            </span>
+                                            <div className="w-full sm:w-auto flex items-center justify-start sm:justify-end py-1 sm:py-1.5">
+                                                <span className="text-xs font-semibold text-[#9D8FD0] italic px-2.5 py-0.5 rounded-md bg-white/5 border border-white/5 sm:bg-transparent sm:border-0">
+                                                    Closed all day
+                                                </span>
+                                            </div>
                                         ) : (
-                                            <>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-[10px] uppercase text-[#8B7EC8] font-bold">Open</span>
+                                            <div className="grid grid-cols-2 gap-2.5 w-full sm:flex sm:items-center sm:gap-3 sm:w-auto">
+                                                {/* Open Time */}
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
+                                                    <span className="text-[10px] uppercase text-[#8B7EC8] font-bold shrink-0">Open</span>
                                                     <input
                                                         type="time"
                                                         value={current.open}
                                                         onChange={(e) =>
                                                             handleDayChange(d.day, "open", e.target.value)
                                                         }
-                                                        className="h-9 px-2.5 rounded-lg bg-black/40 border border-[rgba(124,58,237,0.4)] text-white text-xs focus:outline-none focus:border-[#E8FF57]"
+                                                        className="w-full sm:w-[112px] md:w-[118px] h-9 px-2 sm:px-2.5 rounded-lg bg-black/40 border border-[rgba(124,58,237,0.4)] text-white text-xs focus:outline-none focus:border-[#E8FF57] [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:brightness-0 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer min-w-0 tracking-tight"
                                                         required={!current.isClosed}
                                                     />
                                                 </div>
-                                                <span className="text-white/40 text-xs">-</span>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-[10px] uppercase text-[#8B7EC8] font-bold">Close</span>
+
+                                                {/* Close Time */}
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
+                                                    <span className="text-[10px] uppercase text-[#8B7EC8] font-bold shrink-0">Close</span>
                                                     <input
                                                         type="time"
                                                         value={current.close}
                                                         onChange={(e) =>
                                                             handleDayChange(d.day, "close", e.target.value)
                                                         }
-                                                        className="h-9 px-2.5 rounded-lg bg-black/40 border border-[rgba(124,58,237,0.4)] text-white text-xs focus:outline-none focus:border-[#E8FF57]"
+                                                        className="w-full sm:w-[112px] md:w-[118px] h-9 px-2 sm:px-2.5 rounded-lg bg-black/40 border border-[rgba(124,58,237,0.4)] text-white text-xs focus:outline-none focus:border-[#E8FF57] [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:brightness-0 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer min-w-0 tracking-tight"
                                                         required={!current.isClosed}
                                                     />
                                                 </div>
-                                            </>
+                                            </div>
                                         )}
 
-                                        <label className="hidden sm:flex items-center gap-1.5 ml-3 cursor-pointer select-none">
-                                            <input
-                                                type="checkbox"
-                                                checked={current.isClosed}
-                                                onChange={(e) =>
-                                                    handleDayChange(d.day, "isClosed", e.target.checked)
-                                                }
-                                                className="w-4 h-4 rounded bg-purple-900 border-purple-600 text-purple-500 focus:ring-0 cursor-pointer"
-                                            />
-                                            <span className="text-xs text-[#9D8FD0]">Closed</span>
-                                        </label>
+                                        {/* Desktop Custom Closed Toggle */}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleDayChange(d.day, "isClosed", !current.isClosed)
+                                            }
+                                            className="hidden sm:flex items-center gap-1.5 ml-2.5 sm:ml-4 cursor-pointer select-none shrink-0 min-w-fit whitespace-nowrap group"
+                                            aria-label={`Toggle closed for ${d.label}`}
+                                        >
+                                            <div
+                                                className={`w-4 h-4 min-w-[16px] min-h-[16px] rounded-[4px] flex items-center justify-center transition-all shrink-0 ${
+                                                    current.isClosed
+                                                        ? "bg-[#7C3AED] border border-[#A855F7] shadow-[0_0_8px_rgba(124,58,237,0.6)]"
+                                                        : "bg-black/50 border border-white/25 group-hover:border-[#7C3AED]/70"
+                                                }`}
+                                            >
+                                                {current.isClosed && (
+                                                    <svg className="w-2.5 h-2 text-white fill-current shrink-0" viewBox="0 0 16 12">
+                                                        <path d="M5.5 10.586L1.707 6.793A1 1 0 00.293 8.207l4.5 4.5a1 1 0 001.414 0l9-9A1 1 0 0013.793 2.293L5.5 10.586z" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <span className={`text-xs font-semibold whitespace-nowrap transition-colors ${current.isClosed ? "text-[#E8FF57]" : "text-[#9D8FD0] group-hover:text-white"}`}>
+                                                Closed
+                                            </span>
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -238,18 +272,18 @@ export function OperatingHoursModal({
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-[rgba(124,58,237,0.2)]">
+                    <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2.5 sm:gap-3 mt-4 pt-4 border-t border-[rgba(124,58,237,0.2)]">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#B7AADC] hover:text-white hover:bg-white/5 transition-all"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#B7AADC] hover:text-white hover:bg-white/5 transition-all text-center"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={updateHoursMutation.isPending}
-                            className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-110 active:scale-95 text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)] disabled:opacity-50 disabled:pointer-events-none transition-all"
+                            className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-110 active:scale-95 text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)] disabled:opacity-50 disabled:pointer-events-none transition-all text-center"
                         >
                             {updateHoursMutation.isPending ? "Updating..." : "Save Operating Hours"}
                         </button>
