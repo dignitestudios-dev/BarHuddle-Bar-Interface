@@ -91,30 +91,31 @@ export function UploadGalleryModal({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-200 font-['Manrope',sans-serif]">
             <div className="absolute inset-0" onClick={onClose} />
 
             <div
-                className="relative w-full max-w-[500px] rounded-[24px] p-6 sm:p-8 flex flex-col gap-6 shadow-[0px_16px_48px_rgba(0,0,0,0.6)] border border-[rgba(124,58,237,0.35)]"
-                style={{ background: "rgba(14, 7, 34, 0.95)" }}
+                className="relative w-full max-w-[500px] rounded-[24px] p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 shadow-[0px_16px_48px_rgba(0,0,0,0.6)] border border-[rgba(124,58,237,0.35)] max-h-[92vh] overflow-y-auto custom-scrollbar"
+                style={{ background: "rgba(14, 7, 34, 0.96)" }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[rgba(124,58,237,0.2)] border border-[rgba(124,58,237,0.4)] flex items-center justify-center text-[#E8FF57]">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[rgba(124,58,237,0.2)] border border-[rgba(124,58,237,0.4)] flex items-center justify-center text-[#E8FF57] shrink-0">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                         </div>
                         <div>
-                            <h3 className="text-xl font-extrabold text-white">Add Gallery Photo</h3>
-                            <p className="text-xs text-[#8B7EC8]">Upload showcase photos for your venue</p>
+                            <h3 className="text-lg sm:text-xl font-extrabold text-white">Add Gallery Photo</h3>
+                            <p className="text-xs text-[#8B7EC8] leading-tight mt-0.5">Upload showcase photos for your venue</p>
                         </div>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white flex items-center justify-center transition-colors shrink-0"
                     >
                         ✕
                     </button>
@@ -124,7 +125,7 @@ export function UploadGalleryModal({
                     {/* Upload Drop Area */}
                     <div
                         onClick={() => fileInputRef.current?.click()}
-                        className={`relative w-full h-56 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 cursor-pointer overflow-hidden transition-all ${previewUrl
+                        className={`relative w-full h-48 sm:h-56 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-4 cursor-pointer overflow-hidden transition-all ${previewUrl
                                 ? "border-[rgba(124,58,237,0.6)] bg-black/50"
                                 : "border-[rgba(124,58,237,0.3)] bg-[#140E50]/40 hover:bg-[#140E50]/70 hover:border-[#7C3AED]"
                             }`}
@@ -169,21 +170,21 @@ export function UploadGalleryModal({
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center justify-end gap-3 mt-3 pt-4 border-t border-[rgba(124,58,237,0.2)]">
+                    <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2.5 sm:gap-3 mt-3 pt-4 border-t border-[rgba(124,58,237,0.2)]">
                         <button
                             type="button"
                             onClick={() => {
                                 handleClear();
                                 onClose();
                             }}
-                            className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#B7AADC] hover:text-white hover:bg-white/5 transition-all"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-[#B7AADC] hover:text-white hover:bg-white/5 transition-all text-center"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={!selectedFile || addGalleryMutation.isPending}
-                            className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-110 active:scale-95 text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)] disabled:opacity-50 disabled:pointer-events-none transition-all"
+                            className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] hover:brightness-110 active:scale-95 text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)] disabled:opacity-50 disabled:pointer-events-none transition-all text-center"
                         >
                             {addGalleryMutation.isPending ? "Uploading..." : "Add to Gallery"}
                         </button>

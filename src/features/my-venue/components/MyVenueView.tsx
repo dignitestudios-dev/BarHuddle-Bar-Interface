@@ -429,8 +429,8 @@ export function MyVenueView() {
                     </p>
                 </div>
 
-                {/* Header Actions */}
-                <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                {/* Header Actions (Right aligned on mobile) */}
+                <div className="flex items-center justify-end md:justify-start gap-2.5 sm:gap-3 w-full md:w-auto">
                     {/* Custom Venue Switcher Dropdown */}
                     {venuesList.length > 0 && (
                         <VenueSwitcherDropdown
@@ -536,10 +536,10 @@ export function MyVenueView() {
             </div>
 
             {/* Navigation Tabs for Details */}
-            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#0E0528]/80 border border-[rgba(124,58,237,0.25)] max-w-md backdrop-blur-md">
+            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[#0E0528]/80 border border-[rgba(124,58,237,0.25)] max-w-md w-full overflow-x-auto custom-scrollbar backdrop-blur-md">
                 <button
                     onClick={() => setActiveSection("overview")}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeSection === "overview"
+                    className={`shrink-0 sm:flex-1 py-2 sm:py-2.5 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${activeSection === "overview"
                             ? "bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)]"
                             : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
                         }`}
@@ -548,7 +548,7 @@ export function MyVenueView() {
                 </button>
                 <button
                     onClick={() => setActiveSection("hours")}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeSection === "hours"
+                    className={`shrink-0 sm:flex-1 py-2 sm:py-2.5 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${activeSection === "hours"
                             ? "bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)]"
                             : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
                         }`}
@@ -557,7 +557,7 @@ export function MyVenueView() {
                 </button>
                 <button
                     onClick={() => setActiveSection("gallery")}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeSection === "gallery"
+                    className={`shrink-0 sm:flex-1 py-2 sm:py-2.5 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${activeSection === "gallery"
                             ? "bg-gradient-to-r from-[#7C3AED] to-[#9333EA] text-white shadow-[0px_4px_16px_rgba(124,58,237,0.4)]"
                             : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
                         }`}

@@ -12,9 +12,9 @@ export function PromotionsPageHeader({
     className = "",
 }: PromotionsPageHeaderProps) {
     return (
-        <div className={`w-full max-w-[1200px] flex items-center justify-between min-h-[45px] font-['Manrope',sans-serif] ${className}`}>
+        <div className={`w-full max-w-[1200px] flex items-center justify-between min-h-[45px] gap-3 font-['Manrope',sans-serif] ${className}`}>
             {/* Promotions Gradient Heading */}
-            <h1 className="font-extrabold text-[36px] leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
+            <h1 className="font-extrabold text-[28px] sm:text-[36px] leading-[36px] sm:leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
                 Promotions
             </h1>
 
@@ -22,13 +22,13 @@ export function PromotionsPageHeader({
             <button
                 type="button"
                 onClick={onCreatePromotion}
-                className="h-[42px] px-6 rounded-[100px] bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_22px_rgba(124,58,237,0.45)] flex items-center justify-center gap-2 font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0"
+                className="h-[40px] sm:h-[42px] px-4 sm:px-6 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_22px_rgba(124,58,237,0.45)] flex items-center justify-center gap-1.5 sm:gap-2 font-extrabold text-xs sm:text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0"
             >
                 {/* Plus Icon */}
                 <svg className="w-4 h-4 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                <span>Create Promotion</span>
+                <span>Create <span className="hidden xs:inline sm:inline">Promotion</span></span>
             </button>
         </div>
     );

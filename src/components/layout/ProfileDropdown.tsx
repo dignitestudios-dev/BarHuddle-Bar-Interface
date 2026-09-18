@@ -54,35 +54,38 @@ export function ProfileDropdown() {
 
     return (
         <div ref={profileRef} className="relative font-['Manrope',sans-serif]">
-            {/* Profile Pill Button */}
+            {/* Profile Pill Button (Avatar only on mobile, full pill on desktop) */}
             <button
                 type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="h-[37.6px] px-3 bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] rounded-[24px] flex items-center gap-2.5 hover:bg-[rgba(124,58,237,0.2)] transition-all focus:outline-none cursor-pointer"
+                className="w-[38px] h-[38px] md:w-auto md:h-[37.6px] px-0 md:px-3 bg-[rgba(124,58,237,0.12)] border border-[rgba(124,58,237,0.25)] rounded-full md:rounded-[24px] flex items-center justify-center md:justify-start gap-2.5 hover:bg-[rgba(124,58,237,0.2)] transition-all focus:outline-none cursor-pointer shrink-0"
+                title={`${displayName} - Profile options`}
             >
                 {/* Gradient Avatar or Image */}
                 {avatarUrl ? (
-                    <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-[rgba(124,58,237,0.4)]">
+                    <div className="w-7 h-7 md:w-6 md:h-6 rounded-full overflow-hidden shrink-0 border border-[rgba(124,58,237,0.4)]">
                         <Image
                             src={avatarUrl}
                             alt={firstName}
-                            width={24}
-                            height={24}
+                            width={28}
+                            height={28}
                             className="w-full h-full object-cover"
                         />
                     </div>
                 ) : (
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#F472B6] flex items-center justify-center text-[10px] font-bold text-[#F0EEFF] shrink-0">
+                    <div className="w-7 h-7 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-[#7C3AED] to-[#F472B6] flex items-center justify-center text-[11px] md:text-[10px] font-bold text-[#F0EEFF] shrink-0">
                         {initials}
                     </div>
                 )}
 
-                {/* Name */}
-                <span className="font-semibold text-sm text-white">{firstName}</span>
+                {/* Name (Hidden on Mobile, Displayed on Desktop) */}
+                <span className="hidden md:inline font-semibold text-sm text-white max-w-[120px] truncate">
+                    {firstName}
+                </span>
 
-                {/* Chevron Down */}
+                {/* Chevron Down (Hidden on Mobile, Displayed on Desktop) */}
                 <svg
-                    className={`w-3 h-3 text-[#C27AFF] transition-transform duration-200 ${showProfileMenu ? "rotate-180" : ""
+                    className={`hidden md:block w-3 h-3 text-[#C27AFF] transition-transform duration-200 ${showProfileMenu ? "rotate-180" : ""
                         }`}
                     fill="none"
                     viewBox="0 0 24 24"

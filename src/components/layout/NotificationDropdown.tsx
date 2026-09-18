@@ -172,7 +172,7 @@ export function NotificationDropdown() {
 
             {/* Notifications Dropdown Panel */}
             {showNotifications && (
-                <div className="absolute right-0 mt-3 w-[340px] sm:w-[400px] bg-[#05033A] border border-[rgba(180,95,242,0.3)] shadow-2xl rounded-xl p-4 sm:p-5 z-50 animate-in fade-in duration-150">
+                <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] max-w-[340px] sm:max-w-[400px] bg-[#05033A] border border-[rgba(180,95,242,0.3)] shadow-2xl rounded-xl p-3.5 sm:p-5 z-50 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between mb-4 border-b border-[#23165A] pb-3">
                         <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-base text-white">Notifications</h3>

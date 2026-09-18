@@ -58,12 +58,12 @@ export function AnalyticsPageHeader({
             {/* Top Row: Gradient Title & Date Filter Pill Group */}
             <div className="w-full flex items-center justify-between min-h-[45px] flex-wrap gap-4">
                 {/* Title: Analytics */}
-                <h1 className="font-extrabold text-[36px] leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
+                <h1 className="font-extrabold text-[28px] sm:text-[36px] leading-[36px] sm:leading-[45px] bg-gradient-to-r from-white to-[#C4B5FD] bg-clip-text text-transparent tracking-tight">
                     Analytics
                 </h1>
 
                 {/* DateFilter Pill Container & Custom Range */}
-                <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                     {selectedDateFilter === "Custom" && customStartDate && customEndDate && (
                         <div className="px-3 py-1 rounded-full bg-purple-900/30 border border-purple-500/30 text-purple-200 text-xs font-semibold flex items-center gap-1.5 animate-in fade-in duration-150">
                             <CalendarIcon className="w-3.5 h-3.5 text-[#E8FF57]" />
@@ -86,7 +86,7 @@ export function AnalyticsPageHeader({
                                     >
                                         <PopoverTrigger
                                             onClick={() => handleFilterClick(filter)}
-                                            className={`h-[29px] px-3.5 flex items-center justify-center rounded-[20px] font-bold text-[11px] leading-[16px] transition-all cursor-pointer ${
+                                            className={`h-[29px] px-3 sm:px-3.5 flex items-center justify-center rounded-[20px] font-bold text-[11px] leading-[16px] transition-all cursor-pointer ${
                                                 isActive
                                                     ? "bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white shadow-[0px_0px_14px_rgba(124,58,237,0.45)]"
                                                     : "text-[#8B7EC8] hover:text-white hover:bg-white/5"
@@ -95,7 +95,7 @@ export function AnalyticsPageHeader({
                                             {filter}
                                         </PopoverTrigger>
                                         <PopoverContent
-                                            className="w-[320px] p-4 bg-[#0E093C] border border-[#7C3AED]/40 rounded-2xl shadow-2xl z-[9999] flex flex-col gap-3 font-['Manrope',sans-serif]"
+                                            className="w-[calc(100vw-32px)] sm:w-[320px] p-4 bg-[#0E093C] border border-[#7C3AED]/40 rounded-2xl shadow-2xl z-[9999] flex flex-col gap-3 font-['Manrope',sans-serif]"
                                             align="end"
                                         >
                                             <div className="text-sm font-bold text-white border-b border-purple-800/30 pb-2">

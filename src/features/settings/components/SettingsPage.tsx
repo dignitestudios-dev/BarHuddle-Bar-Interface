@@ -33,14 +33,14 @@ export function SettingsPage() {
     };
 
     return (
-        <div className="w-full flex flex-col p-6 sm:p-8 font-['Manrope',sans-serif] min-h-screen">
+        <div className="w-full flex flex-col p-4 sm:p-6 md:p-8 font-['Manrope',sans-serif] min-h-screen">
             {/* Top Title Heading */}
-            <h1 className="text-[28px] font-extrabold text-white tracking-tight mb-8">
+            <h1 className="text-[24px] sm:text-[28px] font-extrabold text-white tracking-tight mb-4 sm:mb-6 md:mb-8">
                 Settings
             </h1>
 
             {/* Layout Container with Side Panel on Left and Content on Right */}
-            <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start w-full">
+            <div className="flex flex-col md:flex-row gap-4 sm:gap-6 md:gap-8 items-start w-full">
                 {/* Side Panel matching specified Figma CSS */}
                 <SettingsSidePanel
                     activeTab={activeTab}
