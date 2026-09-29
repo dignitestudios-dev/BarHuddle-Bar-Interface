@@ -49,7 +49,7 @@ export default function VenueDetailPage({
             <VenueDetailView
                 venue={venue}
                 onBack={() => router.push("/venue-management")}
-                onClaimSubmitted={() => router.push("/venue-management")}
+                onClaimSubmitted={() => router.push("/pending")}
             />
         </main>
     );

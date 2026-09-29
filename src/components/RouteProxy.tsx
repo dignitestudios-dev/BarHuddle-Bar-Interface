@@ -55,37 +55,48 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
                     return;
                 }
 
-                // Authenticated user routing logic based on isClaimed and isSubscribed
-                const isClaimed = user?.isClaimed || "none"; // fallback to none
-                let targetRoute = "/app/dashboard"; // Default to dashboard if fully subscribed
+                // Normalize status flags
+                const isClaimed = (user?.isClaimed || (user as any)?.isClamied || "none") as "none" | "pending" | "approved" | string;
+                const isSubscribed = Boolean(
+                    user?.isSubscribed ||
+                    (user?.subscriptionPlan && user.subscriptionPlan !== "none" && user.subscriptionPlan !== "null")
+                );
 
-                // If approved and subscribed, they can access the dashboard.
-                // Otherwise, they are forced into onboarding steps.
-                if (isClaimed === "none") {
+                let targetRoute = "/app/dashboard"; // Default to dashboard
+
+                // Route enforcement based on onboarding state
+                if (isSubscribed) {
+                    // Subscribed users have full access to the dashboard
+                    targetRoute = "/app/dashboard";
+                } else if (isClaimed === "none") {
                     targetRoute = "/venue-management"; // Needs to claim bar
                 } else if (isClaimed === "pending") {
-                    targetRoute = "/pending"; // Waiting for approval
-                } else if (isClaimed === "approved" && !user?.isSubscribed) {
+                    targetRoute = "/pending"; // Waiting for approval (Under Review)
+                } else if (isClaimed === "approved" && !isSubscribed) {
                     targetRoute = "/subscription"; // Needs to pick a plan
-                } else if (isClaimed === "approved" && user?.isSubscribed) {
-                    targetRoute = "/app/dashboard"; // All good
                 }
 
-                // If user is on an auth route OR they are on a protected route that doesn't match their allowed onboarding route
-                // Exceptions: If they are subscribed, they can access ANY /app/* route.
-
-                if (isAuthRoute || pathname === "/auth/profile-setup") {
-                    // Redirect logged-in user away from auth pages
+                if (isAuthRoute || pathname === "/auth/profile-setup" || (isSubscribed && pathname === "/subscription")) {
+                    // Redirect logged-in user away from auth pages or subscription page if already subscribed
                     router.replace(targetRoute);
-                } else if (pathname?.startsWith("/app") || pathname?.startsWith("/venue-management")) {
-                    // Authenticated users already inside the app or browsing venue-management should stay on the page
+                } else if (isSubscribed) {
+                    // Subscribed users can freely navigate all app routes
                     setIsChecking(false);
                     return;
-                } else if (
-                    !(isClaimed === "approved" && user?.isSubscribed) &&
-                    !pathname?.startsWith(targetRoute)
-                ) {
-                    // Force the user to stay on their required onboarding step
+                } else if (isClaimed === "none" && pathname?.startsWith("/venue-management")) {
+                    // Users who haven't claimed a venue yet stay on venue-management
+                    setIsChecking(false);
+                    return;
+                } else if (isClaimed === "pending" && pathname === "/pending") {
+                    // Users with pending claims stay on the under review screen
+                    setIsChecking(false);
+                    return;
+                } else if (isClaimed === "approved" && !isSubscribed && pathname === "/subscription") {
+                    // Users needing subscription stay on subscription screen
+                    setIsChecking(false);
+                    return;
+                } else if (!pathname?.startsWith(targetRoute)) {
+                    // Force the user to their designated onboarding step
                     router.replace(targetRoute);
                 }
             }
