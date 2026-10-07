@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { SettingsTab } from "../types";
 import { SettingsSidePanel } from "./SettingsSidePanel";
 import { NotificationsTab } from "./NotificationsTab";
@@ -10,8 +11,54 @@ import { PrivacyPolicyTab } from "./PrivacyPolicyTab";
 import { TermsConditionsTab } from "./TermsConditionsTab";
 import { DeleteAccountTab } from "./DeleteAccountTab";
 
+const TAB_PARAM_MAP: Record<string, SettingsTab> = {
+    notifications: "Notifications",
+    notification: "Notifications",
+    "change-password": "Change Password",
+    change_password: "Change Password",
+    password: "Change Password",
+    subscription: "Subscription",
+    subscriptions: "Subscription",
+    plan: "Subscription",
+    plans: "Subscription",
+    "privacy-policy": "Privacy Policy",
+    privacy: "Privacy Policy",
+    "terms-conditions": "Terms & Conditions",
+    terms: "Terms & Conditions",
+    "terms-and-conditions": "Terms & Conditions",
+    "delete-account": "Delete Account",
+    delete: "Delete Account",
+};
+
+const TAB_TO_PARAM: Record<SettingsTab, string> = {
+    Notifications: "notifications",
+    "Change Password": "change-password",
+    Subscription: "subscription",
+    "Privacy Policy": "privacy-policy",
+    "Terms & Conditions": "terms-conditions",
+    "Delete Account": "delete-account",
+};
+
 export function SettingsPage() {
-    const [activeTab, setActiveTab] = useState<SettingsTab>("Notifications");
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const tabParam = (searchParams?.get("tab") || "").toLowerCase().trim();
+
+    const activeTab: SettingsTab = useMemo(() => {
+        if (tabParam && TAB_PARAM_MAP[tabParam]) {
+            return TAB_PARAM_MAP[tabParam];
+        }
+        return "Notifications";
+    }, [tabParam]);
+
+    const handleTabChange = (newTab: SettingsTab) => {
+        const paramValue = TAB_TO_PARAM[newTab] || "notifications";
+        const params = new URLSearchParams(searchParams?.toString() || "");
+        params.set("tab", paramValue);
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -44,7 +91,7 @@ export function SettingsPage() {
                 {/* Side Panel matching specified Figma CSS */}
                 <SettingsSidePanel
                     activeTab={activeTab}
-                    onTabChange={setActiveTab}
+                    onTabChange={handleTabChange}
                 />
 
                 {/* Main Content Panel */}
@@ -57,3 +104,4 @@ export function SettingsPage() {
 }
 
 export default SettingsPage;
+

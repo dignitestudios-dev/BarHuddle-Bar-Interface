@@ -38,11 +38,26 @@ export function Sidebar() {
 
     const initials = getInitials(displayName);
 
+    // Only show Analytics in sidebar for paid subscription plans (other than venue_free)
+    const isPaidSubscribed = Boolean(
+        user?.subscriptionPlan &&
+        user.subscriptionPlan !== "venue_free" &&
+        user.subscriptionPlan !== "none" &&
+        user.subscriptionPlan !== "null"
+    );
+
+    const visibleNavItems = navItems.filter((item) => {
+        if (item.href === "/app/analytics" && !isPaidSubscribed) {
+            return false;
+        }
+        return true;
+    });
+
     // Common Nav Links Renderer
     const renderNavLinks = (collapsed: boolean, onLinkClick?: () => void) => {
         return (
             <nav className="w-full flex flex-col gap-1.5">
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                     const isActive =
                         pathname === item.href ||
                         (item.href === "/app/dashboard" && pathname === "/app") ||

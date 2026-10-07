@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { EventBoostingHeader } from "./EventBoostingHeader";
 import { EventCard, EventCardData, CreateEventModal } from "@/features/events/components";
 import { BoostEventModal } from "./BoostEventModal";
@@ -10,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useGetBoostsQuery } from "../api/boost.queries";
 import { useGetEventsQuery } from "@/features/events/api/events.queries";
 import { useCreateBoostMutation } from "../api/boost.mutations";
+import { CreateBoostPayload } from "../api/boost.service";
+import { usePurchasePlanMutation } from "@/features/subscription/api/subscription.mutations";
 import { useUpdateEventMutation, useDeleteEventMutation } from "@/features/events/api/events.mutations";
 import { toast } from "sonner";
 import { cleanImageUrl } from "@/utils/image";
@@ -27,8 +30,10 @@ export function EventBoosting() {
     const [editingEvent, setEditingEvent] = useState<any | null>(null);
     const [deletingEvent, setDeletingEvent] = useState<{ id: string; title: string } | null>(null);
 
+    const searchParams = useSearchParams();
     const { selectedVenueId } = useSelectedVenue();
-    const { data: apiBoostsData, isLoading: isLoadingBoosts } = useGetBoostsQuery({
+
+    const { data: apiBoostsData, isLoading: isLoadingBoosts, refetch: refetchBoosts } = useGetBoostsQuery({
         page: 1,
         limit: 50,
         ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
@@ -39,8 +44,30 @@ export function EventBoosting() {
         ...(selectedVenueId ? { venueId: selectedVenueId } : {}),
     });
     const createBoostMutation = useCreateBoostMutation();
+    const purchasePlanMutation = usePurchasePlanMutation();
     const updateEventMutation = useUpdateEventMutation();
     const deleteEventMutation = useDeleteEventMutation();
+
+    // Handle return from Stripe Checkout for Event Boost purchase
+    useEffect(() => {
+        const checkoutStatus = searchParams?.get("checkout");
+        const eventId = searchParams?.get("eventId");
+        const duration = searchParams?.get("duration");
+
+        if (checkoutStatus === "success") {
+            if (eventId) {
+                setLocallyBoostedIds((prev) => new Set(prev).add(eventId));
+            }
+            if (duration) {
+                setBoostedDurationText(duration);
+            }
+            setIsSuccessModalOpen(true);
+            refetchBoosts();
+            toast.success("Event boost checkout completed!");
+        } else if (checkoutStatus === "cancelled") {
+            toast.info("Boost checkout was cancelled.");
+        }
+    }, [searchParams, refetchBoosts]);
 
     const { eventsList, rawEventsMap }: { eventsList: EventCardData[]; rawEventsMap: Map<string, any> } = useMemo(() => {
         const rawBoostsList = Array.isArray(apiBoostsData?.data)
@@ -206,7 +233,6 @@ export function EventBoosting() {
 
     const handleBoostToggle = (targetEvent: EventCardData) => {
         if (!targetEvent.isBoosted) {
-            // Open boost modal for this event
             setSelectedEventForBoost(targetEvent);
             setIsBoostModalOpen(true);
         } else {
@@ -217,23 +243,63 @@ export function EventBoosting() {
     const handleConfirmBoost = async (
         targetEvent: EventCardData,
         duration: string,
-        payload: { eventId: string; startAt: string; endAt: string; amount: number }
+        payload: CreateBoostPayload
     ) => {
+        let toastId: string | number | undefined;
         try {
-            await createBoostMutation.mutateAsync(payload);
-            setLocallyBoostedIds((prev) => new Set(prev).add(String(targetEvent.id)));
+            toastId = toast.loading(`Preparing checkout for "${targetEvent.title}" (${duration})...`);
+
+            const eventId = String(payload.eventId || targetEvent.id);
+            const planId = payload.planId;
+
+            // When a planId is available, call POST /subscriptions/purchase/:planId
+            if (planId) {
+                const origin = typeof window !== "undefined" ? window.location.origin : "";
+                const successUrl = `${origin}/app/event-boosting?checkout=success&eventId=${encodeURIComponent(eventId)}&duration=${encodeURIComponent(duration)}`;
+                const cancelUrl = `${origin}/app/event-boosting?checkout=cancelled`;
+
+                const result = await purchasePlanMutation.mutateAsync({
+                    planId,
+                    eventId,
+                    successUrl,
+                    cancelUrl,
+                });
+
+                if (toastId) toast.dismiss(toastId);
+
+                const checkoutUrl = result?.data?.checkoutUrl || (result as any)?.checkoutUrl;
+                if (checkoutUrl) {
+                    window.location.href = checkoutUrl;
+                    return;
+                }
+            }
+
+            // Fallback to direct create boost if no specific planId was attached
+            const result = await createBoostMutation.mutateAsync({
+                eventId,
+                startAt: payload.startAt,
+                endAt: payload.endAt,
+                amount: payload.amount,
+            });
+
+            if (toastId) toast.dismiss(toastId);
+
+            if (result?.data?.checkoutUrl || result?.checkoutUrl) {
+                window.location.href = result.data?.checkoutUrl || result.checkoutUrl;
+                return;
+            }
+
+            setLocallyBoostedIds((prev) => new Set(prev).add(eventId));
             setBoostedDurationText(duration);
             setIsBoostModalOpen(false);
             setIsSuccessModalOpen(true);
-            toast.success("Event boosted successfully!");
+            toast.success(`"${targetEvent.title}" boosted successfully!`);
+            refetchBoosts();
         } catch (error: any) {
-            console.error("Failed to create boost", error);
-            // In case of simulated or unexpected backend error, still reflect state
-            setLocallyBoostedIds((prev) => new Set(prev).add(String(targetEvent.id)));
-            setBoostedDurationText(duration);
-            setIsBoostModalOpen(false);
-            setIsSuccessModalOpen(true);
-            toast.success("Event boosted successfully!");
+            if (toastId) toast.dismiss(toastId);
+            console.error("Failed to purchase boost", error);
+            const msg = error?.response?.data?.message || error?.message || "Failed to purchase boost";
+            toast.error(msg);
         }
     };
 

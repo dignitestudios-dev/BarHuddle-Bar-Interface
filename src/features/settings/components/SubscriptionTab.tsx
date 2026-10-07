@@ -21,59 +21,41 @@ const DEFAULT_SETTINGS_PLANS: SubscriptionPlan[] = [
         _id: "plan_free_tier",
         key: "venue_free",
         billingMode: "subscription",
-        label: "Starter Plan",
-        name: "Starter",
+        label: "Free Plan",
+        name: "Free",
         displayPrice: 0,
         price: 0,
         currency: "usd",
         features: [
-            "Claim and verify venue profile",
-            "Basic venue details & opening hours",
-            "Upload venue photos & menus",
-            "Receive customer reviews & ratings",
-            "Standard foot-traffic visibility",
+            "Claiming a venue",
+            "Add venue photos",
+            "Add Bar open/close timings",
+            "Event Creation",
+            "Promotion",
+            "No Analytics",
         ],
         sortOrder: 1,
     },
     {
-        _id: "plan_growth_tier",
+        _id: "plan_pro_tier",
         key: "venue_premium",
         billingMode: "subscription",
-        label: "Growth Plan",
-        name: "Growth",
-        displayPrice: 49,
-        price: 49,
+        label: "Pro Plan",
+        name: "Pro",
+        displayPrice: 9.99,
+        price: 9.99,
         currency: "usd",
         features: [
-            "Everything in Starter",
-            "Create unlimited events & drink specials",
-            "Featured venue placement in search results",
-            "Attendee demographic & peak hour insights",
-            "Direct customer promo & notification tools",
-            "Enhanced performance analytics dashboard",
+            "Claiming a venue",
+            "Add venue photos",
+            "Add Bar open/close timings",
+            "Event Creation",
+            "Promotion",
+            "Full Analytics (Visitor, Retention, Events, Sentiment, Boost, Reports)",
+            "Boost events at $9.99",
         ],
         popular: true,
         sortOrder: 2,
-    },
-    {
-        _id: "plan_executive_tier",
-        key: "venue_executive",
-        billingMode: "subscription",
-        label: "Executive Plan",
-        name: "Executive",
-        displayPrice: 99,
-        price: 99,
-        currency: "usd",
-        features: [
-            "Everything in Growth",
-            "Top-tier priority placement across the app",
-            "Advanced real-time foot-traffic radar",
-            "Dedicated VIP account manager",
-            "Custom branding & flyer designer integration",
-            "Multi-venue management tools",
-            "Early VIP access to all new features",
-        ],
-        sortOrder: 3,
     },
 ];
 
@@ -228,10 +210,29 @@ export function SubscriptionTab() {
         }
     };
 
-    const handlePlanAction = async (plan: SubscriptionPlan) => {
-        const isFree = (plan.displayPrice ?? plan.price ?? 0) === 0 || plan.key === "venue_free";
+    const planPrice =
+        activePlanObj?.displayPrice ??
+        activePlanObj?.price ??
+        (currentPlanKey === "venue_executive" ? 99 : currentPlanKey === "venue_premium" ? 49 : 0);
 
-        if (isFree) {
+    const isFreeTier =
+        currentPlanKey === "venue_free" ||
+        planPrice === 0 ||
+        !user?.isSubscribed ||
+        user?.subscriptionPlan === "venue_free";
+
+    const isPaidActive = Boolean(isActive && !isFreeTier && currentSub?.status === "active");
+
+    const handlePlanAction = async (plan: SubscriptionPlan) => {
+        const isTargetFree = (plan.displayPrice ?? plan.price ?? 0) === 0 || plan.key === "venue_free";
+        const targetPrice = plan.displayPrice ?? plan.price ?? 0;
+
+        if (isPaidActive && targetPrice < planPrice) {
+            toast.error("Downgrading to a lower subscription is not allowed while a higher plan is active.");
+            return;
+        }
+
+        if (isTargetFree) {
             toast.info("Starter features are included by default.");
             return;
         }
@@ -253,13 +254,8 @@ export function SubscriptionTab() {
         }
 
         try {
-            if (isActive) {
-                // Change plan if currently active
-                await changePlanMutation.mutateAsync({ newPlanId: planId! });
-                toast.success(`Plan successfully updated to ${plan.label || plan.name}!`);
-                await Promise.all([refetchMySub(), syncUserProfile()]);
-            } else {
-                // Initiate Stripe Checkout for subscription purchase
+            if (isFreeTier || !isPaidActive) {
+                // If user has free plan active, call purchase API when upgrading
                 const origin = typeof window !== "undefined" ? window.location.origin : "";
                 const result = await purchaseMutation.mutateAsync({
                     planId: planId!,
@@ -269,6 +265,11 @@ export function SubscriptionTab() {
                 if (result?.data?.checkoutUrl) {
                     window.location.href = result.data.checkoutUrl;
                 }
+            } else {
+                // If user has an existing active paid subscription (e.g. Growth upgrading to Executive), call change plan
+                await changePlanMutation.mutateAsync({ newPlanId: planId! });
+                toast.success(`Plan successfully updated to ${plan.label || plan.name}!`);
+                await Promise.all([refetchMySub(), syncUserProfile()]);
             }
         } catch (error: any) {
             const msg =
@@ -283,11 +284,6 @@ export function SubscriptionTab() {
     const alternativePlans = useMemo(() => {
         return plans.filter((p) => p.key !== currentPlanKey);
     }, [plans, currentPlanKey]);
-
-    const planPrice =
-        activePlanObj?.displayPrice ??
-        activePlanObj?.price ??
-        (currentPlanKey === "venue_executive" ? 99 : currentPlanKey === "venue_premium" ? 49 : 0);
 
     const planDisplayName =
         activePlanObj?.label ||
@@ -385,25 +381,25 @@ export function SubscriptionTab() {
                             </span>
                             <span
                                 className={`px-2.5 py-[2px] rounded-full border text-[10px] font-bold leading-[15px] flex items-center gap-1.5 ${
-                                    isCancelAtPeriodEnd
+                                    isPaidActive && isCancelAtPeriodEnd
                                         ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
-                                        : isActive
+                                        : isPaidActive
                                         ? "bg-[rgba(74,222,128,0.15)] border-[rgba(74,222,128,0.3)] text-[#4ADE80]"
                                         : "bg-white/10 border-white/20 text-white/80"
                                 }`}
                             >
                                 <span
                                     className={`w-1.5 h-1.5 rounded-full ${
-                                        isCancelAtPeriodEnd
+                                        isPaidActive && isCancelAtPeriodEnd
                                             ? "bg-rose-400"
-                                            : isActive
+                                            : isPaidActive
                                             ? "bg-[#4ADE80] animate-pulse"
                                             : "bg-white/60"
                                     }`}
                                 />
-                                {isCancelAtPeriodEnd
+                                {isPaidActive && isCancelAtPeriodEnd
                                     ? "Canceling at period end"
-                                    : isActive
+                                    : isPaidActive
                                     ? "Active Subscription"
                                     : "Free Tier"}
                             </span>
@@ -421,9 +417,9 @@ export function SubscriptionTab() {
                         </h3>
                         <p className="font-normal text-[13px] sm:text-[14px] leading-[20px] text-[#C4B5FD]">
                             ${planPrice} / month ·{" "}
-                            {isCancelAtPeriodEnd
+                            {isPaidActive && isCancelAtPeriodEnd
                                 ? `Access remains active until ${formattedDate}`
-                                : isActive
+                                : isPaidActive
                                 ? `Renews on ${formattedDate}`
                                 : `Free tier features active`}
                         </p>
@@ -473,7 +469,7 @@ export function SubscriptionTab() {
                             </span>
                         </div>
 
-                        {isActive && !isCancelAtPeriodEnd && (
+                        {isPaidActive && !isCancelAtPeriodEnd && (
                             <button
                                 type="button"
                                 onClick={() => setIsCancelModalOpen(true)}
@@ -488,7 +484,9 @@ export function SubscriptionTab() {
                         )}
 
                         <p className="font-normal text-[12px] sm:text-[13px] leading-[18px] text-white/80 lg:text-right">
-                            {isCancelAtPeriodEnd
+                            {!isPaidActive
+                                ? "Starter features included by default"
+                                : isCancelAtPeriodEnd
                                 ? `Active until ${formattedDate}`
                                 : `Next billing cycle: ${formattedDate}`}
                         </p>
@@ -513,6 +511,7 @@ export function SubscriptionTab() {
                             const price = plan.displayPrice ?? plan.price ?? 0;
                             const isFree = price === 0 || plan.key === "venue_free";
                             const isExecutive = plan.key === "venue_executive";
+                            const isLowerTier = isActive && price < planPrice;
 
                             return (
                                 <div
@@ -525,10 +524,20 @@ export function SubscriptionTab() {
                                                 className={`px-[12px] py-[4px] rounded-full border font-extrabold text-[10px] leading-[15px] tracking-[1px] uppercase ${
                                                     isExecutive
                                                         ? "bg-[rgba(232,255,87,0.12)] border-[rgba(232,255,87,0.3)] text-[#E8FF57]"
+                                                        : isLowerTier
+                                                        ? "bg-white/5 border-white/10 text-white/40"
                                                         : "bg-[rgba(157,143,208,0.12)] border-[rgba(157,143,208,0.25)] text-[#9D8FD0]"
                                                 }`}
                                             >
-                                                {isExecutive ? "EXECUTIVE TIER" : "STARTER TIER"}
+                                                {isLowerTier
+                                                    ? "LOWER TIER"
+                                                    : plan.label
+                                                    ? `${plan.label.toUpperCase()} TIER`
+                                                    : plan.name
+                                                    ? `${plan.name.toUpperCase()} TIER`
+                                                    : isExecutive
+                                                    ? "EXECUTIVE TIER"
+                                                    : "STARTER TIER"}
                                             </span>
 
                                             <div className="w-[36px] h-[36px] rounded-full bg-white/5 flex items-center justify-center text-[#C4B5FD]">
@@ -585,20 +594,33 @@ export function SubscriptionTab() {
                                         </div>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => handlePlanAction(plan)}
-                                        disabled={purchaseMutation.isPending || changePlanMutation.isPending}
-                                        className="w-full h-[46px] rounded-[16px] font-extrabold text-[14px] text-white transition-all cursor-pointer hover:opacity-95 active:scale-98 mt-6 bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.4)] disabled:opacity-50"
-                                    >
-                                        {purchaseMutation.isPending || changePlanMutation.isPending
-                                            ? "Processing..."
-                                            : isFree
-                                            ? "Starter Plan"
-                                            : isActive
-                                            ? `Switch to ${plan.label || plan.name}`
-                                            : `Upgrade to ${plan.label || plan.name}`}
-                                    </button>
+                                    <div className="flex flex-col gap-1.5 mt-6">
+                                        <button
+                                            type="button"
+                                            onClick={() => handlePlanAction(plan)}
+                                            disabled={isLowerTier || purchaseMutation.isPending || changePlanMutation.isPending}
+                                            className={`w-full h-[46px] rounded-[16px] font-extrabold text-[14px] transition-all ${
+                                                isLowerTier
+                                                    ? "bg-white/5 border border-white/10 text-white/40 cursor-not-allowed shadow-none"
+                                                    : "text-white cursor-pointer hover:opacity-95 active:scale-98 bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.4)] disabled:opacity-50"
+                                            }`}
+                                        >
+                                            {purchaseMutation.isPending || changePlanMutation.isPending
+                                                ? "Processing..."
+                                                : isLowerTier
+                                                ? "Downgrade Unavailable"
+                                                : isFree
+                                                ? "Starter Plan"
+                                                : isActive
+                                                ? `Switch to ${plan.label || plan.name}`
+                                                : `Upgrade to ${plan.label || plan.name}`}
+                                        </button>
+                                        {isLowerTier && (
+                                            <p className="text-[11px] text-center text-[#8B7EC8]">
+                                                Included with your active higher plan
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}

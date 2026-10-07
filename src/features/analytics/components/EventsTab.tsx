@@ -7,6 +7,8 @@ import { EventAttendanceTrendChart, AttendanceDataPoint } from "@/components/cha
 import { TopPerformingEventsCard, RankedEventItem } from "@/components/charts/TopPerformingEventsCard";
 import { TrafficByTimeChart, TimeSlotData } from "@/components/charts/TrafficByTimeChart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 import {
     useGetEventsOverviewQuery,
     useGetEventsAttendanceQuery,
@@ -35,6 +37,8 @@ export interface EventsTabProps {
 }
 
 export function EventsTab({ filterParams }: EventsTabProps) {
+    const { isFree } = useTierAccess();
+
     const { data: eventsOverviewResponse, isLoading: isLoadingOverview } =
         useGetEventsOverviewQuery(filterParams);
     const { data: eventsAttendanceResponse, isLoading: isLoadingAttendance } =
@@ -233,6 +237,18 @@ export function EventsTab({ filterParams }: EventsTabProps) {
             iconBgShadow: "shadow-[0px_0px_12px_rgba(232,255,87,0.2)]",
         },
     ];
+
+    if (isFree) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <TierLockedGate
+                    requiredTier="premium"
+                    title="Event Analytics & Turnout Tracking"
+                    description="Unlock real-time turnout per event, attendee engagement rates, attendance trend graphs, and event performance tracking with the Pro Plan ($9.99/mo)."
+                />
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

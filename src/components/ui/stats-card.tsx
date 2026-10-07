@@ -3,6 +3,9 @@
 import React, { useId } from "react";
 import { cn } from "@/lib/utils";
 
+import Link from "next/link";
+import { Lock } from "lucide-react";
+
 export type StatsColorVariant =
     | "purple"
     | "cyan"
@@ -20,6 +23,8 @@ export interface StatsCardProps {
     variant?: StatsColorVariant;
     icon?: React.ReactNode;
     className?: string;
+    isLocked?: boolean;
+    lockedTier?: "growth" | "executive";
 }
 
 // Color palette config mapping variants to stroke, fill, icon bg, and border styles
@@ -100,6 +105,8 @@ export function StatsCard({
     variant = "purple",
     icon,
     className,
+    isLocked = false,
+    lockedTier = "growth",
 }: StatsCardProps) {
     const rawId = useId();
     const gradientId = `paint0_linear_${variant}_${rawId.replace(/:/g, "")}`;
@@ -107,6 +114,66 @@ export function StatsCard({
     const mask1Id = `mask1_${rawId.replace(/:/g, "")}`;
 
     const config = COLOR_VARIANTS[variant] || COLOR_VARIANTS.purple;
+    const isExecutive = lockedTier === "executive";
+
+    if (isLocked) {
+        return (
+            <div
+                className={cn(
+                    "relative w-[260px] h-[134px] p-[16.8px] flex flex-col justify-between overflow-hidden select-none font-['Manrope',sans-serif]",
+                    isExecutive
+                        ? "bg-gradient-to-br from-[rgba(20,14,80,0.85)] via-[rgba(14,9,60,0.9)] to-[rgba(5,3,40,0.95)] border-[rgba(232,255,87,0.3)] shadow-[0px_0px_30px_rgba(232,255,87,0.08)]"
+                        : "bg-gradient-to-br from-[rgba(124,58,237,0.25)] via-[rgba(79,20,150,0.15)] to-[rgba(5,3,58,0.2)] border-[rgba(124,58,237,0.25)] shadow-[0px_0px_30px_rgba(124,58,237,0.08)]",
+                    "rounded-[24px] border transition-all duration-300 group",
+                    className
+                )}
+            >
+                {/* Top Row: Lock Badge */}
+                <div className="flex items-center justify-between w-full relative z-10">
+                    <div
+                        className={cn(
+                            "w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0 border",
+                            isExecutive
+                                ? "bg-[rgba(232,255,87,0.15)] border-[rgba(232,255,87,0.35)] text-[#E8FF57]"
+                                : "bg-[rgba(124,58,237,0.25)] border-[rgba(124,58,237,0.4)] text-[#C4B5FD]"
+                        )}
+                    >
+                        <Lock className="w-4 h-4" />
+                    </div>
+
+                    <Link
+                        href="/app/settings?tab=subscription"
+                        className={cn(
+                            "text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border transition-all cursor-pointer",
+                            isExecutive
+                                ? "bg-[rgba(232,255,87,0.1)] border-[rgba(232,255,87,0.3)] text-[#E8FF57] hover:bg-[#E8FF57] hover:text-[#05033A]"
+                                : "bg-[rgba(124,58,237,0.15)] border-[rgba(124,58,237,0.35)] text-[#C4B5FD] hover:bg-[#7C3AED] hover:text-white"
+                        )}
+                    >
+                        {isExecutive ? "Executive Plan" : "Growth Plan"}
+                    </Link>
+                </div>
+
+                {/* Bottom Row: Blurred / Locked State */}
+                <div className="flex flex-col items-start relative z-10">
+                    <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-[16px] leading-[20px] text-white/40 tracking-widest select-none">
+                            ••••••
+                        </span>
+                        <Link
+                            href="/app/settings?tab=subscription"
+                            className="text-[11px] text-[#C4B5FD] hover:text-[#E8FF57] underline font-medium cursor-pointer transition-colors"
+                        >
+                            Unlock
+                        </Link>
+                    </div>
+                    <span className="font-semibold text-[11px] leading-[16px] text-[#8B7EC8] mt-1">
+                        {title}
+                    </span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div

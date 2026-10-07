@@ -22,52 +22,37 @@ export interface SubscriptionPlansScreenProps {
 const FALLBACK_PLANS_TEMPLATE: Partial<SubscriptionPlan>[] = [
     {
         key: "venue_free",
-        label: "Starter",
-        name: "Starter",
+        label: "Free",
+        name: "Free",
         displayPrice: 0,
         currency: "usd",
         features: [
-            "Claim and verify venue",
-            "Basic venue profile & hours",
-            "Upload venue photos & menu",
-            "Receive customer reviews",
-            "Basic foot-traffic analytics",
+            "Claiming a venue",
+            "Add venue photos",
+            "Add Bar open/close timings",
+            "Event Creation",
+            "Promotion",
+            "No Analytics",
         ],
         sortOrder: 1,
     },
     {
         key: "venue_premium",
-        label: "Growth",
-        name: "Growth",
-        displayPrice: 49,
+        label: "Pro",
+        name: "Pro",
+        displayPrice: 9.99,
         currency: "usd",
         features: [
-            "Everything in Starter",
-            "Create unlimited events & specials",
-            "Featured venue placement",
-            "Attendee demographic insights",
-            "Direct customer messaging & promo tools",
-            "Enhanced analytics dashboard",
+            "Claiming a venue",
+            "Add venue photos",
+            "Add Bar open/close timings",
+            "Event Creation",
+            "Promotion",
+            "Full Analytics (Visitor, Retention, Events, Sentiment, Boost, Reports)",
+            "Boost events at $9.99",
         ],
         popular: true,
         sortOrder: 2,
-    },
-    {
-        key: "venue_executive",
-        label: "Executive",
-        name: "Executive",
-        displayPrice: 99,
-        currency: "usd",
-        features: [
-            "Everything in Growth",
-            "Top-tier priority search placement",
-            "Advanced real-time foot-traffic radar",
-            "Dedicated VIP account manager",
-            "Custom branding & flyer designer",
-            "Multi-venue management tools",
-            "Early access to new features",
-        ],
-        sortOrder: 3,
     },
 ];
 
@@ -132,35 +117,22 @@ export function SubscriptionPlansScreen({
     const currentUser = useAppSelector((state) => state.auth.user);
     const hasRedirectedRef = useRef(false);
 
-    // If user is already subscribed or plans response has isSubscribed: true, redirect immediately to dashboard
+    // If user is already on a PAID subscription, redirect immediately to dashboard
     useEffect(() => {
         if (hasRedirectedRef.current) return;
 
-        const isSubscribedInApi = Boolean(
-            (plansResponse as any)?.isSubscribed ||
-            (plansResponse?.data as any)?.isSubscribed
+        const isPaidSubscribed = Boolean(
+            currentUser?.subscriptionPlan &&
+            currentUser.subscriptionPlan !== "none" &&
+            currentUser.subscriptionPlan !== "null" &&
+            currentUser.subscriptionPlan !== "venue_free"
         );
 
-        const isUserSubscribed = Boolean(
-            currentUser?.isSubscribed ||
-            (currentUser?.subscriptionPlan &&
-                currentUser.subscriptionPlan !== "none" &&
-                currentUser.subscriptionPlan !== "null")
-        );
-
-        if (isSubscribedInApi || isUserSubscribed) {
+        if (isPaidSubscribed) {
             hasRedirectedRef.current = true;
-            if (!currentUser?.isSubscribed) {
-                dispatch(
-                    updateUser({
-                        isSubscribed: true,
-                        isClaimed: "approved",
-                    })
-                );
-            }
             router.replace("/app/dashboard");
         }
-    }, [plansResponse, currentUser?.isSubscribed, currentUser?.subscriptionPlan, dispatch, router]);
+    }, [currentUser?.subscriptionPlan, router]);
 
     // Handle return from Stripe Checkout (Asynchronous webhook verification)
     useEffect(() => {
@@ -245,14 +217,19 @@ export function SubscriptionPlansScreen({
 
         // If it is a Free Starter plan
         if (isFreePlan(selectedPlan)) {
+            if (typeof window !== "undefined") {
+                sessionStorage.setItem("barhuddle_free_plan_chosen", "true");
+                localStorage.setItem("barhuddle_free_plan_chosen", "true");
+            }
             dispatch(
                 updateUser({
                     isSubscribed: true,
                     isClaimed: "approved",
                     subscriptionPlan: selectedPlan.key || "venue_free",
+                    hasCompletedSubscriptionChoice: true,
                 })
             );
-            toast.success("Free Starter plan activated!");
+            toast.success("Continuing with Free Starter plan!");
             router.push("/app/dashboard");
             return;
         }

@@ -6,6 +6,8 @@ import { StatsCard, StatsColorVariant } from "@/components/ui/stats-card";
 import { TrafficByTimeChart, OrganicBoostedGroup } from "@/components/charts/TrafficByTimeChart";
 import { BoostHistoryTableCard } from "./BoostHistoryTableCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 import {
     useGetBoostedOverviewQuery,
     useGetOrganicVsBoostedQuery,
@@ -26,6 +28,8 @@ export interface BoostTabProps {
 }
 
 export function BoostTab({ filterParams }: BoostTabProps) {
+    const { isFree } = useTierAccess();
+
     const { data: boostedOverviewResponse, isLoading: isLoadingOverview } =
         useGetBoostedOverviewQuery(filterParams);
     const { data: organicVsBoostedResponse, isLoading: isLoadingChart, isError: isErrorChart } =
@@ -103,6 +107,18 @@ export function BoostTab({ filterParams }: BoostTabProps) {
             };
         });
     }, [organicVsBoostedResponse]);
+
+    if (isFree) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <TierLockedGate
+                    requiredTier="premium"
+                    title="Boost ROI & Campaign Tracking"
+                    description="Unlock boosted event reach analytics, ROI tracking, conversion rates, and organic vs. boosted performance with the Pro Plan ($9.99/mo)."
+                />
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

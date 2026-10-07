@@ -7,6 +7,8 @@ import { VisitorTrendsChart, TrendDataPoint } from "@/components/charts/VisitorT
 import { TrafficByTimeChart, TimeSlotData } from "@/components/charts/TrafficByTimeChart";
 import { CustomerDonutChart, CustomerSegment } from "@/components/charts/CustomerDonutChart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 import {
     useGetOverviewQuery,
     useGetVisitorsGraphQuery,
@@ -30,6 +32,8 @@ export interface OverviewTabProps {
 }
 
 export function OverviewTab({ filterParams }: OverviewTabProps) {
+    const { isFree, canTrackNewVsRepeat } = useTierAccess();
+
     const { data: overviewResponse, isLoading: isLoadingOverview } =
         useGetOverviewQuery(filterParams);
     const { data: visitorsGraphResponse, isLoading: isLoadingVisitorsGraph } =
@@ -231,6 +235,18 @@ export function OverviewTab({ filterParams }: OverviewTabProps) {
         }
         return undefined;
     }, [customerBreakdownResponse]);
+
+    if (isFree) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <TierLockedGate
+                    requiredTier="premium"
+                    title="Real-Time Analytics & Foot-Traffic Dashboard"
+                    description="Real-time check-in counts, crowd size estimates, demographic breakdowns, peak hours, and event metrics are available on the Pro Plan ($9.99/mo)."
+                />
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

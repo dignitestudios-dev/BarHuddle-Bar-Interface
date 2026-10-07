@@ -22,6 +22,8 @@ export interface SubscriptionPlan {
   currency: string;
   features: string[];
   trialDays?: number;
+  durationDays?: number;
+  days?: number;
   limitations?: {
     flyers?: number | null;
     [key: string]: any;
@@ -29,6 +31,7 @@ export interface SubscriptionPlan {
   sortOrder?: number;
   popular?: boolean;
   badge?: string;
+  [key: string]: any;
 }
 
 export interface SubscriptionPlansResponse {
@@ -80,6 +83,9 @@ export interface PurchasePlanPayload {
   planId: string;
   successUrl: string;
   cancelUrl: string;
+  eventId?: string;
+  params?: Record<string, any>;
+  [key: string]: any;
 }
 
 export interface PurchasePlanResponse {
@@ -127,11 +133,22 @@ export const subscriptionService = {
     planId,
     successUrl,
     cancelUrl,
+    eventId,
+    params,
+    ...rest
   }: PurchasePlanPayload): Promise<PurchasePlanResponse> => {
-    const response = await axiosInstance.post(`/subscriptions/purchase/${planId}`, {
+    const body: Record<string, any> = {
       successUrl,
       cancelUrl,
-    });
+      ...(eventId ? { eventId } : {}),
+      ...rest,
+    };
+
+    const response = await axiosInstance.post(
+      `/subscriptions/purchase/${planId}`,
+      body,
+      params ? { params } : undefined
+    );
     return response.data;
   },
 

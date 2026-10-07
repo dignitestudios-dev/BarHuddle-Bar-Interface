@@ -56,48 +56,65 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
                 }
 
                 // Normalize status flags
-                const isClaimed = (user?.isClaimed || (user as any)?.isClamied || "none") as "none" | "pending" | "approved" | string;
-                const isSubscribed = Boolean(
-                    user?.isSubscribed ||
-                    (user?.subscriptionPlan && user.subscriptionPlan !== "none" && user.subscriptionPlan !== "null")
+                const isClaimed = String(user?.isClaimed || (user as any)?.isClamied || "none").toLowerCase().trim();
+                const isPaidSubscribed = Boolean(
+                    user?.subscriptionPlan &&
+                    user.subscriptionPlan !== "none" &&
+                    user.subscriptionPlan !== "null" &&
+                    user.subscriptionPlan !== "venue_free"
+                );
+                const isFreePlanConfirmed = Boolean(
+                    (user as any)?.hasCompletedSubscriptionChoice ||
+                    (typeof window !== "undefined" && (sessionStorage.getItem("barhuddle_free_plan_chosen") === "true" || localStorage.getItem("barhuddle_free_plan_chosen") === "true"))
                 );
 
-                let targetRoute = "/app/dashboard"; // Default to dashboard
+                let targetRoute = "/app/dashboard";
 
                 // Route enforcement based on onboarding state
-                if (isSubscribed) {
-                    // Subscribed users have full access to the dashboard
-                    targetRoute = "/app/dashboard";
-                } else if (isClaimed === "none") {
-                    targetRoute = "/venue-management"; // Needs to claim bar
+                if (isClaimed === "none") {
+                    targetRoute = "/venue-management"; // Must claim a venue first
                 } else if (isClaimed === "pending") {
-                    targetRoute = "/pending"; // Waiting for approval (Under Review)
-                } else if (isClaimed === "approved" && !isSubscribed) {
-                    targetRoute = "/subscription"; // Needs to pick a plan
+                    targetRoute = "/pending"; // Waiting for admin approval (Under Review)
+                } else if (isClaimed === "approved" && !isPaidSubscribed && !isFreePlanConfirmed) {
+                    targetRoute = "/subscription"; // Needs to view plans and pick or continue with free
+                } else {
+                    targetRoute = "/app/dashboard";
                 }
 
-                if (isAuthRoute || pathname === "/auth/profile-setup" || (isSubscribed && pathname === "/subscription")) {
-                    // Redirect logged-in user away from auth pages or subscription page if already subscribed
+                if (isAuthRoute || pathname === "/auth/profile-setup") {
+                    // Redirect logged-in user away from auth/profile-setup to their target onboarding step
                     router.replace(targetRoute);
-                } else if (isSubscribed) {
-                    // Subscribed users can freely navigate all app routes
-                    setIsChecking(false);
-                    return;
-                } else if (isClaimed === "none" && pathname?.startsWith("/venue-management")) {
+                } else if (isClaimed === "none") {
                     // Users who haven't claimed a venue yet stay on venue-management
-                    setIsChecking(false);
-                    return;
-                } else if (isClaimed === "pending" && pathname === "/pending") {
+                    if (!pathname?.startsWith("/venue-management")) {
+                        router.replace("/venue-management");
+                    } else {
+                        setIsChecking(false);
+                        return;
+                    }
+                } else if (isClaimed === "pending") {
                     // Users with pending claims stay on the under review screen
-                    setIsChecking(false);
-                    return;
-                } else if (isClaimed === "approved" && !isSubscribed && pathname === "/subscription") {
-                    // Users needing subscription stay on subscription screen
-                    setIsChecking(false);
-                    return;
-                } else if (!pathname?.startsWith(targetRoute)) {
-                    // Force the user to their designated onboarding step
+                    if (pathname !== "/pending") {
+                        router.replace("/pending");
+                    } else {
+                        setIsChecking(false);
+                        return;
+                    }
+                } else if (isClaimed === "approved" && !isPaidSubscribed && !isFreePlanConfirmed) {
+                    // Users on venue_free who haven't confirmed stay on subscription screen
+                    if (pathname !== "/subscription") {
+                        router.replace("/subscription");
+                    } else {
+                        setIsChecking(false);
+                        return;
+                    }
+                } else if (pathname === "/subscription" && (isPaidSubscribed || isFreePlanConfirmed)) {
+                    router.replace("/app/dashboard");
+                } else if (pathname === "/pending" && isClaimed !== "pending") {
                     router.replace(targetRoute);
+                } else {
+                    setIsChecking(false);
+                    return;
                 }
             }
             setIsChecking(false);

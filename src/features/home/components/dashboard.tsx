@@ -10,6 +10,8 @@ import { EventPerformanceCard } from "@/features/events/components";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statsList } from "@/utils/constants";
 import VisitorSentimentsChart from "@/components/charts/VisitorSentimentsChart";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 import {
     useGetOverviewQuery,
     useGetVisitorsGraphQuery,
@@ -30,6 +32,7 @@ interface DashboardCardItem {
 }
 
 export function Dashboard() {
+    const { isFree, canTrackNewVsRepeat } = useTierAccess();
     const { selectedVenueId, selectedVenue } = useSelectedVenue();
 
     const filterParams = useMemo(() => {
@@ -366,48 +369,61 @@ export function Dashboard() {
                     )}
                 </div>
 
-                {/* Overview Stats Cards Grid - 8 Cards (4 Columns) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {stats.map((stat, idx) => (
-                        <StatsCard
-                            key={stat.id || idx}
-                            title={stat.title}
-                            value={stat.value}
-                            trend={stat.trend}
-                            isPositive={stat.isPositive}
-                            variant={stat.variant}
-                            icon={stat.icon}
-                        />
-                    ))}
-                </div>
+                {isFree ? (
+                    <TierLockedGate
+                        requiredTier="premium"
+                        title="Live Foot-Traffic & Venue Analytics"
+                        description="Real-time check-in counts, crowd size estimates, demographic breakdowns, peak hours, and event metrics are available on the Pro Plan ($9.99/mo)."
+                    />
+                ) : (
+                    <>
+                        {/* Overview Stats Cards Grid - 8 Cards (4 Columns) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {stats.map((stat, idx) => (
+                                <StatsCard
+                                    key={stat.id || idx}
+                                    title={stat.title}
+                                    value={stat.value}
+                                    trend={stat.trend}
+                                    isPositive={stat.isPositive}
+                                    variant={stat.variant}
+                                    icon={stat.icon}
+                                />
+                            ))}
+                        </div>
 
-                {/* Charts Row: Visitor Trends (Area) + Customer Breakdown (Donut) */}
-                <div className="flex flex-col lg:flex-row justify-between items-stretch max-w-[1200px] w-full gap-6">
-                    <div className="flex-1 min-w-0">
-                        <VisitorTrendsChart data={visitorTrendsData} />
-                    </div>
-                    <div className="w-full lg:w-[288px] shrink-0">
-                        <CustomerDonutChart
-                            segments={customerSegments}
-                            totalCustomers={totalCustomersFormatted}
-                            isError={isErrorCustomers}
-                        />
-                    </div>
-                </div>
+                        {/* Charts Row: Visitor Trends (Area) + Customer Breakdown (Donut) */}
+                        <div className="flex flex-col lg:flex-row justify-between items-stretch max-w-[1200px] w-full gap-6">
+                            <div className="flex-1 min-w-0">
+                                <VisitorTrendsChart
+                                    data={visitorTrendsData}
+                                    showRetention={true}
+                                />
+                            </div>
+                            <div className="w-full lg:w-[288px] shrink-0">
+                                <CustomerDonutChart
+                                    segments={customerSegments}
+                                    totalCustomers={totalCustomersFormatted}
+                                    isError={isErrorCustomers}
+                                />
+                            </div>
+                        </div>
 
-                {/* Bottom Row: Best Performance + Visitor Sentiments */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 max-w-[1200px] gap-6">
-                    <div className="w-full min-w-0">
-                        <EventPerformanceCard />
-                    </div>
-                    <div className="w-full min-w-0">
-                        <VisitorSentimentsChart
-                            overallScore={overallSentimentScore}
-                            sentiments={sentimentItems}
-                            isError={isErrorSentiment}
-                        />
-                    </div>
-                </div>
+                        {/* Bottom Row: Best Performance + Visitor Sentiments */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 max-w-[1200px] gap-6">
+                            <div className="w-full min-w-0">
+                                <EventPerformanceCard />
+                            </div>
+                            <div className="w-full min-w-0">
+                                <VisitorSentimentsChart
+                                    overallScore={overallSentimentScore}
+                                    sentiments={sentimentItems}
+                                    isError={isErrorSentiment}
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
             </main>
         </div>
     );

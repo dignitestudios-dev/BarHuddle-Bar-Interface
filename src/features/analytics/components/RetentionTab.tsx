@@ -7,6 +7,8 @@ import { VisitorTrendsChart, TrendDataPoint } from "@/components/charts/VisitorT
 import { VisitorSentimentsChart, SentimentItem } from "@/components/charts/VisitorSentimentsChart";
 import { AvgVisitDurationCard, DurationBarItem } from "@/components/charts/AvgVisitDurationCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 import {
     useGetVisitorsGraphQuery,
     useGetRetentionDashboardQuery,
@@ -30,6 +32,8 @@ export interface RetentionTabProps {
 }
 
 export function RetentionTab({ filterParams }: RetentionTabProps) {
+    const { isFree } = useTierAccess();
+
     const { data: visitorsGraphResponse, isLoading: isLoadingVisitorsGraph } =
         useGetVisitorsGraphQuery(filterParams);
     const { data: retentionDashboardResponse, isLoading: isLoadingRetention } =
@@ -346,6 +350,18 @@ export function RetentionTab({ filterParams }: RetentionTabProps) {
         if (w !== undefined) return Math.round(w);
         return undefined;
     }, [sentimentResponse]);
+
+    if (isFree) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <TierLockedGate
+                    requiredTier="premium"
+                    title="Customer Retention & Repeat Visitor Analytics"
+                    description="Track repeat visitor patterns, retention curves, average duration, and sentiment intelligence with the Pro Plan ($9.99/mo)."
+                />
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

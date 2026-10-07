@@ -70,7 +70,7 @@ export function getDeviceModel(): string {
 }
 
 const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.dev.barhuddle.com/",
+  baseURL: "https://api.dev.barhuddle.com/",
   timeout: 300000,
   headers: { "Content-Type": "application/json" },
 });
@@ -97,11 +97,20 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle API response errors cleanly without dropping error messages
+// Handle 401 Unauthorized errors and redirect to login
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Return error rejection to allow components and mutations to catch and display toast errors
+    if (typeof window !== "undefined" && error.response?.status === 401) {
+      localStorage.removeItem("auth-token");
+      localStorage.removeItem("auth-user");
+      Cookies.remove("auth-token", { path: "/" });
+
+      const currentPath = window.location.pathname;
+      if (!currentPath.startsWith("/auth/")) {
+        window.location.href = "/auth/login";
+      }
+    }
     return Promise.reject(error);
   }
 );
