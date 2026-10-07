@@ -205,18 +205,21 @@ export function SubscriptionPlansScreen({
         setSelectedKey(plan.key || "");
     };
 
-    const handleContinue = async () => {
+    const handleExecutePlan = async (planToExecute?: SubscriptionPlan | null) => {
+        const plan = planToExecute || selectedPlan;
+
         // If plans are still loading from API
-        if (!selectedPlan) {
+        if (!plan) {
             toast.loading("Loading subscription plans...");
             await refetch();
             return;
         }
 
-        onSelectPlan?.(selectedPlan._id || selectedPlan.key);
+        setSelectedKey(plan.key || "");
+        onSelectPlan?.(plan._id || plan.id || plan.key);
 
-        // If it is a Free Starter plan
-        if (isFreePlan(selectedPlan)) {
+        // 1. FREE PLAN -> Direct redirect to dashboard
+        if (isFreePlan(plan)) {
             if (typeof window !== "undefined") {
                 sessionStorage.setItem("barhuddle_free_plan_chosen", "true");
                 localStorage.setItem("barhuddle_free_plan_chosen", "true");
@@ -225,22 +228,40 @@ export function SubscriptionPlansScreen({
                 updateUser({
                     isSubscribed: true,
                     isClaimed: "approved",
-                    subscriptionPlan: selectedPlan.key || "venue_free",
+                    subscriptionPlan: plan.key || "venue_free",
                     hasCompletedSubscriptionChoice: true,
                 })
             );
-            toast.success("Continuing with Free Starter plan!");
+            toast.success("Welcome! You are on the Free plan.");
             router.push("/app/dashboard");
             return;
         }
 
-        // Paid plan: Validate real MongoDB ObjectId before Stripe call
-        const planId = selectedPlan._id || selectedPlan.id;
+        // 2. PAID PLAN -> Call Stripe Purchase API: POST /subscriptions/purchase/:planId
+        let planId = plan._id || plan.id;
+
+        // If fallback template was clicked, find matching plan from real API response
+        if (!isValidMongoObjectId(planId)) {
+            const apiPlans = extractPlansFromResponse(plansResponse);
+            const matchingApiPlan = apiPlans.find(
+                (p) => p.key === plan.key || (p.displayPrice ?? p.price) === (plan.displayPrice ?? plan.price)
+            );
+            if (matchingApiPlan && isValidMongoObjectId(matchingApiPlan._id || matchingApiPlan.id)) {
+                planId = matchingApiPlan._id || matchingApiPlan.id;
+            }
+        }
 
         if (!isValidMongoObjectId(planId)) {
-            toast.error("Invalid plan identifier. Refreshing plans from server...");
-            await refetch();
-            return;
+            toast.error("Connecting to server to load checkout...");
+            const refetched = await refetch();
+            const refetchedPlans = extractPlansFromResponse(refetched.data);
+            const found = refetchedPlans.find((p) => p.key === plan.key && (p.displayPrice ?? p.price ?? 0) > 0);
+            if (found && isValidMongoObjectId(found._id || found.id)) {
+                planId = found._id || found.id;
+            } else {
+                toast.error("Could not locate plan on server. Please try again.");
+                return;
+            }
         }
 
         // Initiate Stripe Checkout session
@@ -250,7 +271,7 @@ export function SubscriptionPlansScreen({
             const successUrl = `${origin}/app/dashboard?checkout=success&planId=${planId}`;
             const cancelUrl = `${origin}/subscription?checkout=cancelled`;
 
-            toastId = toast.loading(`Preparing secure checkout for ${selectedPlan.label || selectedPlan.name}...`);
+            toastId = toast.loading(`Preparing secure checkout for ${plan.label || plan.name || "Pro Plan"}...`);
 
             const result = await purchaseMutation.mutateAsync({
                 planId: planId!,
@@ -271,9 +292,13 @@ export function SubscriptionPlansScreen({
             const msg =
                 error?.response?.data?.message ||
                 error?.message ||
-                "Failed to initiate checkout. Please try again.";
+                "Failed to initiate Stripe checkout. Please try again.";
             toast.error(msg);
         }
+    };
+
+    const handleContinue = async () => {
+        await handleExecutePlan(selectedPlan);
     };
 
     if (isVerifyingCheckout) {
@@ -559,21 +584,26 @@ export function SubscriptionPlansScreen({
                                     type="button"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        handleSelectPlan(plan);
+                                        handleExecutePlan(plan);
                                     }}
-                                    className={`w-full py-2.5 sm:py-3 rounded-[16px] text-[13px] sm:text-[14px] font-bold transition-all ${
+                                    disabled={purchaseMutation.isPending && selectedKey === plan.key}
+                                    className={`w-full py-2.5 sm:py-3 rounded-[16px] text-[13px] sm:text-[14px] font-bold transition-all cursor-pointer ${
                                         isSelected
                                             ? isExecutive
-                                                ? "bg-[#E8FF57] text-[#05033A] shadow-[0px_0px_20px_rgba(232,255,87,0.4)]"
+                                                ? "bg-[#E8FF57] text-[#05033A] shadow-[0px_0px_20px_rgba(232,255,87,0.4)] hover:brightness-110 active:scale-95"
                                                 : isPopular
-                                                ? "bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white shadow-[0px_0px_20px_rgba(124,58,237,0.6)]"
-                                                : "bg-[#7C3AED] text-white shadow-[0px_0px_16px_rgba(124,58,237,0.5)]"
+                                                ? "bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] text-white shadow-[0px_0px_20px_rgba(124,58,237,0.6)] hover:brightness-110 active:scale-95"
+                                                : "bg-[#7C3AED] text-white shadow-[0px_0px_16px_rgba(124,58,237,0.5)] hover:brightness-110 active:scale-95"
                                             : "bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white"
                                     }`}
                                 >
-                                    {isSelected
-                                        ? "Plan Selected"
-                                        : `Choose ${plan.label || plan.name || "Plan"}`}
+                                    {purchaseMutation.isPending && selectedKey === plan.key ? (
+                                        "Connecting to Stripe..."
+                                    ) : isFree ? (
+                                        "Get Started Free"
+                                    ) : (
+                                        `Upgrade to ${plan.label || plan.name || "Pro"} ($${price}/mo)`
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -592,12 +622,19 @@ export function SubscriptionPlansScreen({
                     {purchaseMutation.isPending ? (
                         <>
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            <span>Processing...</span>
+                            <span>Connecting to Stripe...</span>
+                        </>
+                    ) : isFreePlan(selectedPlan) ? (
+                        <>
+                            <span>Continue with Free Plan</span>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
                         </>
                     ) : (
                         <>
                             <span>
-                                Continue with {selectedPlan?.label || selectedPlan?.name || "Selected Plan"}
+                                Proceed to Stripe Checkout (${selectedPlan?.displayPrice ?? selectedPlan?.price ?? 9.99}/mo)
                             </span>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />

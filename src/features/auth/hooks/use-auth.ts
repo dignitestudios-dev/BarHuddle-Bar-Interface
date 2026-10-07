@@ -81,18 +81,10 @@ export function useAuth() {
           router.push("/auth/profile-setup");
         } else {
           const isClaimed = String(userData?.isClaimed || (userData as any)?.isClamied || "none").toLowerCase().trim();
-          const isPaidSubscribed = Boolean(
-            userData?.subscriptionPlan &&
-            userData.subscriptionPlan !== "none" &&
-            userData.subscriptionPlan !== "null" &&
-            userData.subscriptionPlan !== "venue_free"
-          );
           if (isClaimed === "none") {
             router.push("/venue-management");
           } else if (isClaimed === "pending") {
             router.push("/pending");
-          } else if (isClaimed === "approved" && !isPaidSubscribed) {
-            router.push("/subscription");
           } else {
             router.push("/app/dashboard");
           }
@@ -158,18 +150,10 @@ export function useAuth() {
         router.push("/auth/profile-setup");
       } else {
         const isClaimed = String(verifiedUser?.isClaimed || (verifiedUser as any)?.isClamied || "none").toLowerCase().trim();
-        const isPaidSubscribed = Boolean(
-          verifiedUser?.subscriptionPlan &&
-          verifiedUser.subscriptionPlan !== "none" &&
-          verifiedUser.subscriptionPlan !== "null" &&
-          verifiedUser.subscriptionPlan !== "venue_free"
-        );
         if (isClaimed === "none") {
           router.push("/venue-management");
         } else if (isClaimed === "pending") {
           router.push("/pending");
-        } else if (isClaimed === "approved" && !isPaidSubscribed) {
-          router.push("/subscription");
         } else {
           router.push("/app/dashboard");
         }

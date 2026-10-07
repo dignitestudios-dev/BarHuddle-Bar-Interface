@@ -112,23 +112,14 @@ export function ProfileSetup() {
             dispatch(updateUser(mergedUser));
             toast.success("Profile setup completed successfully!");
 
-            // Check isClaimed flag and subscription tier from /users response
+            // Check isClaimed flag from /users response
             const isClaimed = String(mergedUser?.isClaimed || mergedUser?.isClamied || "none").toLowerCase().trim();
-            const isPaidSubscribed = Boolean(
-                mergedUser?.subscriptionPlan &&
-                mergedUser.subscriptionPlan !== "none" &&
-                mergedUser.subscriptionPlan !== "null" &&
-                mergedUser.subscriptionPlan !== "venue_free"
-            );
 
             if (isClaimed === "none") {
                 // Redirect to venue claim page instead of dashboard
                 router.push("/venue-management");
             } else if (isClaimed === "pending") {
                 router.push("/pending");
-            } else if (isClaimed === "approved" && !isPaidSubscribed) {
-                // Approved claim on free plan -> redirect to subscription screen
-                router.push("/subscription");
             } else {
                 router.push("/app/dashboard");
             }

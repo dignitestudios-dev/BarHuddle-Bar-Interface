@@ -24,22 +24,7 @@ export function PendingApprovalScreen() {
                 const isClaimed = String(updatedUser.isClaimed || updatedUser.isClamied || "").toLowerCase().trim();
 
                 if (isClaimed === "approved") {
-                    const isPaidSubscribed = Boolean(
-                        updatedUser.subscriptionPlan &&
-                        updatedUser.subscriptionPlan !== "venue_free" &&
-                        updatedUser.subscriptionPlan !== "none" &&
-                        updatedUser.subscriptionPlan !== "null"
-                    );
-                    const isFreePlanConfirmed = Boolean(
-                        updatedUser.hasCompletedSubscriptionChoice ||
-                        (typeof window !== "undefined" && (sessionStorage.getItem("barhuddle_free_plan_chosen") === "true" || localStorage.getItem("barhuddle_free_plan_chosen") === "true"))
-                    );
-
-                    if (isPaidSubscribed || isFreePlanConfirmed) {
-                        router.replace("/app/dashboard");
-                    } else {
-                        router.replace("/subscription");
-                    }
+                    router.replace("/app/dashboard");
                 } else if (isClaimed === "none") {
                     router.replace("/venue-management");
                 }
@@ -55,22 +40,7 @@ export function PendingApprovalScreen() {
     useEffect(() => {
         const isClaimed = String(user?.isClaimed || (user as any)?.isClamied || "").toLowerCase().trim();
         if (isClaimed === "approved") {
-            const isPaidSubscribed = Boolean(
-                user?.subscriptionPlan &&
-                user.subscriptionPlan !== "venue_free" &&
-                user.subscriptionPlan !== "none" &&
-                user.subscriptionPlan !== "null"
-            );
-            const isFreePlanConfirmed = Boolean(
-                (user as any)?.hasCompletedSubscriptionChoice ||
-                (typeof window !== "undefined" && (sessionStorage.getItem("barhuddle_free_plan_chosen") === "true" || localStorage.getItem("barhuddle_free_plan_chosen") === "true"))
-            );
-
-            if (isPaidSubscribed || isFreePlanConfirmed) {
-                router.replace("/app/dashboard");
-            } else {
-                router.replace("/subscription");
-            }
+            router.replace("/app/dashboard");
         }
     }, [user, router]);
 
@@ -122,7 +92,7 @@ export function PendingApprovalScreen() {
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="text-[#E8FF57] mt-0.5">•</span>
-                                Once approved, you'll be redirected to pick a subscription plan.
+                                Once approved, you'll be redirected directly to your venue dashboard.
                             </li>
                         </ul>
                     </div>
