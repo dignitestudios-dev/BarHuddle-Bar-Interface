@@ -5,6 +5,8 @@ import { VisitorSentimentsChart, SentimentItem } from "@/components/charts/Visit
 import { OverallScoreCard, ScoreProgressItem } from "@/components/charts/OverallScoreCard";
 import { TopInsightsCard, InsightItem } from "@/components/charts/TopInsightsCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 import {
     useGetPerformanceSummaryQuery,
     useGetVisitorSentimentDashboardQuery,
@@ -16,6 +18,8 @@ export interface SentimentTabProps {
 }
 
 export function SentimentTab({ filterParams }: SentimentTabProps) {
+    const { isFree } = useTierAccess();
+
     const { data: performanceResponse, isLoading: isLoadingPerformance, isError: isErrorPerformance } =
         useGetPerformanceSummaryQuery(filterParams);
     const { data: visitorSentimentResponse, isLoading: isLoadingSentiment, isError: isErrorSentiment } =
@@ -215,6 +219,18 @@ export function SentimentTab({ filterParams }: SentimentTabProps) {
             },
         ];
     }, [perfData, overallScore]);
+
+    if (isFree) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <TierLockedGate
+                    requiredTier="premium"
+                    title="Visitor Sentiment & Feedback Analytics"
+                    description="Unlock real-time sentiment poll results, customer satisfaction breakdown, and AI sentiment insights with the Pro Plan ($9.99/mo)."
+                />
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (

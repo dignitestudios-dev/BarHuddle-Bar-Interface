@@ -640,8 +640,7 @@ export function VenueManagement() {
                     setPendingSuccessVenue(null);
                     setSelectedVenueId(null);
                     setSelectedVenueCard(null);
-                    refetchVenues();
-                    refetchClaims();
+                    router.push("/pending");
                 }}
             />
         </div>

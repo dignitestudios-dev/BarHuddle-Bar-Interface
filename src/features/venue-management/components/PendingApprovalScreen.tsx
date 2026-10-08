@@ -1,9 +1,59 @@
 "use client";
 
-import React from "react";
-import { Button } from "@/components/ui";
+import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { updateUser } from "@/store/slices/auth.slice";
+import { useGetMeMutation } from "@/features/auth/api/auth.mutations";
+import { RefreshCw } from "lucide-react";
 
 export function PendingApprovalScreen() {
+    const router = useRouter();
+    const dispatch = useAppDispatch();
+    const { user } = useAppSelector((state) => state.auth);
+    const { mutateAsync: getMe } = useGetMeMutation();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleCheckStatus = useCallback(async () => {
+        try {
+            setIsRefreshing(true);
+            const res = await getMe();
+            const updatedUser = res?.data || res?.user || res?.data?.user;
+            if (updatedUser) {
+                dispatch(updateUser(updatedUser));
+                const isClaimed = String(updatedUser.isClaimed || updatedUser.isClamied || "").toLowerCase().trim();
+
+                if (isClaimed === "approved") {
+                    router.replace("/app/dashboard");
+                } else if (isClaimed === "none") {
+                    router.replace("/venue-management");
+                }
+            }
+        } catch (error) {
+            console.error("Error checking approval status:", error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [getMe, dispatch, router]);
+
+    // Check immediately if current user in Redux is already approved
+    useEffect(() => {
+        const isClaimed = String(user?.isClaimed || (user as any)?.isClamied || "").toLowerCase().trim();
+        if (isClaimed === "approved") {
+            router.replace("/app/dashboard");
+        }
+    }, [user, router]);
+
+    // Poll every 5 seconds for status updates
+    useEffect(() => {
+        handleCheckStatus();
+        const interval = setInterval(() => {
+            handleCheckStatus();
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [handleCheckStatus]);
+
     return (
         <div className="w-full flex flex-col items-center justify-center min-h-[70vh] font-['Manrope',sans-serif] animate-in fade-in duration-300">
             <div className="relative w-full max-w-[600px] bg-[rgba(20,14,80,0.6)] border border-[rgba(124,58,237,0.3)] rounded-[32px] p-10 md:p-14 flex flex-col items-center text-center shadow-[0px_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
@@ -42,10 +92,21 @@ export function PendingApprovalScreen() {
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="text-[#E8FF57] mt-0.5">•</span>
-                                Once approved, you'll select a subscription plan.
+                                Once approved, you'll be redirected directly to your venue dashboard.
                             </li>
                         </ul>
                     </div>
+
+                    {/* Manual Refresh Button */}
+                    <button
+                        type="button"
+                        onClick={handleCheckStatus}
+                        disabled={isRefreshing}
+                        className="w-full h-[46px] rounded-full bg-[rgba(124,58,237,0.2)] hover:bg-[rgba(124,58,237,0.35)] border border-[rgba(124,58,237,0.4)] text-white font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-4 h-4 text-[#E8FF57] ${isRefreshing ? "animate-spin" : ""}`} />
+                        <span>{isRefreshing ? "Checking Status..." : "Refresh Approval Status"}</span>
+                    </button>
                 </div>
 
                 {/* Contact Support */}

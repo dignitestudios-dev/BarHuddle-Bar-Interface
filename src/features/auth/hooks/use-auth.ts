@@ -80,12 +80,19 @@ export function useAuth() {
         if (userData && !userData.isProfileCompleted) {
           router.push("/auth/profile-setup");
         } else {
-          router.push("/app/dashboard");
+          const isClaimed = String(userData?.isClaimed || (userData as any)?.isClamied || "none").toLowerCase().trim();
+          if (isClaimed === "none") {
+            router.push("/venue-management");
+          } else if (isClaimed === "pending") {
+            router.push("/pending");
+          } else {
+            router.push("/app/dashboard");
+          }
         }
       } else if (response?.data?.requiresOtp && response?.data?.email) {
         router.push(`/auth/verify-email?email=${encodeURIComponent(response.data.email)}&mode=login`);
       } else {
-        router.push("/app/dashboard");
+        router.push("/venue-management");
       }
     } catch (error: any) {
       console.error("Google Auth error:", error);
@@ -138,11 +145,18 @@ export function useAuth() {
         });
       }
 
-
-      if (!response?.data?.user?.isProfileCompleted) {
+      const verifiedUser = response?.data?.user;
+      if (verifiedUser && !verifiedUser.isProfileCompleted) {
         router.push("/auth/profile-setup");
       } else {
-        router.push("/app/dashboard");
+        const isClaimed = String(verifiedUser?.isClaimed || (verifiedUser as any)?.isClamied || "none").toLowerCase().trim();
+        if (isClaimed === "none") {
+          router.push("/venue-management");
+        } else if (isClaimed === "pending") {
+          router.push("/pending");
+        } else {
+          router.push("/app/dashboard");
+        }
       }
 
     } catch (error) {

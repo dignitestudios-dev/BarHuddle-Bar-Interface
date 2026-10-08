@@ -8,6 +8,7 @@ import * as z from "zod";
 import { Button, InputField } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useUpdateProfileMutation } from "../api/auth.mutations";
+import { getMe } from "../api/auth.service";
 import { RootState, useAppDispatch, useAppSelector } from "@/store";
 import { updateUser } from "@/store/slices/auth.slice";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -91,14 +92,37 @@ export function ProfileSetup() {
                 formData.append("image", imageFile);
             }
 
-            const response = await updateProfileMutation.mutateAsync(formData);
+            await updateProfileMutation.mutateAsync(formData);
             
-            // Update the user state locally so RouteProxy allows dashboard access
-            const updatedUserData = response?.data?.user || response?.data || response?.user || {};
-            dispatch(updateUser({ ...updatedUserData, isProfileCompleted: true }));
+            // Call GET /users API to retrieve fresh user object
+            let latestUser: any = null;
+            try {
+                const userResponse = await getMe();
+                latestUser = userResponse?.data || userResponse?.user || userResponse;
+            } catch (fetchErr) {
+                console.error("Failed to fetch fresh user data after profile setup", fetchErr);
+            }
+
+            const mergedUser = {
+                ...(latestUser || user || {}),
+                name: data.name,
+                isProfileCompleted: true,
+            };
+
+            dispatch(updateUser(mergedUser));
             toast.success("Profile setup completed successfully!");
 
-            router.push("/app/dashboard");
+            // Check isClaimed flag from /users response
+            const isClaimed = String(mergedUser?.isClaimed || mergedUser?.isClamied || "none").toLowerCase().trim();
+
+            if (isClaimed === "none") {
+                // Redirect to venue claim page instead of dashboard
+                router.push("/venue-management");
+            } else if (isClaimed === "pending") {
+                router.push("/pending");
+            } else {
+                router.push("/app/dashboard");
+            }
         } catch (error: any) {
             console.error("Profile update error", error);
             toast.error(error?.response?.data?.message || "Failed to update profile. Please try again.");

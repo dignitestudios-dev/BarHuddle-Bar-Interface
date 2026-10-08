@@ -15,6 +15,8 @@ import { ReportsTab } from "./ReportsTab";
 import { AnalyticsFilterParams } from "../api/analytics.service";
 
 import { useSelectedVenue } from "@/hooks/useSelectedVenue";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 
 const VALID_TABS: Record<string, AnalyticsTab> = {
     overview: "Overview",
@@ -31,6 +33,7 @@ export function Analytics() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { isFree } = useTierAccess();
 
     const { selectedVenueId } = useSelectedVenue();
     const [dateFilter, setDateFilter] = useState<DateFilterOption>("Weekly");
@@ -105,6 +108,26 @@ export function Analytics() {
                 return <OverviewTab filterParams={filterParams} />;
         }
     };
+
+    if (isFree) {
+        return (
+            <div className="w-full flex flex-col items-center justify-center p-4 sm:p-8 font-['Manrope',sans-serif] min-h-[70vh]">
+                <TierLockedGate
+                    requiredTier="premium"
+                    title="Analytics is a Pro Feature"
+                    description="Upgrade to Pro ($9.99/mo) or higher to unlock real-time visitor demographics, event attendance, sentiment intelligence, retention trends, boost ROI, and downloadable reports."
+                    featureList={[
+                        "Visitor Demographics (Age, Peak Hours, Gender Ratio)",
+                        "Customer Retention & Repeat Visitor Tracking",
+                        "Event Turnout & Attendance Analytics",
+                        "Live Sentiment Poll Results & Intelligence",
+                        "Boost Performance & ROI Tracking",
+                        "Exportable Analytics & Automated Reports",
+                    ]}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="w-full flex flex-col gap-6 p-4 sm:p-6 font-['Manrope',sans-serif]">

@@ -7,6 +7,7 @@ import { useAppDispatch } from "@/store";
 import { updateUser } from "@/store/slices/auth.slice";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addPendingClaimId, recordVenueClaimed } from "../utils/claims";
 
@@ -23,7 +24,7 @@ const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg"];
 const ALLOWED_MIME_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 
 export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFormModalProps) {
-
+    const router = useRouter();
     const { mutateAsync: claimVenue, isPending: isClaiming } = useClaimVenueMutation();
     const { mutateAsync: getMe, isPending: isFetchingMe } = useGetMeMutation();
     const dispatch = useAppDispatch();
@@ -115,14 +116,21 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
             setFileError("");
             await claimVenue(formData);
 
-            // Hit /users API to fetch updated user state and update Redux
-            const profileResponse = await getMe();
-            if (profileResponse?.user) {
-                dispatch(updateUser(profileResponse.user));
-            } else if (profileResponse?.data?.user) {
-                dispatch(updateUser(profileResponse.data.user));
-            } else if (profileResponse?.data) {
-                dispatch(updateUser(profileResponse.data));
+            // 1. Immediately set user claim state to pending in Redux and localStorage
+            dispatch(updateUser({ isClaimed: "pending" }));
+
+            // 2. Refresh profile in background if available
+            try {
+                const profileResponse = await getMe();
+                if (profileResponse?.user) {
+                    dispatch(updateUser({ ...profileResponse.user, isClaimed: "pending" }));
+                } else if (profileResponse?.data?.user) {
+                    dispatch(updateUser({ ...profileResponse.data.user, isClaimed: "pending" }));
+                } else if (profileResponse?.data) {
+                    dispatch(updateUser({ ...profileResponse.data, isClaimed: "pending" }));
+                }
+            } catch {
+                // ignore background profile fetch error
             }
 
             // Save pending claim ID locally so status updates immediately
@@ -136,11 +144,15 @@ export function ClaimFormModal({ isOpen, venue, onClose, onSubmitted }: ClaimFor
 
             toast.success("Ownership documents submitted successfully!");
             onClose();
+
             try {
                 onSubmitted?.(venue);
             } catch (cbErr) {
                 console.error("Error in onSubmitted callback:", cbErr);
             }
+
+            // 3. Immediately redirect user to the Under Review screen
+            router.push("/pending");
         } catch (error: any) {
             console.error("Failed to claim venue:", error);
             const backendMsg = error?.response?.data?.message || error?.message || "";

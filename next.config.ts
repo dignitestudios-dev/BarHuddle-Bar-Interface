@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'bar-huddle-s3bucket.s3.amazonaws.com',
+      },
     ],
   },
 };

@@ -55,38 +55,44 @@ export function RouteProxy({ children }: { children: React.ReactNode }) {
                     return;
                 }
 
-                // Authenticated user routing logic based on isClaimed and isSubscribed
-                const isClaimed = user?.isClaimed || "none"; // fallback to none
-                let targetRoute = "/app/dashboard"; // Default to dashboard if fully subscribed
+                // Normalize status flags
+                const isClaimed = String(user?.isClaimed || (user as any)?.isClamied || "none").toLowerCase().trim();
 
-                // If approved and subscribed, they can access the dashboard.
-                // Otherwise, they are forced into onboarding steps.
+                let targetRoute = "/app/dashboard";
+
+                // Route enforcement based on onboarding state
                 if (isClaimed === "none") {
-                    targetRoute = "/venue-management"; // Needs to claim bar
+                    targetRoute = "/venue-management"; // Must claim a venue first
                 } else if (isClaimed === "pending") {
-                    targetRoute = "/pending"; // Waiting for approval
-                } else if (isClaimed === "approved" && !user?.isSubscribed) {
-                    targetRoute = "/subscription"; // Needs to pick a plan
-                } else if (isClaimed === "approved" && user?.isSubscribed) {
-                    targetRoute = "/app/dashboard"; // All good
+                    targetRoute = "/pending"; // Waiting for admin approval (Under Review)
+                } else {
+                    targetRoute = "/app/dashboard"; // Approved claims go directly to dashboard
                 }
 
-                // If user is on an auth route OR they are on a protected route that doesn't match their allowed onboarding route
-                // Exceptions: If they are subscribed, they can access ANY /app/* route.
-
                 if (isAuthRoute || pathname === "/auth/profile-setup") {
-                    // Redirect logged-in user away from auth pages
+                    // Redirect logged-in user away from auth/profile-setup to their target onboarding step
                     router.replace(targetRoute);
-                } else if (pathname?.startsWith("/app") || pathname?.startsWith("/venue-management")) {
-                    // Authenticated users already inside the app or browsing venue-management should stay on the page
+                } else if (isClaimed === "none") {
+                    // Users who haven't claimed a venue yet stay on venue-management
+                    if (!pathname?.startsWith("/venue-management")) {
+                        router.replace("/venue-management");
+                    } else {
+                        setIsChecking(false);
+                        return;
+                    }
+                } else if (isClaimed === "pending") {
+                    // Users with pending claims stay on the under review screen
+                    if (pathname !== "/pending") {
+                        router.replace("/pending");
+                    } else {
+                        setIsChecking(false);
+                        return;
+                    }
+                } else if (pathname === "/pending" && isClaimed !== "pending") {
+                    router.replace(targetRoute);
+                } else {
                     setIsChecking(false);
                     return;
-                } else if (
-                    !(isClaimed === "approved" && user?.isSubscribed) &&
-                    !pathname?.startsWith(targetRoute)
-                ) {
-                    // Force the user to stay on their required onboarding step
-                    router.replace(targetRoute);
                 }
             }
             setIsChecking(false);

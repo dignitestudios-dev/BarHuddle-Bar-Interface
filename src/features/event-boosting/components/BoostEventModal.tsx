@@ -1,20 +1,80 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { EventCardData } from "@/features/events/components";
 import { cleanImageUrl } from "@/utils/image";
+import { SubscriptionPlan } from "@/features/subscription/api/subscription.service";
+import { useSubscriptionPlans } from "@/features/subscription/api/subscription.queries";
+import { CreateBoostPayload } from "../api/boost.service";
+import { useTierAccess } from "@/hooks/useTierAccess";
 
+export interface BoostOption {
+    id?: string;
+    key?: string;
+    label: string;
+    days: number;
+    price: number;
+    discountBadge?: string;
+    currency?: string;
+    theme: {
+        border: string;
+        bg: string;
+        shadow: string;
+        inactiveBg: string;
+        inactiveBorder: string;
+        textColor: string;
+    };
+}
+
+const THEMES = [
+    {
+        border: "border-[#7C3AED]",
+        bg: "bg-[rgba(124,58,237,0.18)]",
+        shadow: "shadow-[0px_0px_16px_rgba(124,58,237,0.3)]",
+        inactiveBg: "bg-[rgba(124,58,237,0.047)]",
+        inactiveBorder: "border-[rgba(124,58,237,0.133)]",
+        textColor: "text-[#7C3AED]",
+    },
+    {
+        border: "border-[#E8FF57]",
+        bg: "bg-[rgba(232,255,87,0.18)]",
+        shadow: "shadow-[0px_0px_16px_rgba(232,255,87,0.3)]",
+        inactiveBg: "bg-[rgba(232,255,87,0.047)]",
+        inactiveBorder: "border-[rgba(232,255,87,0.133)]",
+        textColor: "text-[#E8FF57]",
+    },
+    {
+        border: "border-[#22D3EE]",
+        bg: "bg-[rgba(34,211,238,0.18)]",
+        shadow: "shadow-[0px_0px_16px_rgba(34,211,238,0.3)]",
+        inactiveBg: "bg-[rgba(34,211,238,0.047)]",
+        inactiveBorder: "border-[rgba(34,211,238,0.133)]",
+        textColor: "text-[#22D3EE]",
+    },
+];
+
+function extractPlansFromResponse(response: any): SubscriptionPlan[] {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.data?.plans)) return response.data.plans;
+    if (Array.isArray(response?.plans)) return response.plans;
+    if (Array.isArray(response?.data?.data)) return response.data.data;
+    return [];
+}
 
 export interface BoostEventModalProps {
     isOpen: boolean;
     onClose: () => void;
     event?: EventCardData | null;
     isPending?: boolean;
+    plans?: SubscriptionPlan[];
+    isLoadingPlans?: boolean;
     onConfirmBoost?: (
         event: EventCardData,
         duration: string,
-        payload: { eventId: string; startAt: string; endAt: string; amount: number }
+        payload: CreateBoostPayload
     ) => void;
 }
 
@@ -23,35 +83,162 @@ export function BoostEventModal({
     onClose,
     event,
     isPending = false,
+    plans = [],
+    isLoadingPlans: propIsLoadingPlans = false,
     onConfirmBoost,
 }: BoostEventModalProps) {
-    const [selectedDuration, setSelectedDuration] = useState("7 Days");
+    const { isExecutive, isPremium } = useTierAccess();
+
+    // Fetch one_time boost plans from /subscriptions/plans?billingMode=one_time
+    const { data: plansResponse, isLoading: isFetchingPlans } = useSubscriptionPlans("one_time", {
+        enabled: isOpen,
+    });
+
+    const isLoadingPlans = propIsLoadingPlans || isFetchingPlans;
+
+    const fetchedPlans = useMemo(() => {
+        if (plans && plans.length > 0) return plans;
+        return extractPlansFromResponse(plansResponse);
+    }, [plans, plansResponse]);
+
+    const boostOptions: BoostOption[] = useMemo(() => {
+        const basePrice = isExecutive ? 9.99 : isPremium ? 19.99 : 29.99;
+        const discountBadge = isExecutive ? "$20 OFF" : isPremium ? "$10 OFF" : undefined;
+
+        // If one-time plans are returned by the API
+        if (fetchedPlans.length > 0) {
+            // Case 1: Multiple plans returned (e.g. 7, 14, 21 days)
+            if (fetchedPlans.length > 1) {
+                return fetchedPlans.map((plan, idx) => {
+                    const parsedDays =
+                        plan.durationDays ||
+                        plan.days ||
+                        (plan.label?.match(/(\d+)\s*Day/i) ? parseInt(plan.label.match(/(\d+)\s*Day/i)![1], 10) : null) ||
+                        (idx === 0 ? 7 : idx === 1 ? 14 : 21);
+
+                    const price = isExecutive
+                        ? Math.min(plan.displayPrice ?? 29.99, Number((basePrice * (parsedDays / 7)).toFixed(2)))
+                        : isPremium
+                            ? Math.min(plan.displayPrice ?? 29.99, Number((basePrice * (parsedDays / 7)).toFixed(2)))
+                            : (plan.displayPrice ?? plan.price ?? 29.99);
+
+                    const label = plan.label || `${parsedDays} Days`;
+
+                    return {
+                        id: plan._id || plan.id,
+                        key: plan.key,
+                        label,
+                        days: parsedDays,
+                        price,
+                        discountBadge: discountBadge || plan.badge,
+                        currency: plan.currency || "usd",
+                        theme: THEMES[idx % THEMES.length],
+                    };
+                });
+            }
+
+            // Case 2: Single plan returned (e.g. standard event_boost product)
+            const singlePlan = fetchedPlans[0];
+            const planId = singlePlan._id || singlePlan.id;
+            const planBasePrice = isExecutive ? 9.99 : isPremium ? 19.99 : (singlePlan.displayPrice ?? 29.99);
+
+            return [
+                {
+                    id: planId,
+                    key: singlePlan.key,
+                    label: singlePlan.label || "7 Days",
+                    days: 7,
+                    price: planBasePrice,
+                    discountBadge: discountBadge || singlePlan.badge,
+                    currency: singlePlan.currency || "usd",
+                    theme: THEMES[0],
+                },
+                {
+                    id: planId,
+                    key: singlePlan.key,
+                    label: "14 Days",
+                    days: 14,
+                    price: Number((planBasePrice * 1.8).toFixed(2)),
+                    discountBadge,
+                    currency: singlePlan.currency || "usd",
+                    theme: THEMES[1],
+                },
+                {
+                    id: planId,
+                    key: singlePlan.key,
+                    label: "21 Days",
+                    days: 21,
+                    price: Number((planBasePrice * 2.5).toFixed(2)),
+                    discountBadge,
+                    currency: singlePlan.currency || "usd",
+                    theme: THEMES[2],
+                },
+            ];
+        }
+
+        // Fallback default options
+        const defaultPlanId = fetchedPlans?.[0]?._id || fetchedPlans?.[0]?.id || "event_boost";
+        return [
+            {
+                id: defaultPlanId,
+                label: "7 Days",
+                days: 7,
+                price: basePrice,
+                discountBadge,
+                theme: THEMES[0],
+            },
+            {
+                id: defaultPlanId,
+                label: "14 Days",
+                days: 14,
+                price: Number((basePrice * 1.8).toFixed(2)),
+                discountBadge,
+                theme: THEMES[1],
+            },
+            {
+                id: defaultPlanId,
+                label: "21 Days",
+                days: 21,
+                price: Number((basePrice * 2.5).toFixed(2)),
+                discountBadge,
+                theme: THEMES[2],
+            },
+        ];
+    }, [fetchedPlans, isExecutive, isPremium]);
+
+    const [selectedDays, setSelectedDays] = useState<number>(7);
+
+    // Reset to first option (7 days) when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedDays(7);
+        }
+    }, [isOpen]);
+
+    const selectedOption = useMemo(() => {
+        return boostOptions.find((o) => o.days === selectedDays) || boostOptions[0];
+    }, [boostOptions, selectedDays]);
 
     if (!isOpen || !event) return null;
 
     const handleConfirm = () => {
-        let days = 7;
-        let amount = 9.99;
-
-        if (selectedDuration === "14 Days") {
-            days = 14;
-            amount = 19.99;
-        } else if (selectedDuration === "21 Days") {
-            days = 21;
-            amount = 29.99;
-        }
+        const days = selectedOption?.days || selectedDays || 7;
+        const amount = selectedOption?.price || (isExecutive ? 9.99 : isPremium ? 19.99 : 29.99);
 
         const startAt = new Date().toISOString();
         const endAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 
-        const payload = {
+        const resolvedPlanId = selectedOption?.id || fetchedPlans?.[0]?._id || fetchedPlans?.[0]?.id || "event_boost";
+
+        const payload: CreateBoostPayload = {
             eventId: String(event.id),
+            planId: resolvedPlanId,
             startAt,
             endAt,
             amount,
         };
 
-        onConfirmBoost?.(event, selectedDuration, payload);
+        onConfirmBoost?.(event, selectedOption?.label || `${days} Days`, payload);
     };
 
     return (
@@ -66,9 +253,14 @@ export function BoostEventModal({
 
                 {/* Modal Header */}
                 <div className="flex items-center justify-between">
-                    <h2 className="font-bold text-[20px] leading-[27px] text-white capitalize tracking-tight">
-                        Boost Event
-                    </h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="font-bold text-[20px] leading-[27px] text-white capitalize tracking-tight">
+                            Boost Event
+                        </h2>
+                        {isLoadingPlans && (
+                            <span className="w-2 h-2 rounded-full bg-[#E8FF57] animate-ping" title="Loading current pricing..." />
+                        )}
+                    </div>
 
                     {/* Close Button (40x40 container) */}
                     <button
@@ -143,68 +335,61 @@ export function BoostEventModal({
                     Promotions will appear on your venue page during selected days and will be visible to all BarHuddle users in your area.
                 </p>
 
-                {/* Duration Select Row (3 Options) */}
-                <div className="grid grid-cols-3 gap-3 w-full">
-                    {/* 7 Days Option */}
-                    <button
-                        type="button"
-                        onClick={() => setSelectedDuration("7 Days")}
-                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${selectedDuration === "7 Days"
-                                ? "bg-[rgba(124,58,237,0.18)] border-2 border-[#7C3AED] shadow-[0px_0px_16px_rgba(124,58,237,0.3)]"
-                                : "bg-[rgba(124,58,237,0.047)] border border-[rgba(124,58,237,0.133)] hover:bg-[rgba(124,58,237,0.1)]"
-                            }`}
-                    >
-                        <span className="font-extrabold text-[14px] leading-[20px] text-[#7C3AED]">
-                            7 Days
-                        </span>
-                        <span className="font-bold text-[11px] text-white/90 mt-0.5">
-                            $9.99
-                        </span>
-                    </button>
-
-                    {/* 14 Days Option */}
-                    <button
-                        type="button"
-                        onClick={() => setSelectedDuration("14 Days")}
-                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${selectedDuration === "14 Days"
-                                ? "bg-[rgba(232,255,87,0.18)] border-2 border-[#E8FF57] shadow-[0px_0px_16px_rgba(232,255,87,0.3)]"
-                                : "bg-[rgba(232,255,87,0.047)] border border-[rgba(232,255,87,0.133)] hover:bg-[rgba(232,255,87,0.1)]"
-                            }`}
-                    >
-                        <span className="font-extrabold text-[14px] leading-[20px] text-[#E8FF57]">
-                            14 Days
-                        </span>
-                        <span className="font-bold text-[11px] text-white/90 mt-0.5">
-                            $19.99
-                        </span>
-                    </button>
-
-                    {/* 21 Days Option */}
-                    <button
-                        type="button"
-                        onClick={() => setSelectedDuration("21 Days")}
-                        className={`h-[68px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${selectedDuration === "21 Days"
-                                ? "bg-[rgba(34,211,238,0.18)] border-2 border-[#22D3EE] shadow-[0px_0px_16px_rgba(34,211,238,0.3)]"
-                                : "bg-[rgba(34,211,238,0.047)] border border-[rgba(34,211,238,0.133)] hover:bg-[rgba(34,211,238,0.1)]"
-                            }`}
-                    >
-                        <span className="font-extrabold text-[14px] leading-[20px] text-[#22D3EE]">
-                            21 Days
-                        </span>
-                        <span className="font-bold text-[11px] text-white/90 mt-0.5">
-                            $29.99
-                        </span>
-                    </button>
-                </div>
+                {/* Duration Select Row */}
+                {isLoadingPlans ? (
+                    <div className="grid grid-cols-3 gap-3 w-full">
+                        {Array.from({ length: 3 }).map((_, idx) => (
+                            <div
+                                key={idx}
+                                className="h-[72px] rounded-[14px] bg-[rgba(124,58,237,0.08)] border border-[rgba(124,58,237,0.15)] animate-pulse flex flex-col items-center justify-center gap-2"
+                            >
+                                <div className="w-16 h-4 rounded bg-white/20" />
+                                <div className="w-10 h-3 rounded bg-white/10" />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-3 gap-3 w-full">
+                        {boostOptions.map((opt, idx) => {
+                            const isSelected = selectedDays === opt.days;
+                            return (
+                                <button
+                                    key={opt.id || opt.key || idx}
+                                    type="button"
+                                    onClick={() => setSelectedDays(opt.days)}
+                                    className={`relative h-[72px] rounded-[14px] flex flex-col items-center justify-center cursor-pointer transition-all ${
+                                        isSelected
+                                            ? `${opt.theme.bg} border-2 ${opt.theme.border} ${opt.theme.shadow}`
+                                            : `${opt.theme.inactiveBg} border ${opt.theme.inactiveBorder} hover:bg-white/10`
+                                    }`}
+                                >
+                                    {opt.discountBadge && (
+                                        <span className="absolute -top-2 px-2 py-[1px] rounded-full bg-[#E8FF57] text-[#05033A] font-extrabold text-[9px] tracking-wide shadow-sm uppercase">
+                                            {opt.discountBadge}
+                                        </span>
+                                    )}
+                                    <span className={`font-extrabold text-[14px] leading-[20px] ${opt.theme.textColor}`}>
+                                        {opt.label}
+                                    </span>
+                                    <span className="font-bold text-[11px] text-white/90 mt-0.5">
+                                        ${opt.price}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Boost Now Button */}
                 <button
                     type="button"
                     onClick={handleConfirm}
-                    disabled={isPending}
+                    disabled={isPending || isLoadingPlans}
                     className="w-full h-[52px] rounded-[14px] bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.45)] flex items-center justify-center font-extrabold text-[14px] leading-[20px] text-white hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer mt-1 disabled:opacity-50"
                 >
-                    {isPending ? "Boosting Event..." : `Boost Now ($${selectedDuration === "7 Days" ? "9.99" : selectedDuration === "14 Days" ? "19.99" : "29.99"})`}
+                    {isPending
+                        ? "Boosting Event..."
+                        : `Boost Now ($${selectedOption?.price ?? 9.99})`}
                 </button>
             </div>
         </div>

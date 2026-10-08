@@ -33,14 +33,31 @@ const authSlice = createSlice({
       state,
       action: PayloadAction<{ token: string; user: User }>
     ) => {
+      const rawUser = action.payload.user;
+      const claimedVal = rawUser?.isClaimed !== undefined 
+        ? rawUser.isClaimed 
+        : (rawUser as any)?.isClamied !== undefined 
+        ? (rawUser as any).isClamied 
+        : undefined;
+
+      const subscribedVal = rawUser?.isSubscribed !== undefined
+        ? Boolean(rawUser.isSubscribed)
+        : Boolean(rawUser?.subscriptionPlan && rawUser.subscriptionPlan !== "none" && rawUser.subscriptionPlan !== "null");
+
+      const normalizedUser: User = {
+        ...rawUser,
+        isClaimed: claimedVal,
+        isSubscribed: subscribedVal,
+      };
+
       state.accessToken = action.payload.token;
-      state.user = action.payload.user;
+      state.user = normalizedUser;
       state.isRehydrated = true;
 
       // Persist locally
       if (typeof window !== "undefined") {
         localStorage.setItem("auth-token", action.payload.token);
-        localStorage.setItem("auth-user", JSON.stringify(action.payload.user));
+        localStorage.setItem("auth-user", JSON.stringify(normalizedUser));
         // We set the cookie for proxy.ts to read on the server side
         Cookies.set("auth-token", action.payload.token, { expires: 7, path: '/' }); 
       }
@@ -60,14 +77,32 @@ const authSlice = createSlice({
       state.isRehydrated = true;
     },
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
+      const incoming = action.payload;
+      const claimedVal = incoming.isClaimed !== undefined 
+        ? incoming.isClaimed 
+        : (incoming as any)?.isClamied !== undefined 
+        ? (incoming as any).isClamied 
+        : state.user?.isClaimed;
+
+      const subscribedVal = incoming.isSubscribed !== undefined
+        ? Boolean(incoming.isSubscribed)
+        : incoming.subscriptionPlan && incoming.subscriptionPlan !== "none" && incoming.subscriptionPlan !== "null"
+        ? true
+        : state.user?.isSubscribed;
+
       if (state.user) {
         state.user = { 
           ...state.user, 
-          ...action.payload,
-          isSubscribed: action.payload.isSubscribed !== undefined ? action.payload.isSubscribed : state.user.isSubscribed,
+          ...incoming,
+          isClaimed: claimedVal,
+          isSubscribed: subscribedVal,
         };
       } else {
-        state.user = action.payload as User;
+        state.user = {
+          ...incoming,
+          isClaimed: claimedVal,
+          isSubscribed: subscribedVal,
+        } as User;
       }
       
       if (typeof window !== "undefined") {

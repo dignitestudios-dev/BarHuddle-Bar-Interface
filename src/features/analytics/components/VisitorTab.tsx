@@ -6,6 +6,8 @@ import { VisitorTrendsChart, TrendDataPoint } from "@/components/charts/VisitorT
 import { TrafficByTimeChart, TimeSlotData } from "@/components/charts/TrafficByTimeChart";
 import { CustomerDonutChart, CustomerSegment } from "@/components/charts/CustomerDonutChart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierLockedGate } from "@/components/ui/TierLockedGate";
 import {
     useGetVisitorsGraphQuery,
     useGetTimeOfDayGraphQuery,
@@ -18,6 +20,8 @@ export interface VisitorTabProps {
 }
 
 export function VisitorTab({ filterParams }: VisitorTabProps) {
+    const { isFree, canTrackNewVsRepeat } = useTierAccess();
+
     const { data: visitorsGraphResponse, isLoading: isLoadingVisitorsGraph } =
         useGetVisitorsGraphQuery(filterParams);
     const { data: timeOfDayResponse, isLoading: isLoadingTimeOfDay, isError: isErrorTimeOfDay } =
@@ -133,6 +137,18 @@ export function VisitorTab({ filterParams }: VisitorTabProps) {
         }
         return undefined;
     }, [customerBreakdownResponse]);
+
+    if (isFree) {
+        return (
+            <div className="w-full flex flex-col gap-6 font-['Manrope',sans-serif]">
+                <TierLockedGate
+                    requiredTier="premium"
+                    title="Visitor Traffic & Peak Hours Analytics"
+                    description="Unlock live visitor trends, check-in flow, peak hours breakdown, and foot-traffic analytics with the Pro Plan ($9.99/mo)."
+                />
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (
