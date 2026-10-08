@@ -425,7 +425,7 @@ export function SubscriptionTab() {
                         {/* Feature Pills */}
                         <div className="flex flex-wrap gap-2 mt-1">
                             {(activePlanObj?.features && activePlanObj.features.length > 0
-                                ? activePlanObj.features.slice(0, 4)
+                                ? activePlanObj.features.slice(0, 6)
                                 : [
                                     "Unlimited Events",
                                     "Featured Placement",
