@@ -28,10 +28,10 @@ const DEFAULT_SETTINGS_PLANS: SubscriptionPlan[] = [
         currency: "usd",
         features: [
             "Claiming a venue",
+            "Promotion",
             "Add venue photos",
             "Add Bar open/close timings",
             "Event Creation",
-            "Promotion",
             "No Analytics",
         ],
         sortOrder: 1,
@@ -291,8 +291,8 @@ export function SubscriptionTab() {
         (currentPlanKey === "venue_executive"
             ? "Executive Plan"
             : currentPlanKey === "venue_premium"
-            ? "Growth Plan"
-            : "Starter Plan");
+                ? "Growth Plan"
+                : "Starter Plan");
 
     return (
         <div className="flex-1 flex flex-col gap-6 font-['Manrope',sans-serif] relative">
@@ -380,28 +380,26 @@ export function SubscriptionTab() {
                                 ACTIVE PLAN
                             </span>
                             <span
-                                className={`px-2.5 py-[2px] rounded-full border text-[10px] font-bold leading-[15px] flex items-center gap-1.5 ${
-                                    isPaidActive && isCancelAtPeriodEnd
-                                        ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
-                                        : isPaidActive
+                                className={`px-2.5 py-[2px] rounded-full border text-[10px] font-bold leading-[15px] flex items-center gap-1.5 ${isPaidActive && isCancelAtPeriodEnd
+                                    ? "bg-rose-500/15 border-rose-500/30 text-rose-400"
+                                    : isPaidActive
                                         ? "bg-[rgba(74,222,128,0.15)] border-[rgba(74,222,128,0.3)] text-[#4ADE80]"
                                         : "bg-white/10 border-white/20 text-white/80"
-                                }`}
+                                    }`}
                             >
                                 <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                        isPaidActive && isCancelAtPeriodEnd
-                                            ? "bg-rose-400"
-                                            : isPaidActive
+                                    className={`w-1.5 h-1.5 rounded-full ${isPaidActive && isCancelAtPeriodEnd
+                                        ? "bg-rose-400"
+                                        : isPaidActive
                                             ? "bg-[#4ADE80] animate-pulse"
                                             : "bg-white/60"
-                                    }`}
+                                        }`}
                                 />
                                 {isPaidActive && isCancelAtPeriodEnd
                                     ? "Canceling at period end"
                                     : isPaidActive
-                                    ? "Active Subscription"
-                                    : "Free Tier"}
+                                        ? "Active Subscription"
+                                        : "Free Tier"}
                             </span>
 
                             {user?.boostsCount !== undefined && user.boostsCount > 0 && (
@@ -420,8 +418,8 @@ export function SubscriptionTab() {
                             {isPaidActive && isCancelAtPeriodEnd
                                 ? `Access remains active until ${formattedDate}`
                                 : isPaidActive
-                                ? `Renews on ${formattedDate}`
-                                : `Free tier features active`}
+                                    ? `Renews on ${formattedDate}`
+                                    : `Free tier features active`}
                         </p>
 
                         {/* Feature Pills */}
@@ -429,11 +427,11 @@ export function SubscriptionTab() {
                             {(activePlanObj?.features && activePlanObj.features.length > 0
                                 ? activePlanObj.features.slice(0, 4)
                                 : [
-                                      "Unlimited Events",
-                                      "Featured Placement",
-                                      "Audience Insights",
-                                      "Enhanced Analytics",
-                                  ]
+                                    "Unlimited Events",
+                                    "Featured Placement",
+                                    "Audience Insights",
+                                    "Enhanced Analytics",
+                                ]
                             ).map((feat, idx) => (
                                 <div
                                     key={idx}
@@ -487,8 +485,8 @@ export function SubscriptionTab() {
                             {!isPaidActive
                                 ? "Starter features included by default"
                                 : isCancelAtPeriodEnd
-                                ? `Active until ${formattedDate}`
-                                : `Next billing cycle: ${formattedDate}`}
+                                    ? `Active until ${formattedDate}`
+                                    : `Next billing cycle: ${formattedDate}`}
                         </p>
                     </div>
                 </div>
@@ -521,23 +519,22 @@ export function SubscriptionTab() {
                                     <div className="flex flex-col gap-4">
                                         <div className="flex items-center justify-between">
                                             <span
-                                                className={`px-[12px] py-[4px] rounded-full border font-extrabold text-[10px] leading-[15px] tracking-[1px] uppercase ${
-                                                    isExecutive
-                                                        ? "bg-[rgba(232,255,87,0.12)] border-[rgba(232,255,87,0.3)] text-[#E8FF57]"
-                                                        : isLowerTier
+                                                className={`px-[12px] py-[4px] rounded-full border font-extrabold text-[10px] leading-[15px] tracking-[1px] uppercase ${isExecutive
+                                                    ? "bg-[rgba(232,255,87,0.12)] border-[rgba(232,255,87,0.3)] text-[#E8FF57]"
+                                                    : isLowerTier
                                                         ? "bg-white/5 border-white/10 text-white/40"
                                                         : "bg-[rgba(157,143,208,0.12)] border-[rgba(157,143,208,0.25)] text-[#9D8FD0]"
-                                                }`}
+                                                    }`}
                                             >
                                                 {isLowerTier
                                                     ? "LOWER TIER"
                                                     : plan.label
-                                                    ? `${plan.label.toUpperCase()} TIER`
-                                                    : plan.name
-                                                    ? `${plan.name.toUpperCase()} TIER`
-                                                    : isExecutive
-                                                    ? "EXECUTIVE TIER"
-                                                    : "STARTER TIER"}
+                                                        ? `${plan.label.toUpperCase()} TIER`
+                                                        : plan.name
+                                                            ? `${plan.name.toUpperCase()} TIER`
+                                                            : isExecutive
+                                                                ? "EXECUTIVE TIER"
+                                                                : "STARTER TIER"}
                                             </span>
 
                                             <div className="w-[36px] h-[36px] rounded-full bg-white/5 flex items-center justify-center text-[#C4B5FD]">
@@ -557,13 +554,13 @@ export function SubscriptionTab() {
                                             <h4 className="font-extrabold text-[20px] text-white">
                                                 {plan.label || plan.name}
                                             </h4>
-                                            <p className="text-[12px] text-[#9D8FD0] mt-0.5">
+                                            {/* <p className="text-[12px] text-[#9D8FD0] mt-0.5">
                                                 {isFree
                                                     ? "Essential tools for claimed venue profiles."
                                                     : isExecutive
                                                     ? "Top priority placement & VIP account management."
                                                     : "Advanced analytics and promotional tools."}
-                                            </p>
+                                            </p> */}
                                         </div>
 
                                         <div className="flex items-baseline gap-1.5 pt-1">
@@ -599,21 +596,20 @@ export function SubscriptionTab() {
                                             type="button"
                                             onClick={() => handlePlanAction(plan)}
                                             disabled={isLowerTier || purchaseMutation.isPending || changePlanMutation.isPending}
-                                            className={`w-full h-[46px] rounded-[16px] font-extrabold text-[14px] transition-all ${
-                                                isLowerTier
-                                                    ? "bg-white/5 border border-white/10 text-white/40 cursor-not-allowed shadow-none"
-                                                    : "text-white cursor-pointer hover:opacity-95 active:scale-98 bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.4)] disabled:opacity-50"
-                                            }`}
+                                            className={`w-full h-[46px] rounded-[16px] font-extrabold text-[14px] transition-all ${isLowerTier
+                                                ? "bg-white/5 border border-white/10 text-white/40 cursor-not-allowed shadow-none"
+                                                : "text-white cursor-pointer hover:opacity-95 active:scale-98 bg-gradient-to-r from-[#7C3AED] to-[#9F4FFA] shadow-[0px_0px_24px_rgba(124,58,237,0.4)] disabled:opacity-50"
+                                                }`}
                                         >
                                             {purchaseMutation.isPending || changePlanMutation.isPending
                                                 ? "Processing..."
                                                 : isLowerTier
-                                                ? "Downgrade Unavailable"
-                                                : isFree
-                                                ? "Starter Plan"
-                                                : isActive
-                                                ? `Switch to ${plan.label || plan.name}`
-                                                : `Upgrade to ${plan.label || plan.name}`}
+                                                    ? "Downgrade Unavailable"
+                                                    : isFree
+                                                        ? "Starter Plan"
+                                                        : isActive
+                                                            ? `Switch to ${plan.label || plan.name}`
+                                                            : `Upgrade to ${plan.label || plan.name}`}
                                         </button>
                                         {isLowerTier && (
                                             <p className="text-[11px] text-center text-[#8B7EC8]">

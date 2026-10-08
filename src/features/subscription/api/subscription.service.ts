@@ -49,13 +49,13 @@ export interface SubscriptionDetails {
   planId?: string | SubscriptionPlan;
   planKey?: string;
   status:
-    | "active"
-    | "trialing"
-    | "past_due"
-    | "canceled"
-    | "unpaid"
-    | "incomplete"
-    | string;
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "canceled"
+  | "unpaid"
+  | "incomplete"
+  | string;
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
   periodEnd?: string;
